@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Development Workflow — User Guide</title>
+<style>
+  :root {
+    --blue: #2B5797;
+    --light-blue: #D6E4F0;
+    --accent: #E8792F;
+    --dark: #1a1a2e;
+    --gray: #555;
+    --light-gray: #f4f5f7;
+    --border: #e0e0e0;
+    --code-bg: #f0f2f5;
+    --user-bg: #eef3fb;
+    --claude-bg: #fef7f0;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: var(--dark); line-height: 1.65; max-width: 860px; margin: 0 auto; padding: 40px 24px 80px; background: #fff; }
+  h1 { font-size: 2rem; color: var(--blue); margin: 56px 0 16px; padding-bottom: 8px; border-bottom: 3px solid var(--blue); }
+  h1:first-of-type { margin-top: 0; }
+  h2 { font-size: 1.4rem; color: var(--dark); margin: 36px 0 12px; }
+  h3 { font-size: 1.1rem; color: var(--gray); margin: 24px 0 8px; }
+  p { margin: 0 0 14px; }
+  .subtitle { color: var(--gray); font-size: 1.1rem; margin-bottom: 8px; }
+  .note { color: var(--gray); font-style: italic; font-size: 0.92rem; margin: 8px 0 16px; }
+
+  /* Title */
+  .title-block { text-align: center; padding: 60px 0 40px; border-bottom: 3px solid var(--blue); margin-bottom: 48px; }
+  .title-block h1 { border: none; font-size: 2.6rem; margin: 0 0 8px; }
+  .title-block .subtitle { font-size: 1.2rem; }
+
+  /* Command table */
+  table { width: 100%; border-collapse: collapse; margin: 12px 0 20px; font-size: 0.95rem; }
+  th { background: var(--blue); color: #fff; text-align: left; padding: 10px 14px; font-weight: 600; }
+  td { padding: 10px 14px; border-bottom: 1px solid var(--border); }
+  tr:nth-child(even) td { background: var(--light-gray); }
+  td:first-child { font-family: 'SF Mono', 'Fira Code', monospace; font-weight: 600; color: var(--blue); white-space: nowrap; }
+
+  /* Chat bubbles */
+  .chat { margin: 8px 0; padding: 12px 16px; border-radius: 10px; font-size: 0.95rem; }
+  .user { background: var(--user-bg); border-left: 4px solid var(--blue); }
+  .user::before { content: "You:  "; font-weight: 700; color: var(--blue); }
+  .claude { background: var(--claude-bg); border-left: 4px solid var(--accent); }
+  .claude::before { content: "Claude:  "; font-weight: 700; color: var(--accent); }
+
+  /* Code */
+  code { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.88rem; background: var(--code-bg); padding: 2px 6px; border-radius: 4px; }
+  pre { background: var(--code-bg); padding: 16px 20px; border-radius: 8px; overflow-x: auto; margin: 12px 0 20px; font-size: 0.88rem; line-height: 1.6; }
+  pre code { background: none; padding: 0; }
+
+  /* Divider */
+  hr { border: none; border-top: 2px solid var(--border); margin: 48px 0; }
+
+  /* Lists */
+  ul, ol { margin: 8px 0 16px 24px; }
+  li { margin-bottom: 6px; }
+
+  /* Key rules */
+  .rule { margin: 12px 0; padding: 12px 16px; background: var(--light-gray); border-radius: 8px; border-left: 4px solid var(--blue); }
+  .rule strong { color: var(--blue); }
+
+  /* Flow diagram */
+  .flow { background: var(--code-bg); padding: 20px; border-radius: 10px; text-align: center; margin: 16px 0 24px; font-family: 'SF Mono', monospace; font-size: 0.9rem; line-height: 2; }
+  .flow .gate { background: var(--accent); color: #fff; padding: 2px 8px; border-radius: 4px; font-weight: 600; font-size: 0.8rem; }
+  .flow .cmd { background: var(--blue); color: #fff; padding: 2px 8px; border-radius: 4px; }
+
+  /* File tree */
+  .tree { font-family: 'SF Mono', monospace; font-size: 0.88rem; line-height: 1.7; background: var(--code-bg); padding: 20px; border-radius: 10px; margin: 12px 0 20px; }
+  .tree .comment { color: var(--gray); }
+
+  @media (max-width: 600px) {
+    body { padding: 20px 16px 60px; }
+    .title-block h1 { font-size: 2rem; }
+    h1 { font-size: 1.6rem; }
+    pre { font-size: 0.8rem; padding: 12px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="title-block">
+  <h1>Development Workflow</h1>
+  <div class="subtitle">User Guide</div>
+  <p style="color: var(--gray); margin-top: 16px; font-size: 0.95rem;">
+    How to work with /discover, /architect, /thorough_plan, /gate, /implement, /review, /end_of_task, /rollback, /start_of_day, /end_of_day
+  </p>
+</div>
+
+<!-- ============ QUICK REFERENCE ============ -->
+<h1>Quick Reference</h1>
+<p>Your workflow has 13 commands in three groups: the development pipeline, safety controls, and session management.</p>
+
+<h2>The Pipeline</h2>
+<table>
+  <tr><th>Command</th><th>What it does</th></tr>
+  <tr><td>/init_workflow</td><td>One-time project bootstrap. Creates directory structure, copies all skills, runs /discover, generates quickstart guide.</td></tr>
+  <tr><td>/discover</td><td>Scans all repos, builds inventory, architecture map, and git log. Run once on setup.</td></tr>
+  <tr><td>/architect</td><td>Deep exploration with Opus. Reads repos, docs, web. Produces <code>architecture.md</code> with decomposed stages.</td></tr>
+  <tr><td>/thorough_plan</td><td>Orchestrates <code>/plan → /critic → /revise</code> loop (up to 5 rounds) until convergence.</td></tr>
+  <tr><td>/plan</td><td>Creates the initial detailed plan. Reads <code>lessons-learned.md</code>. Can be used standalone.</td></tr>
+  <tr><td>/critic</td><td>Reviews plan in a <strong>fresh session</strong> against actual code. Reads <code>lessons-learned.md</code>.</td></tr>
+  <tr><td>/revise</td><td>Addresses critic feedback. Updates <code>current-plan.md</code>.</td></tr>
+  <tr><td>/implement</td><td>Writes code from the plan. <strong>Requires your explicit command. Never auto-invoked.</strong></td></tr>
+  <tr><td>/review</td><td>Opus verifies implementation vs plan. Integration safety, risk assessment.</td></tr>
+  <tr><td>/end_of_task</td><td>Finalizes accepted work. Commits, pushes branch to remote, captures lessons. Does NOT create PR — you do that separately. <strong>Requires your explicit command.</strong></td></tr>
+</table>
+
+<h2>Safety Controls</h2>
+<table>
+  <tr><th>Command</th><th>What it does</th></tr>
+  <tr><td>/gate</td><td>Runs automated checks (tests, lint, secrets scan) and <strong>STOPS</strong> for your approval between every phase.</td></tr>
+  <tr><td>/rollback</td><td>Maps commits to plan tasks. Shows what would revert. Requires your confirmation before acting.</td></tr>
+</table>
+
+<h2>Session Management</h2>
+<table>
+  <tr><th>Command</th><th>What it does</th></tr>
+  <tr><td>/start_of_day</td><td>Reads daily cache, checks git state, presents briefing with exactly where to resume.</td></tr>
+  <tr><td>/end_of_day</td><td>Saves session state, updates git log, consolidates unfinished work, prompts for lessons learned.</td></tr>
+</table>
+
+<hr>
+
+<!-- ============ SCENARIO 1: FIRST TIME SETUP ============ -->
+<h1>Scenario 1: First Time Setup</h1>
+<p>You just cloned your repos into a project folder and want to set up the workflow.</p>
+
+<h3>Run /discover</h3>
+<div class="chat user">/discover</div>
+<div class="chat claude">Scanning the project folder… Found 4 repositories: <strong>api-gateway</strong> (TypeScript/NestJS), <strong>payment-service</strong> (Go), <strong>user-service</strong> (Python/FastAPI), <strong>notification-service</strong> (TypeScript/Node). Mapping integrations…</div>
+<div class="chat claude">Done. Saved 4 files to <code>memory/</code>: repos-inventory.md, architecture-overview.md, dependencies-map.md, git-log.md. The API gateway routes to all three backend services. Payment and notification communicate via Kafka. 47 recent commits captured.</div>
+
+<p class="note">That's it for setup. The memory files persist across sessions. Re-run /discover only when repos change significantly.</p>
+
+<hr>
+
+<!-- ============ SCENARIO 2: LARGE FEATURE ============ -->
+<h1>Scenario 2: Planning a Large Feature</h1>
+<p>You need to add a refund flow that touches the payment service, API gateway, and notification service.</p>
+
+<h3>Step 1: /architect</h3>
+<div class="chat user">/architect — I need to add customer-initiated refunds. Should go through the gateway, hit the payment service which calls Stripe, and notify the customer.</div>
+<div class="chat claude">Reading memory/architecture-overview.md for baseline context… Reading payment-service source code, Stripe SDK usage, existing transaction flow… Searching web for Stripe refund API best practices…</div>
+<div class="chat claude">[Asks 2-3 clarifying questions: partial refunds? refund window? admin override?]</div>
+<div class="chat user">Yes to partial refunds, 30-day window, admin can override the window.</div>
+<div class="chat claude">Architecture document saved to <code>refund-flow/architecture.md</code>. Decomposed into 3 stages: (1) Payment service refund logic + Stripe integration, (2) Gateway endpoint + validation, (3) Notification templates + Kafka consumer. Each stage is independently deployable.</div>
+
+<h3>Step 2: Gate</h3>
+<div class="chat claude">Running gate: <strong>architect → thorough_plan</strong>. Architecture document exists and covers objective, service map, integration points, 3 decomposed stages. ✅ 6/6 checks passed.<br><br><strong>Action required:</strong> type <code>/thorough_plan</code> to proceed, or tell me what to adjust.</div>
+<div class="chat user">/thorough_plan</div>
+
+<h3>Step 3: Thorough plan (automatic loop)</h3>
+<div class="chat claude">Invoking <code>/plan</code> for stage 1 (payment service refund logic)…</div>
+<div class="chat claude">Plan created: 7 tasks covering Stripe refund client, refund domain model, idempotency handling, event publishing, error mapping, and tests. Saved to <code>refund-flow/current-plan.md</code>.</div>
+<div class="chat claude">Invoking <code>/critic</code> in fresh session (round 1)…</div>
+<div class="chat claude">Round 1 complete — critic found <strong>1 MAJOR issue</strong>: plan doesn't handle Stripe's async refund status (refunds can be pending for days). Verdict: <strong>REVISE</strong>.</div>
+<div class="chat claude">Invoking <code>/revise</code> to address critic feedback…</div>
+<div class="chat claude">Plan revised: added Task 4a (webhook handler for refund.updated events) and updated risk table. Invoking <code>/critic</code> round 2…</div>
+<div class="chat claude">Round 2 complete. Critic verdict: <strong>PASS</strong>. No critical or major issues. 🎉</div>
+
+<h3>Step 4: Gate → you decide to /implement</h3>
+<div class="chat claude">Running gate: <strong>thorough_plan → implement</strong>. Plan has PASS verdict, 8 tasks with file paths and acceptance criteria, integration analysis covers Stripe + Kafka + gateway, risk mitigations are concrete. ✅ 8/8 checks passed.<br><br>The plan is ready at <code>refund-flow/current-plan.md</code>. It took 2 rounds. Main revision: added async refund status handling via Stripe webhooks.<br><br><strong>Action required:</strong> type <code>/implement</code> to start coding.</div>
+
+<p class="note">Notice: Claude stops here and waits. It will not start writing code until you explicitly say so.</p>
+
+<div class="chat user">/implement</div>
+
+<h3>Step 5: Implementation</h3>
+<div class="chat claude">Reading refund-flow/current-plan.md… Which tasks would you like me to start with? The plan suggests Tasks 1-3 first (core refund logic), then 4a (webhook), then 5-8 (tests + integration).</div>
+<div class="chat user">Do tasks 1-4a</div>
+<div class="chat claude">[Implements each task, makes small commits, runs tests after each]</div>
+<div class="chat claude">Tasks 1-4a complete. 5 commits on branch <code>feat/refund-flow</code>. All existing tests pass. Running gate…</div>
+
+<h3>Step 6: Gate → /review</h3>
+<div class="chat claude">Gate: <strong>implement → review</strong>. Tests: 47 passed, 0 failed. Lint: clean. No debug code. No secrets in diff. ✅ 6/6 checks passed.<br><br><strong>Action required:</strong> type <code>/review</code> to proceed.</div>
+<div class="chat user">/review</div>
+<div class="chat claude">[Opus reads the diff, traces data flow, checks Stripe error handling, verifies Kafka event schema…]</div>
+<div class="chat claude">Review saved to <code>refund-flow/review-1.md</code>. Verdict: <strong>CHANGES_REQUESTED</strong>.<br>1 major issue: refund amount validation doesn't check against original transaction amount — could refund more than was paid. Suggested fix included.</div>
+
+<div class="chat user">/implement — fix the review issue</div>
+<div class="chat claude">[Fixes the validation, adds test for over-refund case, commits]</div>
+<div class="chat user">/review</div>
+<div class="chat claude">Review round 2. Verdict: <strong>APPROVED</strong>. All issues resolved. Tests pass. ✅</div>
+
+<h3>Step 7: Gate → /end_of_task</h3>
+<div class="chat claude">Gate: <strong>review → end_of_task</strong>. Review is APPROVED, tests pass, no merge conflicts, branch up to date. ✅<br><br><strong>Action required:</strong> type <code>/end_of_task</code> to finalize, commit, and push the branch.</div>
+
+<p class="note">Again, Claude stops and waits. It won't push until you explicitly accept the work. PR creation is a separate step you do when ready.</p>
+
+<div class="chat user">/end_of_task</div>
+<div class="chat claude">
+Pre-flight checks: ✅ Review APPROVED, ✅ tests passing, ✅ working tree clean, ✅ branch up to date, ✅ no secrets.<br><br>
+Pushed <code>feat/refund-flow</code> to origin.<br><br>
+Anything that surprised you, or that the workflow should handle differently next time?<br><br>
+<em>Next: when you're ready, create a PR from the branch.</em>
+</div>
+<div class="chat user">The critic catching async refund patterns was great. For payment integrations, always check webhook/async patterns.</div>
+<div class="chat claude">Added to <code>lessons-learned.md</code>. Task <strong>refund-flow</strong> marked as completed. 🎉</div>
+
+<hr>
+
+<!-- ============ SCENARIO 3: BUG FIX ============ -->
+<h1>Scenario 3: Bug Fix / Debugging</h1>
+<p>A bug comes in: refunds are failing silently for amounts under $1.</p>
+
+<div class="chat user">There's a bug: refunds under $1 fail silently. Can you investigate?</div>
+<div class="chat claude">Reading payment-service refund code… Found it: in <code>refund.service.go:84</code>, the amount is cast to <code>int</code> before sending to Stripe, so $0.50 becomes $0. Stripe rejects $0 refunds but the error is swallowed at line 91.</div>
+
+<p>For small, well-understood fixes you can skip /architect and /thorough_plan:</p>
+
+<div class="chat user">/plan — fix the sub-dollar refund bug. Keep it simple.</div>
+<div class="chat claude">Plan: 2 tasks. (1) Change amount type from <code>int</code> to <code>int64</code> (cents), add validation for amount&nbsp;&gt;&nbsp;0. (2) Add test cases for $0.50, $0.01, and $0 refunds. Files: <code>refund.service.go</code>, <code>refund_test.go</code>.</div>
+<div class="chat user">Looks good. /implement</div>
+<div class="chat claude">[Fixes the type, adds validation, writes 3 test cases, commits]</div>
+<div class="chat claude">Gate: tests pass, lint clean. ✅ <strong>Action required:</strong> type <code>/review</code>.</div>
+<div class="chat user">/review</div>
+<div class="chat claude">APPROVED. Clean fix, tests cover edge cases, no integration impact (Stripe already accepts int64 cents). ✅<br><br><strong>Action required:</strong> type <code>/end_of_task</code> to finalize.</div>
+<div class="chat user">/end_of_task</div>
+<div class="chat claude">✅ Pushed <code>fix/sub-dollar-refund</code> to origin. Task complete. 🎉<br>Next: create a PR when you're ready.</div>
+
+<hr>
+
+<!-- ============ SCENARIO 4: ROLLBACK ============ -->
+<h1>Scenario 4: Rolling Back</h1>
+<p>The implementation went wrong and you want to undo it.</p>
+
+<div class="chat user">/rollback</div>
+<div class="chat claude">Reading current plan and git log… Found 5 commits for refund-flow tasks 1-4a on branch <code>feat/refund-flow</code>.<br><br>What would you like to roll back?</div>
+<ul>
+  <li><strong>Full phase:</strong> revert all 5 commits (back to pre-implementation state)</li>
+  <li><strong>Selective:</strong> pick specific tasks to revert</li>
+  <li><strong>Last commit only</strong></li>
+</ul>
+<div class="chat user">Revert tasks 3 and 4a only</div>
+<div class="chat claude"><strong>Rollback preview:</strong><br>
+Will revert commits <code>e4f5g6</code> (task 3: event publishing) and <code>h7i8j9</code> (task 4a: webhook handler).<br>
+Removes 2 files, modifies 1. Tasks 1-2 preserved. No other branches depend on these commits.<br><br>
+<strong>Confirm?</strong> [waiting for your explicit yes]</div>
+<div class="chat user">Yes</div>
+<div class="chat claude">Reverted. Branch <code>feat/refund-flow</code> is now at commit <code>c3d4e5</code>. Tasks 3 and 4a marked as pending in the plan. Tests pass. ✅</div>
+
+<hr>
+
+<!-- ============ SCENARIO 5: START/END OF DAY ============ -->
+<h1>Scenario 5: Start and End of Day</h1>
+
+<h2>Ending your day</h2>
+<div class="chat user">/end_of_day</div>
+<div class="chat claude">Saving session state for refund-flow… Current stage: implement (tasks 1-4a done, tasks 5-8 pending). Branch: <code>feat/refund-flow</code>. Updating git-log.md with 12 commits from today…</div>
+<div class="chat claude">Anything that surprised you today, or that should work differently next time?</div>
+<div class="chat user">The critic caught the async refund thing which I totally missed. Plans for payment integrations should always ask about async/webhook patterns.</div>
+<div class="chat claude">Added to <code>lessons-learned.md</code>. Daily cache saved to <code>memory/daily/2026-03-17.md</code>. 1 session active (refund-flow, in-progress). Tomorrow's priority: finish tasks 5-8 (tests) and run /review.<br><br>Run <code>/start_of_day</code> when you're back. 👋</div>
+
+<h2>Starting the next day</h2>
+<div class="chat user">/start_of_day</div>
+<div class="chat claude">Good morning. Reading daily cache from 2026-03-17…<br><br>
+<strong>Since last session:</strong> no new commits from others, CI green, no PR reviews.<br><br>
+<strong>Unfinished work:</strong><br>
+• <strong>refund-flow</strong> — implement phase, tasks 5-8 pending (tests + integration). Branch: <code>feat/refund-flow</code>. Resume at: write unit tests for refund.service.go (Task 5 in current-plan.md).<br><br>
+<strong>Key context from yesterday:</strong> Added async refund handling via Stripe webhooks after critic caught it in round 1. Amount type changed to int64 cents.<br><br>
+Suggested priority: finish the tests (tasks 5-8), then /review. Want to resume with <code>/implement</code>?</div>
+<div class="chat user">/implement</div>
+
+<hr>
+
+<!-- ============ SCENARIO 6: PARALLEL WORK ============ -->
+<h1>Scenario 6: Parallel Tasks</h1>
+<p>You're mid-way through the refund feature but an urgent fix comes in.</p>
+
+<div class="chat user">I need to pause refund-flow and fix a production auth bug. Different task.</div>
+<div class="chat claude">Got it. I'll save the current refund-flow session state (tasks 1-4a complete, 5-8 pending, branch <code>feat/refund-flow</code>).</div>
+<div class="chat user">/plan for auth-token-fix — tokens aren't refreshing when the clock skew exceeds 30s</div>
+<div class="chat claude">[Plans the fix in the <code>auth-token-fix/</code> subfolder, separate from refund-flow/]</div>
+<div class="chat user">/implement</div>
+<div class="chat claude">[Implements, tests pass, review passes, branch pushed — all in auth-token-fix/ context]</div>
+
+<p>When you're ready to go back:</p>
+<div class="chat user">Back to refund-flow</div>
+<div class="chat claude">Restoring refund-flow context. You're on branch <code>feat/refund-flow</code>, tasks 1-4a done, tasks 5-8 pending. Ready for <code>/implement</code>.</div>
+
+<p>End of day captures both sessions:</p>
+<div class="chat user">/end_of_day</div>
+<div class="chat claude">2 sessions today: <strong>auth-token-fix</strong> (completed, merged), <strong>refund-flow</strong> (in-progress, tasks 5-8 remaining). Daily cache saved. Only refund-flow carries forward to tomorrow.</div>
+
+<hr>
+
+<!-- ============ KEY RULES ============ -->
+<h1>Key Rules to Remember</h1>
+
+<div class="rule"><strong>1. /implement and /end_of_task never run automatically.</strong> You must type them. Claude stops after planning converges (waiting for /implement) and after review approves (waiting for /end_of_task). Nothing gets written or shipped without your conscious decision.</div>
+
+<div class="rule"><strong>2. Gates run between every phase.</strong> They run automated checks and present results. You approve before the next phase starts. Even if all checks pass, Claude waits.</div>
+
+<div class="rule"><strong>3. /critic always runs in a fresh session.</strong> This prevents bias from having just written the plan. It reads the actual code, not just the plan's claims about it.</div>
+
+<div class="rule"><strong>4. Lessons learned accumulate.</strong> /end_of_day prompts you for insights. /plan and /critic read them at the start. Over time, the workflow gets smarter about your specific codebase and patterns.</div>
+
+<div class="rule"><strong>5. You can skip stages.</strong> Small bug fix? Go straight to /plan → /implement → /review → /end_of_task. The full pipeline (/discover → /architect → /thorough_plan) is for large features.</div>
+
+<div class="rule"><strong>6. /rollback is always available.</strong> It maps commits to plan tasks, shows what will change, and requires your confirmation. Safe to use at any point.</div>
+
+<div class="rule"><strong>7. Each task gets its own folder.</strong> <code>refund-flow/</code>, <code>auth-token-fix/</code> — parallel tasks never mix. Descriptive kebab-case names.</div>
+
+<hr>
+
+<!-- ============ SESSION MANAGEMENT ============ -->
+<h1>Session Management: One Command Per Session</h1>
+
+<p>Context windows fill up. This is expected and the workflow is designed for it. <strong>Each command can run in its own chat session</strong> — the files on disk are the shared memory between sessions.</p>
+
+<h2>How it works</h2>
+<p>Every skill has a "session bootstrap" step. When it starts in a fresh session, it reads what it needs from disk:</p>
+
+<table>
+  <tr><th>Skill</th><th>Reads on startup</th></tr>
+  <tr><td>/architect</td><td>CLAUDE.md, lessons-learned.md, /discover memory files, task subfolder</td></tr>
+  <tr><td>/plan</td><td>CLAUDE.md, lessons-learned.md, architecture.md, prior critic responses</td></tr>
+  <tr><td>/critic</td><td>CLAUDE.md, lessons-learned.md, current-plan.md, <strong>actual source code</strong></td></tr>
+  <tr><td>/revise</td><td>CLAUDE.md, current-plan.md, latest critic-response</td></tr>
+  <tr><td>/implement</td><td>CLAUDE.md, lessons-learned.md, session state, current-plan.md, source code</td></tr>
+  <tr><td>/review</td><td>CLAUDE.md, lessons-learned.md, current-plan.md, architecture.md, git diff + full files</td></tr>
+</table>
+
+<p>You never have to re-explain context. If it's in the files, the skill reads it.</p>
+
+<h2>Recommended session pattern</h2>
+
+<h3>Large feature (multi-session)</h3>
+<div class="chat user">Session 1: /architect — design the refund flow</div>
+<p class="note">Claude saves architecture.md. Close this session.</p>
+<div class="chat user">Session 2: /thorough_plan — plan stage 1</div>
+<p class="note">Claude reads architecture.md from disk, runs plan→critic→revise. Saves current-plan.md. Close.</p>
+<div class="chat user">Session 3: /implement — tasks 1-4</div>
+<p class="note">Fresh context! Clean session means Claude focuses on code, not planning noise. Reads the plan from disk. Close when tasks are done.</p>
+<div class="chat user">Session 4: /review</div>
+<p class="note">Fresh eyes on the diff. Reads plan + code, no implementation bias. Close when done.</p>
+
+<h3>Small bug fix (single session)</h3>
+<div class="chat user">Same session: /plan → /implement → /review</div>
+<p class="note">Short enough to fit in one context. No need to split.</p>
+
+<h3>Resuming mid-task</h3>
+<div class="chat user">New session: /implement — continue with refund-flow</div>
+<div class="chat claude">Reading session state… you completed tasks 1-4a last session. Tasks 5-8 remaining. Branch: feat/refund-flow. Picking up at Task 5.</div>
+<p class="note">The session state file tells the new session exactly where you left off.</p>
+
+<h2>When to split vs stay</h2>
+
+<div class="rule"><strong>Split</strong> when: you've been going for a while and responses are getting slower or less focused, you're moving to a different phase (plan→implement), or you want unbiased review.</div>
+
+<div class="rule"><strong>Stay</strong> when: the task is small, you're in a quick plan→implement→review flow, or you're iterating on implementation fixes within the same phase.</div>
+
+<div class="rule"><strong>Always split</strong> for: /critic (by design — it must be a fresh session), /review (fresh eyes catch more).</div>
+
+<hr>
+
+<!-- ============ WORKFLOW DIAGRAM ============ -->
+<h1>Workflow Diagram</h1>
+
+<p><strong>Full pipeline:</strong></p>
+<div class="flow">
+  <span class="cmd">/discover</span> →
+  <span class="cmd">/architect</span> →
+  <span class="gate">GATE</span> →
+  <span class="cmd">/thorough_plan</span> →
+  <span class="gate">GATE</span> →
+  <span class="cmd">/implement</span> →
+  <span class="gate">GATE</span> →
+  <span class="cmd">/review</span> →
+  <span class="gate">GATE</span> →
+  <span class="cmd">/end_of_task</span>
+</div>
+
+<p><strong>Inside /thorough_plan:</strong></p>
+<div class="flow">
+  <span class="cmd">/plan</span> →
+  <span class="cmd">/critic</span> <small>(fresh session)</small> →
+  <span class="cmd">/revise</span> →
+  <span class="cmd">/critic</span> →
+  … →
+  <span class="gate">PASS</span>
+  <small style="display:block; margin-top:4px;">(up to 5 rounds)</small>
+</div>
+
+<p><strong>Session lifecycle:</strong></p>
+<div class="flow">
+  <span class="cmd">/start_of_day</span> → [ work ] → <span class="cmd">/end_of_day</span>
+</div>
+
+<p><strong>Available at any time:</strong></p>
+<div class="flow">
+  <span class="cmd">/rollback</span> — undo implementation work safely
+</div>
+
+<hr>
+
+<!-- ============ FILE STRUCTURE ============ -->
+<h1>File Structure</h1>
+<p>What gets created in your project folder:</p>
+
+<div class="tree">
+project-folder/<br>
+├── dev-workflow/<br>
+│   ├── CLAUDE.md <span class="comment">← shared rules for all skills</span><br>
+│   ├── memory/<br>
+│   │   ├── repos-inventory.md <span class="comment">← from /discover</span><br>
+│   │   ├── architecture-overview.md <span class="comment">← from /discover</span><br>
+│   │   ├── dependencies-map.md <span class="comment">← from /discover</span><br>
+│   │   ├── git-log.md <span class="comment">← rolling commit log with rationale</span><br>
+│   │   ├── lessons-learned.md <span class="comment">← accumulated insights</span><br>
+│   │   ├── sessions/ <span class="comment">← per-session state files</span><br>
+│   │   └── daily/ <span class="comment">← daily rollups from /end_of_day</span><br>
+│   └── skills/<br>
+│       ├── discover/ architect/ plan/ critic/ revise/<br>
+│       ├── thorough_plan/ gate/ implement/ review/<br>
+│       └── rollback/ start_of_day/ end_of_day/<br>
+├── refund-flow/ <span class="comment">← task subfolder</span><br>
+│   ├── architecture.md<br>
+│   ├── current-plan.md<br>
+│   ├── critic-response-1.md … critic-response-N.md<br>
+│   └── review-1.md … review-N.md<br>
+└── auth-token-fix/ <span class="comment">← another task subfolder</span><br>
+    ├── current-plan.md<br>
+    └── review-1.md<br>
+</div>
+
+</body>
+</html>

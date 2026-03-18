@@ -1,0 +1,18 @@
+# macOS
+.DS_Store
+._*
+
+# Claude Code memory (session-specific, not shared)
+dev-workflow/memory/daily/
+dev-workflow/memory/sessions/
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Environment
+.env
+.env.local

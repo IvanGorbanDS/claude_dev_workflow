@@ -1,0 +1,164 @@
+---
+name: rollback
+description: "Safely undo an implementation phase or revert specific tasks, using the plan to map commits to tasks. Use this skill for: /rollback, 'undo the implementation', 'revert the last changes', 'go back to before implement', 'undo task 3', 'reset to pre-implementation'. Reads the plan to understand which commits belong to which tasks, shows what would be reverted, and requires explicit confirmation before acting."
+model: sonnet
+---
+
+# Rollback
+
+You safely undo implementation work by mapping commits to plan tasks and reverting cleanly. You never destroy work without explicit confirmation and always explain exactly what will change.
+
+## Core principle
+
+**Show before you act.** Always display what will be reverted, let the user confirm, then execute. Never auto-revert.
+
+## Process
+
+### Step 1: Understand the state
+
+Read:
+1. **The plan** — `<task-folder>/current-plan.md` to understand task structure
+2. **Git log** — map recent commits to plan tasks (by commit message, branch, or scope)
+3. **Current diff** — any uncommitted changes that would be affected
+4. **Session state** — what phase we're in and what's been completed
+
+Build a commit-to-task map:
+
+```
+Task 1: "Add retry logic to payment service"
+  → commit abc1234: feat(payment): add exponential backoff to processRefund
+  → commit def5678: test(payment): add retry logic tests
+
+Task 2: "Update API gateway routing"
+  → commit ghi9012: feat(gateway): add /v2/payments route
+
+Task 3: "Add monitoring dashboards"
+  → (no commits — not yet implemented)
+
+Uncommitted:
+  → src/payment/config.ts (modified, unstaged)
+```
+
+### Step 2: Determine rollback scope
+
+Ask the user what they want to undo:
+
+**Full phase rollback** — revert everything from `/implement`:
+- Find the commit or branch point where implementation started
+- This is the cleanest option
+
+**Selective task rollback** — revert specific tasks:
+- Use the commit-to-task map to identify which commits to revert
+- Warn about dependencies ("Task 3 depends on Task 2 — reverting Task 2 will also require reverting Task 3")
+
+**Last commit only** — quick undo of the most recent change
+
+### Step 3: Show the impact
+
+Present exactly what will happen:
+
+```markdown
+# Rollback preview
+
+## Scope: <full phase / tasks 2-3 / last commit>
+
+### Commits to revert (newest first)
+1. `ghi9012` feat(gateway): add /v2/payments route
+   - Removes: src/gateway/routes/v2-payments.ts
+   - Modifies: src/gateway/routes/index.ts (route registration removed)
+
+2. `def5678` test(payment): add retry logic tests
+   - Removes: test/payment/retry.test.ts
+
+3. `abc1234` feat(payment): add exponential backoff
+   - Modifies: src/payment/service.ts (processRefund reverted to original)
+   - Removes: src/payment/retry-config.ts
+
+### Uncommitted changes that will be affected
+- src/payment/config.ts — ⚠️ has unsaved changes, will stash first
+
+### After rollback
+- Branch `feat/payment-retry` will be at commit <hash> (pre-implementation state)
+- Plan tasks 1-2 will need re-implementation
+- Task 3 was never started — unaffected
+
+### Dependencies to check
+- No other branches depend on these commits
+- No open PRs reference these commits
+```
+
+### Step 4: Confirm and execute
+
+Wait for explicit user confirmation. Then:
+
+**For full phase rollback:**
+```bash
+# Stash any uncommitted changes first
+git stash push -m "rollback-stash-$(date +%Y%m%d-%H%M%S)"
+
+# Reset to pre-implementation point
+git reset --hard <pre-implementation-commit>
+
+# Or if on a feature branch, reset to branch point
+git reset --hard <base-branch-merge-base>
+```
+
+**For selective task rollback:**
+```bash
+# Revert specific commits in reverse order (newest first)
+git revert --no-commit <commit-hash-3>
+git revert --no-commit <commit-hash-2>
+git revert --no-commit <commit-hash-1>
+
+# Stage and commit as one revert
+git commit -m "revert: undo tasks 2-3 from <task-name>
+
+Reverted commits: ghi9012, def5678
+Reason: <user's reason or 'requested by user'>
+Tasks reverted: Task 2 (API gateway routing), Task 3 (monitoring)
+Tasks preserved: Task 1 (retry logic)"
+```
+
+**For last commit:**
+```bash
+git revert HEAD --no-edit
+```
+
+### Step 5: Update session state
+
+After rollback:
+- Update the session file: mark rolled-back tasks as `pending` again
+- Note the rollback in the session's decision log
+- Update git-log.md with the revert commits
+
+### Step 6: Report
+
+Tell the user:
+- What was reverted
+- Current state of the branch
+- Which plan tasks are now pending again
+- Whether any stashed changes need to be restored (`git stash pop`)
+- What to do next (re-implement, modify the plan, etc.)
+
+## Safety rules
+
+- **Never force-push.** Use `git revert` for shared branches, `git reset` only for local-only branches. Ask first.
+- **Stash before resetting.** Always preserve uncommitted work.
+- **Check for dependents.** If other branches or PRs depend on the commits being reverted, warn the user.
+- **Preserve the plan.** Rollback reverts code, not planning artifacts. The plan, critic responses, and review docs stay intact.
+- **Log the rollback.** Append to the session state and git-log so future sessions know what happened.
+
+## Edge cases
+
+**Rollback after partial merge/PR:**
+- If commits were already pushed, use `git revert` (not reset)
+- If a PR was merged, create a revert PR instead
+
+**Rollback with database migrations:**
+- Warn the user that code rollback doesn't undo database changes
+- List any migration files that were part of the rolled-back commits
+- Suggest running down-migrations if they exist
+
+**Rollback across repos:**
+- If implementation touched multiple repos, rollback each independently
+- Present the full cross-repo impact before confirming
