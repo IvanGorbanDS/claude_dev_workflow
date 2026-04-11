@@ -1,6 +1,18 @@
 # Development Workflow — Shared Rules
 
-This file defines the common rules and behaviors shared across all development workflow skills: `/init_workflow`, `/discover`, `/architect`, `/plan`, `/critic`, `/revise`, `/thorough_plan` (orchestrator), `/gate`, `/implement`, `/review`, `/rollback`, `/end_of_task`, `/end_of_day`, and `/start_of_day`.
+This file defines the common rules and behaviors shared across all development workflow skills: `/init_workflow`, `/discover`, `/architect`, `/plan`, `/critic`, `/revise`, `/thorough_plan` (orchestrator), `/gate`, `/implement`, `/review`, `/rollback`, `/end_of_task`, `/end_of_day`, `/start_of_day`, `/weekly_review`, and `/capture_insight`.
+
+## Working Rules
+
+### Git & PR Safety
+- **Never push to remote or create PRs outside of `/end_of_task`.** During implementation and review, only commit locally. Push happens as part of `/end_of_task` (which requires `/review` first). PR creation is always a separate explicit user action — never auto-create PRs.
+- **Always start each new task on a fresh branch.** Commit current work, switch to main, fetch latest, then create the new branch.
+
+### Communication
+- **Keep multi-step workflow progress verbose.** When working through plans, implementations, or multi-round processes, provide status updates at each step. Don't go silent during long operations.
+
+### Dev Workflow
+- **Never place stage plans into `finalized/` until `/end_of_task` is explicitly run.** Plans stay in their working location until the user triggers finalization.
 
 ## Project structure
 
@@ -8,55 +20,31 @@ This workspace uses a multi-repo layout. Multiple repositories are cloned side-b
 
 ## Task subfolder convention
 
-### Feature → Task hierarchy
-
-Large work is organized as **features** containing **tasks**. Each feature gets a top-level folder, and each task within it gets a subfolder:
-
-```
-<project-folder>/<feature-name>/
-├── architecture.md              ← feature-level architecture
-├── <task-1>/
-│   ├── current-plan.md
-│   ├── critic-response-1.md
-│   ├── review-1.md
-│   └── ...
-├── <task-2>/
-│   └── ...
-└── implemented/                 ← completed tasks move here
-    ├── <task-1>/
-    └── ...
-```
-
-For standalone tasks (no parent feature), the structure is flat:
+All planning and review artifacts are stored in the project folder under a descriptive task subfolder:
 ```
 <project-folder>/<task-name>/
 ```
 
-### Archiving completed work
-
-When a **task** within a feature is finalized (`/end_of_task`), its artifact folder moves to `<feature-folder>/implemented/`.
-
-When an entire **feature** is complete (all tasks done), the feature folder moves to `<project-folder>/implemented/`.
-
-```
-<project-folder>/
-├── <active-feature>/            ← in-progress feature
-│   ├── <active-task>/
-│   └── implemented/
-│       └── <done-task>/
-├── <active-standalone-task>/    ← standalone task
-└── implemented/                 ← completed features and standalone tasks
-    ├── <done-feature>/
-    └── <done-standalone-task>/
-```
-
-This keeps the project root clean — only active work is visible at the top level.
-
-### Naming
-
-Names are descriptive, kebab-case, derived from the description (e.g., `auth-refactor`, `payment-v2-migration`, `api-rate-limiting`). Ask the user for a name when it's not obvious from context.
+Task names are descriptive, kebab-case, derived from the task description (e.g., `auth-refactor`, `payment-v2-migration`, `api-rate-limiting`). Ask the user for a name when it's not obvious from context.
 
 When running parallel tasks, each gets its own subfolder. Never mix artifacts from different tasks in the same folder.
+
+### Archiving completed work
+
+When a task is finalized via `/end_of_task`, its folder is moved into a `finalized/` directory:
+
+- **Sub-task completed** — moves into `<parent-feature>/finalized/`:
+  ```
+  payment-v2/auth-retry/  →  payment-v2/finalized/auth-retry/
+  ```
+- **Entire feature completed** — moves into `finalized/` at the project root:
+  ```
+  payment-v2/  →  finalized/payment-v2/
+  ```
+
+This keeps the project root clean — only active work is visible at the top level. Completed work is preserved in `finalized/` for reference.
+
+**IMPORTANT: Never move task folders into `finalized/` during planning or implementation.** Keep them in their working location throughout the entire workflow. The `finalized/` directory is reserved for completed, shipped work only. Artifacts are moved there exclusively when `/end_of_task` is explicitly invoked by the user.
 
 ## Workflow sequence
 
@@ -67,7 +55,7 @@ The intended flow is:
 ```
 
 Each stage feeds into the next, with `/gate` checkpoints requiring explicit human approval:
-- `/init_workflow` bootstraps the entire workflow in a new project. Creates directory structure, copies skills, runs `/discover`, generates quickstart guide. Run once per project.
+- `/init_workflow` bootstraps the workflow in a new project. Creates `memory/` structure, configures permissions, runs `/discover`, generates quickstart guide. Run once per project. (Skills and rules are installed separately via `bash install.sh`.)
 - `/discover` scans all repos and saves inventory, architecture overview, and dependency map to `memory/`. Run once on setup, re-run when repos change.
 - `/architect` produces `architecture.md` with stages decomposed for planning (uses `/discover` output as baseline context)
 - **GATE** — user reviews architecture, explicitly approves
@@ -91,6 +79,7 @@ Not every task needs every stage. Small, well-understood changes can skip `/arch
 Session lifecycle:
 - `/start_of_day` — restores context from daily cache and checks git state. Run at the beginning of a work session.
 - `/end_of_day` — saves session state and consolidates unfinished work into a daily cache. Run when wrapping up.
+- `/weekly_review` — aggregates the week's progress into a structured review. Run on Friday (or whenever you want a week-level summary). Saves to `memory/weekly/`.
 
 Multiple sessions can run in a day (parallel tasks). Each session writes its own state to `memory/sessions/`. `/end_of_day` rolls unfinished sessions into `memory/daily/<date>.md`.
 
@@ -137,6 +126,18 @@ All planning and review work must actively de-risk:
 - Define rollback plans for every significant change
 
 ### Git workflow
+
+#### Branch hygiene before new tasks
+
+Before starting any new task on a repo, always:
+
+1. Check if the repo is on another branch with uncommitted changes
+2. Commit (or stash) those changes first
+3. Switch to main/master
+4. Fetch and pull to ensure it's up to date
+5. Create a new branch for the task
+
+Clean working state before each task avoids mixing unrelated changes and working on stale code. At the start of every implementation task, run `git status` + `git branch` on each affected repo. Handle any dirty state before proceeding. This applies to ALL repos involved, not just the primary one.
 
 #### Commit messages
 
@@ -206,6 +207,27 @@ When answering complex questions or designing systems:
 
 Don't guess about external system behavior — verify it.
 
+### Daily insight capture
+
+As you work through any task, watch for patterns, surprises, and friction points worth remembering. When you notice one, write it to the daily insights scratchpad immediately — do not wait for `/end_of_day`:
+
+```
+memory/daily/insights-<YYYY-MM-DD>.md
+```
+
+Write an entry when you encounter:
+- A gotcha that cost time and would cost time again (e.g., "this API silently ignores malformed requests")
+- A non-obvious pattern in this codebase (e.g., "all services use X pattern for Y")
+- A decision whose rationale is non-obvious and will be forgotten by tomorrow
+- A workflow step that felt wrong or slow (mark `Applies to: workflow` — this becomes a Tier 3 suggestion at end of day)
+- Any moment you think "I wish I'd known this earlier in the session"
+
+**Write without asking the user first.** This is your scratchpad. Keep entries short (2-4 sentences). Tag each with `Promote?: yes | maybe | no` based on how reusable it seems across future sessions.
+
+Do NOT use the insights scratchpad for task progress tracking — that belongs in `memory/sessions/<date>-<task>.md`.
+
+You can also invoke `/capture_insight` explicitly to log something the user calls out mid-task.
+
 ### Lessons learned
 
 The file `memory/lessons-learned.md` accumulates insights from completed tasks. It captures what surprised us, what went wrong, and what to do differently next time.
@@ -263,3 +285,5 @@ Keep questions specific and pointed. Don't ask "what do you want?" — ask "shou
 | /end_of_day | Sonnet | Session state capture and daily cache consolidation |
 | /init_workflow | Opus | Project bootstrap, /discover invocation, structure creation |
 | /start_of_day | Sonnet | Context restoration and git state reconciliation |
+| /weekly_review | Sonnet | Aggregates weekly progress, decisions, and outcomes |
+| /capture_insight | Sonnet | Quick insight logging to daily scratchpad during task work |

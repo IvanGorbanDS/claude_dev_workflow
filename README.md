@@ -1,260 +1,194 @@
 # Claude Dev Workflow
 
-A structured, multi-agent development workflow for [Claude Code](https://claude.com/claude-code). It turns Claude into a disciplined engineering partner that plans before coding, critiques its own plans, requires your approval at every stage, and learns from past mistakes.
-
-## Why
-
-Claude Code is powerful but unstructured. Without guardrails, it tends to jump straight to implementation, miss integration issues, and forget lessons from previous tasks. This workflow fixes that by enforcing a deliberate process:
-
-- **Plan before you code** — architecture and detailed planning with critic review
-- **Human gates at every transition** — you approve before the next phase starts
-- **File-based memory** — context survives across sessions, tasks, and days
-- **Accumulated learning** — lessons from past tasks feed into future planning
+A structured, multi-agent development workflow for [Claude Code](https://docs.anthropic.com/en/docs/claude-code). It turns Claude into a disciplined engineering partner with planning, architecture review, quality gates, and institutional memory.
 
 ## How It Works
 
+The workflow breaks complex development tasks into discrete phases, each handled by a specialized skill with built-in quality gates between them:
+
 ```
-/discover → /architect → GATE → /thorough_plan → GATE → /implement → GATE → /review → GATE → /end_of_task
+/discover  -->  /architect  -->  GATE  -->  /thorough_plan  -->  GATE  -->  /implement  -->  GATE  -->  /review  -->  GATE  -->  /end_of_task
 ```
 
-Each slash command is a Claude Code skill. Gates are explicit checkpoints where you review and approve. `/implement` and `/end_of_task` never run automatically — you must type them.
+**You stay in control.** `/implement` and `/end_of_task` never run automatically — you explicitly decide when to write code and when to ship.
 
-Not every task needs every stage. A bug fix might only need `/plan` → `/implement` → `/review` → `/end_of_task`.
+## Skills
+
+| Skill | Purpose | Model |
+|-------|---------|-------|
+| `/init_workflow` | Bootstrap the workflow in a new project | Opus |
+| `/discover` | Scan repos, map architecture and dependencies | Opus |
+| `/architect` | Design solution architecture for a feature | Opus |
+| `/thorough_plan` | Create detailed plan with critic review loop | Opus |
+| `/plan` | Generate implementation plan | Opus |
+| `/critic` | Review plan against actual codebase | Opus |
+| `/revise` | Address critic feedback, update plan | Opus |
+| `/implement` | Write code and tests from the plan | Sonnet |
+| `/review` | Verify implementation against the plan | Opus |
+| `/gate` | Quality checkpoint (runs between phases) | Sonnet |
+| `/end_of_task` | Commit, push branch, capture lessons | Sonnet |
+| `/rollback` | Safely undo implementation work | Sonnet |
+| `/start_of_day` | Restore context, check git state | Sonnet |
+| `/end_of_day` | Save session state, consolidate work | Sonnet |
+| `/weekly_review` | Aggregate week's progress into a review | Sonnet |
+| `/capture_insight` | Log a pattern or gotcha to the daily scratchpad | Sonnet |
 
 ## Installation
 
 ### Prerequisites
 
-- [Claude Code](https://docs.anthropic.com/en/docs/claude-code) installed (`claude` command available)
+- [Claude Code](https://docs.anthropic.com/en/docs/claude-code) CLI installed
 - Git
 - GitHub CLI (`gh`) — optional, for PR creation
 
-### Quick install
+### Step 1 — Clone this repo and run the installer (once per machine)
 
 ```bash
-# From inside your project directory
-bash /path/to/dev-workflow/install.sh
-
-# Or targeting a specific project
-bash /path/to/dev-workflow/install.sh /path/to/your/project
+git clone https://github.com/IvanGorbanDS/claude_dev_workflow.git
+bash claude_dev_workflow/dev-workflow/install.sh
 ```
 
-The installer copies workflow files, symlinks skills into `.claude/skills/`, sets up `CLAUDE.md`, and configures `.gitignore`.
+This is a one-time user-level setup that:
+1. Copies all 16 skills to `~/.claude/skills/` — available in every project
+2. Writes workflow rules to `~/.claude/CLAUDE.md` — auto-loaded by Claude Code everywhere
 
-### First run
+Re-running is safe — it updates skills and rules idempotently.
+
+### Step 2 — Scaffold each project with `/init_workflow`
 
 ```bash
 cd /path/to/your/project
 claude
-# Type: /init_workflow
 ```
 
-`/init_workflow` scans your repositories, maps the architecture, and populates the memory files.
+Then type:
+```
+/init_workflow
+```
 
-### Manual installation
+This handles all project-level setup:
+- Creates `memory/` at the project root with sessions, daily, weekly dirs and template files
+- Configures `.claude/settings.json` permissions
+- Runs `/discover` to scan your repos and populate memory
+- Generates `dev-workflow/QUICKSTART.md`
 
-If you prefer not to use the script, see [SETUP.md](dev-workflow/SETUP.md) for step-by-step instructions.
+## Scenarios
 
-## Skills Reference
+### New machine — first time setup
+```bash
+git clone https://github.com/IvanGorbanDS/claude_dev_workflow.git
+bash claude_dev_workflow/dev-workflow/install.sh
+```
+Then for each project: `cd project && claude` → `/init_workflow`
 
-The workflow includes 14 skills, each assigned to the optimal Claude model.
+### Update the workflow (new version available)
+```bash
+cd claude_dev_workflow
+git pull
+bash dev-workflow/install.sh
+```
+Skills and `~/.claude/CLAUDE.md` are updated. Project `memory/` is never touched.
 
-### Discovery & Design
+### New project
+```bash
+cd /path/to/new-project
+claude
+```
+Type `/init_workflow`. It creates `memory/`, configures permissions, runs `/discover`, and generates the quickstart.
 
-| Skill | Model | Purpose |
-|-------|-------|---------|
-| `/discover` | Opus | Scans all repos, maps architecture, dependencies, and recent git activity into memory files |
-| `/architect` | Opus | Deep architectural analysis — explores the codebase, researches best practices, produces a staged design |
+### Legacy project (old layout: memory inside dev-workflow/)
+```bash
+cd /path/to/legacy-project
+claude
+```
+Type `/init_workflow`. It detects the old `dev-workflow/memory/` layout, offers to move it to the project root, and cleans up old symlinks in `.claude/skills/`. Your accumulated knowledge is fully preserved.
 
-### Planning
+### New machine, existing projects already set up
+```bash
+bash claude_dev_workflow/dev-workflow/install.sh
+```
+That's all. Skills and rules are installed globally. Existing projects already have `memory/` at their root — no further action needed. Just `cd project && claude` and work.
 
-| Skill | Model | Purpose |
-|-------|-------|---------|
-| `/plan` | Opus | Creates a detailed, implementation-ready plan with tasks, integration analysis, and risk assessment |
-| `/critic` | Opus | Reviews the plan against actual code in a fresh session — finds gaps, risks, and integration issues |
-| `/revise` | Opus | Addresses critic feedback, updates the plan surgically without rewriting what's already good |
-| `/thorough_plan` | Opus | Orchestrates the full plan → critic → revise loop (up to 5 rounds) until convergence |
+### Team member joining
+Same as new machine. Clone the workflow repo, run `install.sh`. Each project's `memory/` is in the project repo (or not — depending on your `.gitignore`). `/init_workflow` can re-scaffold any project that's missing its memory structure.
 
-### Implementation & Review
+---
 
-| Skill | Model | Purpose |
-|-------|-------|---------|
-| `/implement` | Sonnet | Executes tasks from the plan — writes code and tests. **Requires explicit user command** |
-| `/review` | Opus | Post-implementation deep review — verifies code matches the plan, checks quality and safety |
-| `/gate` | Sonnet | Automated quality checkpoint between phases — runs checks, then stops for your approval |
+## Typical Flows
 
-### Task Lifecycle
+**Large feature:**
+```
+/discover -> /architect -> /thorough_plan -> /implement -> /review -> /end_of_task
+```
 
-| Skill | Model | Purpose |
-|-------|-------|---------|
-| `/end_of_task` | Sonnet | Finalizes accepted work — commits, pushes branch, archives artifacts, captures lessons. **Requires explicit user command** |
-| `/rollback` | Sonnet | Safely undoes implementation work — maps commits to plan tasks, shows impact before acting |
+**Bug fix:**
+```
+/plan -> /implement -> /review -> /end_of_task
+```
 
-### Session Management
+**Daily routine:**
+```
+/start_of_day    # morning — restores context
+/end_of_day      # evening — saves state, promotes captured insights
+```
 
-| Skill | Model | Purpose |
-|-------|-------|---------|
-| `/start_of_day` | Sonnet | Morning briefing — restores context from daily cache, checks git state, shows what needs attention |
-| `/end_of_day` | Sonnet | Saves session state, consolidates unfinished work into daily cache, prompts for lessons |
-| `/init_workflow` | Opus | One-time project bootstrap — creates directory structure, runs `/discover`, generates guides |
+## Key Concepts
 
-## Project Structure
+### Quality Gates
 
-After installation, your project looks like this:
+Gates run automatically between phases. They perform automated checks (tests, lint, no debug code, no secrets) and require your explicit approval before proceeding.
+
+### Session Independence
+
+Each skill is designed to work in its own chat session. Context windows fill up — this is expected. File-based artifacts (`current-plan.md`, `architecture.md`, session state) are the shared memory between sessions.
+
+### Three-Tier Memory
+
+The workflow accumulates knowledge at three levels:
+
+- **Tier 1 — Daily scratchpad** (`memory/daily/insights-<date>.md`): Claude writes here automatically during task work — patterns, gotchas, decision rationale. Use `/capture_insight` to log something explicitly.
+- **Tier 2 — Project long-term** (`memory/lessons-learned.md`): Promoted from Tier 1 at `/end_of_day` with your confirmation. Planning and review skills read this automatically to avoid repeating past mistakes.
+- **Tier 3 — Workflow-wide** (`memory/workflow-suggestions.md`): Insights about the workflow itself. Surfaced at `/end_of_day` for you to apply to the workflow repo manually.
+
+### Plan-Critic-Revise Loop
+
+`/thorough_plan` orchestrates a convergence loop: `/plan` creates the initial plan, `/critic` reviews it against the actual codebase, `/revise` addresses feedback. Repeats up to 5 rounds until the plan is solid.
+
+## Project Structure After Install
 
 ```
+~/.claude/                       <- user-level (shared across all projects)
+├── CLAUDE.md                    <- workflow rules (auto-loaded everywhere)
+└── skills/                      <- all 16 workflow skills
+
 your-project/
-├── .claude/skills/              ← symlinks to workflow skills
-├── CLAUDE.md                    ← references dev-workflow rules
+├── .claude/
+│   └── settings.json            <- project permissions
+├── CLAUDE.md                    <- project-specific rules
+├── memory/                      <- project memory (at project root)
+│   ├── sessions/                <- per-session task state
+│   ├── daily/                   <- daily rollups + insight scratchpads
+│   ├── weekly/                  <- weekly reviews
+│   ├── lessons-learned.md       <- accumulated project insights
+│   ├── workflow-suggestions.md  <- workflow improvement suggestions
+│   └── ...                      <- populated by /discover
 ├── dev-workflow/
-│   ├── CLAUDE.md                ← shared rules all skills follow
-│   ├── QUICKSTART.md            ← command reference card
-│   ├── SETUP.md                 ← installation guide
-│   ├── Workflow-User-Guide.html ← interactive walkthrough
-│   ├── install.sh               ← installer script
-│   ├── memory/
-│   │   ├── sessions/            ← per-session state files
-│   │   ├── daily/               ← daily rollups from /end_of_day
-│   │   ├── repos-inventory.md   ← populated by /discover
-│   │   ├── architecture-overview.md
-│   │   ├── dependencies-map.md
-│   │   ├── git-log.md           ← recent commits with rationale
-│   │   ├── lessons-learned.md   ← accumulated insights
-│   │   └── workflow-rules.md    ← workflow memory for Claude
-│   └── skills/
-│       └── <14 skill directories, each with SKILL.md>
-├── service-a/                   ← your repos (multi-repo layout)
+│   ├── QUICKSTART.md            <- command reference
+│   ├── SETUP.md                 <- detailed setup guide
+│   ├── Workflow-User-Guide.html <- interactive guide
+│   └── install.sh               <- the installer
+├── service-a/                   <- your repos
 ├── service-b/
 └── frontend/
 ```
 
-## Feature → Task Hierarchy
-
-Work is organized hierarchically. Large work items are **features** containing multiple **tasks**:
-
-```
-your-project/
-├── auth-refactor/                   ← feature (in progress)
-│   ├── architecture.md              ← feature-level architecture
-│   ├── add-jwt-validation/          ← active task
-│   │   ├── current-plan.md
-│   │   ├── critic-response-1.md
-│   │   └── review-1.md
-│   └── implemented/                 ← completed tasks
-│       └── remove-legacy-sessions/
-├── implemented/                     ← completed features & standalone tasks
-│   └── fix-login-redirect/
-└── dev-workflow/
-```
-
-- When a **task** is finalized via `/end_of_task`, its artifact folder moves to `<feature>/implemented/`
-- When all tasks in a **feature** are complete, the feature folder moves to `<project>/implemented/`
-- **Standalone tasks** (not part of a feature) move directly to `<project>/implemented/`
-
-This keeps the project root clean — only active work is visible.
-
-## Workflow Details
-
-### The Planning Loop
-
-`/thorough_plan` orchestrates a convergence loop:
-
-1. `/plan` creates `current-plan.md` with concrete, implementable tasks
-2. `/critic` reviews the plan in a **fresh session** (unbiased) against the actual codebase
-3. If issues found → `/revise` addresses them → back to step 2
-4. Loop repeats up to 5 rounds until the critic finds no critical or major issues
-5. The workflow **stops** — you must explicitly type `/implement`
-
-The critic always reads real code, not just the plan. This catches mismatches between what the plan assumes and what actually exists.
-
-### Gates
-
-Every phase transition goes through `/gate`:
-
-- Runs automated checks appropriate to the phase (lint, typecheck, tests, plan completeness)
-- Presents a clear pass/fail summary
-- **Always stops for your explicit approval** — never auto-proceeds
-
-### Session Independence
-
-Each skill is designed to run in its own chat session. When context windows fill up (expected for heavy work), start a new session. The file-based artifacts are the shared memory:
-
-- `current-plan.md`, `architecture.md`, `critic-response-N.md` — planning artifacts
-- `memory/sessions/<date>-<task>.md` — session state for handoff
-- `memory/daily/<date>.md` — daily rollups
-- `memory/lessons-learned.md` — institutional knowledge
-
-Every skill self-bootstraps by reading these files at startup. You never need to re-explain context.
-
-### Lessons Learned
-
-The workflow accumulates knowledge over time:
-
-- `/plan` and `/critic` read `lessons-learned.md` at the start of every session
-- `/end_of_task` and `/end_of_day` prompt you for new lessons
-- Auto-captured when: critic-revise loops run 3+ rounds, reviews request changes, or rollbacks happen
-- Entries are concise — what happened, the reusable takeaway, which skills should pay attention
-
-## Typical Flows
-
-### Large feature
-
-```
-/discover          → scan repos (if not already done)
-/architect         → design the architecture
-  /gate            → review architecture, approve
-/thorough_plan     → plan → critic → revise loop
-  /gate            → review plan, approve
-/implement         → write code and tests
-  /gate            → verify tests, lint, no secrets
-/review            → deep code review
-  /gate            → review verdict, approve
-/end_of_task       → commit, push, archive, capture lessons
-```
-
-### Bug fix
-
-```
-/plan              → quick plan (skip architect)
-/implement         → fix the bug
-/review            → verify the fix
-/end_of_task       → ship it
-```
-
-### Daily routine
-
-```
-/start_of_day      → morning briefing: what's in progress, what needs attention
-... work ...
-/end_of_day        → save state, consolidate unfinished work, capture lessons
-```
-
-## Key Principles
-
-1. **Explicit human control** — `/implement` and `/end_of_task` never auto-run. Gates require your approval at every transition.
-2. **Integration safety** — every planning and review skill analyzes integration points, failure modes, backward compatibility, and data consistency.
-3. **De-risking** — identify unknowns early, propose spikes/POCs, use feature flags, plan rollbacks.
-4. **File-based memory** — context survives across sessions and days. No reliance on chat history.
-5. **Learning from mistakes** — lessons-learned accumulates and feeds back into planning.
-6. **Clean git history** — conventional commits, thorough PR descriptions with risk assessment.
-
 ## Updating
 
-Re-run the installer to update skills and rules. Your `memory/` directory is always preserved:
+Re-run the installer to update skills and rules. Your `memory/` is never touched:
 
 ```bash
-bash /path/to/new/dev-workflow/install.sh /path/to/your/project
+bash /path/to/claude_dev_workflow/dev-workflow/install.sh
 ```
-
-## Troubleshooting
-
-| Problem | Solution |
-|---------|----------|
-| Skills not recognized | Check symlinks: `ls -la .claude/skills/` should point into `dev-workflow/skills/` |
-| Claude ignores workflow rules | Verify root `CLAUDE.md` references `dev-workflow/CLAUDE.md` |
-| `/discover` finds nothing | Repos must be git repositories (`.git/` folder) inside the project root |
-| Context filling up mid-task | Normal — start a new session. File artifacts carry state between sessions |
-| Gate blocks unexpectedly | Read the failure output. Fix the issue, then re-run `/gate` |
 
 ## License
 

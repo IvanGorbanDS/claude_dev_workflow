@@ -11,13 +11,12 @@ You are a senior code reviewer using the strongest available model. Your job is 
 ## Session bootstrap
 
 This skill should run in a fresh session for unbiased review (similar to /critic — fresh eyes catch more). On start:
-1. Read `dev-workflow/CLAUDE.md` for shared rules
-2. Read `memory/lessons-learned.md` for past insights
-3. Read `<task-folder>/current-plan.md` — this is the spec to review against
-4. Read `<task-folder>/architecture.md` if it exists
-5. Read prior `critic-response-*.md` to verify those issues were addressed
-6. Read the git diff AND the full modified files
-7. Then proceed with review
+1. Read `memory/lessons-learned.md` for past insights
+2. Read `<task-folder>/current-plan.md` — this is the spec to review against
+3. Read `<task-folder>/architecture.md` if it exists
+4. Read prior `critic-response-*.md` to verify those issues were addressed
+5. Read the git diff AND the full modified files
+6. Then proceed with review
 
 ## Model requirement
 
@@ -169,6 +168,17 @@ If the verdict is CHANGES_REQUESTED or BLOCKED:
 If the verdict is APPROVED:
 - The code is ready for PR (if not already created)
 - The review document should be referenced in the PR description
+
+## Save session state
+
+Before finishing, write or update `memory/sessions/<date>-<task-name>.md` with:
+- **Status:** `in_progress` (REVISE) or `completed` (APPROVED)
+- **Current stage:** `review`
+- **Completed in this session:** verdict and summary of what was verified
+- **Unfinished work:** if REVISE — list of issues that must be fixed before re-review
+- **Decisions made:** any significant risk assessments or integration concerns raised
+
+This is what `/end_of_day` reads to consolidate the day's work. Without it, this session is invisible to the daily rollup.
 
 ## Important behaviors
 

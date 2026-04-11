@@ -75,7 +75,7 @@ Use subagents to scan repos in parallel when possible.
 
 ## Output
 
-Save all findings to `<project-folder>/dev-workflow/memory/`:
+Save all findings to `<project-folder>/memory/`:
 
 ### `repos-inventory.md`
 

@@ -15,12 +15,11 @@ This skill MUST be explicitly invoked by the user typing `/implement`. No other 
 ## Session bootstrap
 
 This skill typically runs in a fresh session (clean context is a feature, not a bug — implementation doesn't need planning back-and-forth). On start:
-1. Read `dev-workflow/CLAUDE.md` for shared rules
-2. Read `memory/lessons-learned.md` for relevant insights
-3. Read `memory/sessions/` for active session state (which tasks are done, where to resume)
-4. Read `<task-folder>/current-plan.md` completely — this is your specification
-5. Read the actual source code you'll modify — understand existing patterns before changing anything
-6. Then proceed with implementation
+1. Read `memory/lessons-learned.md` for relevant insights
+2. Read `memory/sessions/` for active session state (which tasks are done, where to resume)
+3. Read `<task-folder>/current-plan.md` completely — this is your specification
+4. Read the actual source code you'll modify — understand existing patterns before changing anything
+5. Then proceed with implementation
 
 ## Model
 
@@ -30,11 +29,11 @@ This skill uses Sonnet for fast, high-quality implementation. The architectural 
 
 1. **Check the gate passed.** Verify that a gate summary exists for the thorough_plan→implement transition. If not, run `/gate` first.
 
-3. **Read the plan.** Find and read `current-plan.md` in the task subfolder. Read it completely. Understand every task, its dependencies, acceptance criteria, and testing requirements.
+2. **Read the plan.** Find and read `current-plan.md` in the task subfolder. Read it completely. Understand every task, its dependencies, acceptance criteria, and testing requirements.
 
-4. **Read the relevant code.** Before modifying any file, read it. Understand the existing patterns, style, naming conventions, and architecture. Your changes must feel native to the codebase.
+3. **Read the relevant code.** Before modifying any file, read it. Understand the existing patterns, style, naming conventions, and architecture. Your changes must feel native to the codebase.
 
-5. **Confirm the task.** Ask the user which task(s) from the plan they want you to implement. Don't implement everything at once unless asked — work through the plan's implementation order.
+4. **Confirm the task.** Ask the user which task(s) from the plan they want you to implement. Don't implement everything at once unless asked — work through the plan's implementation order.
 
 ## Implementation rules
 
@@ -150,6 +149,17 @@ After completing each task, update `current-plan.md` by marking the task as done
 - [x] Task 3: Implement token refresh ✅ completed
   - Deviation: Used middleware pattern instead of interceptor (see commit abc123)
 ```
+
+## Save session state
+
+After each task (or at natural stopping points), write or update `memory/sessions/<date>-<task-name>.md` with:
+- **Status:** `in_progress` (or `completed` if all plan tasks are done)
+- **Current stage:** `implement` — note which task you're on (e.g. `implement task 4 of 7`)
+- **Completed in this session:** list of tasks finished with commit hashes
+- **Unfinished work:** remaining tasks with exact file/function to resume at
+- **Decisions made:** any deviations from the plan and why
+
+This is what `/end_of_day` reads to consolidate the day's work. Without it, this session is invisible to the daily rollup.
 
 ## Important behaviors
 

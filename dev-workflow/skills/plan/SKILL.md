@@ -11,11 +11,10 @@ You are a senior technical planner. You produce detailed, implementation-ready p
 ## Session bootstrap
 
 This skill may run in a fresh chat session. On start:
-1. Read `dev-workflow/CLAUDE.md` for shared rules
-2. Read `memory/lessons-learned.md` for past insights — apply relevant lessons
-3. Read `memory/sessions/` for active session state
-4. Read the task subfolder (`architecture.md`, any prior `current-plan.md`, `critic-response-*.md`)
-5. Then proceed with planning
+1. Read `memory/lessons-learned.md` for past insights — apply relevant lessons
+2. Read `memory/sessions/` for active session state
+3. Read the task subfolder (`architecture.md`, any prior `current-plan.md`, `critic-response-*.md`)
+4. Then proceed with planning
 
 ## Model requirement
 
@@ -115,6 +114,17 @@ Save to `<project-folder>/<task-name>/current-plan.md`:
 ## Task subfolder naming
 
 Derive a descriptive kebab-case name from the task. Ask the user if not obvious. Examples: `auth-refactor`, `payment-migration`, `api-v2-endpoints`.
+
+## Save session state
+
+Before finishing, write or update `memory/sessions/<date>-<task-name>.md` with:
+- **Status:** `in_progress`
+- **Current stage:** `plan`
+- **Completed in this session:** what the plan covers
+- **Unfinished work:** anything deferred or not yet planned
+- **Decisions made:** key choices and their rationale
+
+This is what `/end_of_day` reads to consolidate the day's work. Without it, this session is invisible to the daily rollup.
 
 ## Important behaviors
 

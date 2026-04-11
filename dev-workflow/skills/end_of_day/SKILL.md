@@ -1,12 +1,12 @@
 ---
 name: end_of_day
-description: "Saves the current session state and consolidates unfinished work into a daily cache for next-day resumption. Use this skill for: /end_of_day, 'wrapping up', 'done for the day', 'save my progress', 'end of day', 'EOD'. Captures what was worked on, what's unfinished, blockers, decisions made, and recent git activity. The daily cache feeds into /start_of_day for seamless resumption."
+description: "Consolidates all of today's work across all sessions into a daily cache for next-day resumption. Works in any session — fresh or active. Use this skill for: /end_of_day, 'wrapping up', 'done for the day', 'save my progress', 'end of day', 'EOD'. Captures what was worked on, what's unfinished, blockers, decisions made, and recent git activity. The daily cache feeds into /start_of_day for seamless resumption."
 model: sonnet
 ---
 
 # End of Day
 
-You wrap up the current session and consolidate unfinished work into a daily cache that `/start_of_day` can restore tomorrow.
+You consolidate all of today's work into a daily cache that `/start_of_day` can restore tomorrow. This skill works in any session — you can run it in a fresh session at end of day, or from inside an active working session. Everything except Step 1 reads from disk, so no prior context is needed.
 
 ## How sessions and daily caches work
 
@@ -29,9 +29,11 @@ Multiple sessions can run in a day (parallel tasks, or revisiting a task). Each 
 
 ## Process
 
-### Step 1: Save current session state
+### Step 1: Save current session state (skip if no active task)
 
-Create or update a session file at:
+**If this session has no active task** (e.g. you opened a fresh session just to run `/end_of_day`), skip this step entirely and proceed to Step 2. The existing session files on disk are the source of truth.
+
+**If there is active work in this session**, create or update a session file at:
 ```
 memory/sessions/<date>-<task-name>.md
 ```
@@ -150,22 +152,63 @@ Write the daily cache to `memory/daily/<date>.md`:
 <Based on what's unfinished, suggest what to tackle first>
 ```
 
-### Step 4: Prompt for lessons learned
+### Step 3b: Review and promote daily insights
 
-Before wrapping up, ask the user:
+Check if `memory/daily/insights-<today>.md` exists. If it does:
 
-> "Anything that surprised you today, or that should work differently next time?"
+**Pass 1 — Filter:**
+- Skip entries tagged `Promote?: no`
+- Collect entries tagged `yes` (high-confidence) and `maybe` (review needed)
 
-If they share something, append it to `memory/lessons-learned.md`:
+**Pass 2 — Deduplicate:**
+- Read `memory/lessons-learned.md`
+- If a collected entry is substantially similar to an existing lesson, drop it or flag it as a duplicate
+
+**Pass 3 — Tier 3 check:**
+- Any entry with `Applies to: workflow` or type `workflow-friction` is a Tier 3 candidate
+- Append those to `memory/workflow-suggestions.md` in this format:
+  ```markdown
+  ## <date> — <source-task>
+  **Suggestion:** <what should change in the workflow>
+  **Why:** <the observation from the insight entry>
+  **Affects:** <relevant SKILL.md or CLAUDE.md section>
+  **Status:** surfaced
+  ```
+- Tell the user: "I've added N workflow improvement suggestion(s) to `memory/workflow-suggestions.md`."
+
+**Promotion confirmation:**
+If there are entries to promote (after filtering and dedup), present a compact list:
+
+```
+I captured N insights today worth keeping. Confirm which to add to lessons-learned:
+
+1. [yes] <insight summary, 1 line>
+2. [maybe] <insight summary, 1 line>
+3. [maybe] <insight summary, 1 line>
+
+Reply with the numbers to keep (e.g. "1 3"), "all", or "none".
+```
+
+Wait for the user's response, then append confirmed entries to `memory/lessons-learned.md`:
 
 ```markdown
 ## <date> — <task-name>
-**What happened:** <what the user described>
+**What happened:** <the insight>
 **Lesson:** <the reusable takeaway>
 **Applies to:** <relevant skills>
 ```
 
-If they say "nothing" or skip, that's fine — don't force it.
+If the insights file doesn't exist or has no promotable entries, skip this step silently.
+
+### Step 4: Prompt for lessons learned
+
+Ask the user:
+
+> "Anything else that surprised you today, or that should work differently next time?"
+
+(If insights were already promoted in Step 3b, this catches anything Claude missed.)
+
+If they share something, append it to `memory/lessons-learned.md` in the same format. If they say "nothing" or skip, that's fine.
 
 Also: if any tasks were rolled back today, or if the critic-revise loop ran more than 3 rounds, auto-add a lesson capturing what made it difficult.
 

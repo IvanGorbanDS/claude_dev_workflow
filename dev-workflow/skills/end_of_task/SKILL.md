@@ -1,12 +1,14 @@
 ---
 name: end_of_task
-description: "Finalizes a completed task: ensures all changes are committed, pushes branch to remote, prompts for lessons learned, and marks the task as complete. Does NOT create a PR — that's a separate explicit action. Use this skill for: /end_of_task, 'finalize this', 'we're done', 'ship it', 'task complete', 'wrap up this task', 'accept and push'. This is the explicit user acceptance of completed, reviewed work — the last step before moving on."
+description: "Finalizes a completed task: ensures all changes are committed, pushes branch to remote, prompts for lessons learned, and marks the task as complete. Requires /review to have been run first. Does NOT create a PR — that's a separate explicit action. Use this skill for: /end_of_task, 'finalize this', 'we're done', 'ship it', 'task complete', 'wrap up this task'. This is the explicit user acceptance of completed, reviewed work — the last step before moving on."
 model: sonnet
 ---
 
 # End of Task
 
 You finalize a completed task. This is the user's explicit acceptance that the work is done — reviewed, approved, and ready to ship. You handle the git ceremony (commit, push to branch), capture lessons, and close out the task cleanly. **You do NOT create a PR** — that's a separate, explicit action the user takes when they're ready.
+
+**CRITICAL: You must verify that `/review` was run before proceeding.** If no `review-*.md` file exists in the task folder, STOP and tell the user to run `/review` first.
 
 ## When to use
 
@@ -23,7 +25,7 @@ This skill is never auto-invoked. The user must consciously accept the work.
 
 Before touching git, verify everything is clean:
 
-1. **Review status** — read the latest `<task-folder>/review-N.md`. Confirm verdict is APPROVED. If not, stop and tell the user.
+1. **Review status** — look for `<task-folder>/review-*.md`. If no review file exists, STOP and tell the user: "No review found — please run `/review` first." If a review exists, read the latest one and confirm verdict is APPROVED. If not approved, stop and tell the user.
 2. **Tests pass** — run the test suite one final time. If anything fails, stop.
 3. **No uncommitted changes** — run `git status`. If there are unstaged/uncommitted changes:
    - Show them to the user
@@ -88,26 +90,44 @@ Also auto-capture lessons if:
 - The review requested changes (what did /implement miss?)
 - A rollback happened during this task (what went wrong?)
 
-### Step 5: Archive task artifacts
-
-Move the task's artifact folder to `implemented/`:
-
-- **Task within a feature:** move `<feature-folder>/<task-name>/` → `<feature-folder>/implemented/<task-name>/`
-- **Standalone task:** move `<project-folder>/<task-name>/` → `<project-folder>/implemented/<task-name>/`
-
-Create the `implemented/` directory if it doesn't exist yet.
-
-After moving, check if this was the last active task in a feature (no remaining task subfolders outside `implemented/`). If so, ask the user:
-> "All tasks in `<feature-name>` are complete. Move the entire feature to `implemented/`?"
-
-If yes, move `<project-folder>/<feature-name>/` → `<project-folder>/implemented/<feature-name>/`.
-
-### Step 6: Update session state
+### Step 5: Update session state
 
 Update `memory/sessions/<date>-<task-name>.md`:
 - Set status to `completed`
 - Record the final branch name and commit hash
 - Note any lessons captured
+
+### Step 6: Archive the task folder
+
+Move the completed task folder into a `finalized/` directory to keep the project root clean.
+
+**Determine the scope:**
+
+1. **Sub-task within a global task/feature** — if the task folder lives inside a parent feature folder (e.g., `payment-v2-migration/auth-retry/`), move it into `<parent-feature>/finalized/`:
+   ```
+   payment-v2-migration/auth-retry/  →  payment-v2-migration/finalized/auth-retry/
+   ```
+
+2. **Global task/feature completed entirely** — if this is the top-level task folder and all work is done, move the entire folder into `finalized/` at the project root:
+   ```
+   payment-v2-migration/  →  finalized/payment-v2-migration/
+   ```
+
+**How to decide:** Ask the user if it's not obvious:
+> "Is the parent feature `<feature-name>` fully done, or just this sub-task?"
+
+If just a sub-task, archive into the parent's `finalized/`. If the whole feature is done, archive the entire feature folder to the project root `finalized/`.
+
+**Steps:**
+```bash
+# Create finalized/ if it doesn't exist
+mkdir -p <target-finalized-dir>
+
+# Move the task folder
+mv <task-folder> <target-finalized-dir>/
+```
+
+**Note:** Only move planning/review artifacts (the task subfolder with `current-plan.md`, `architecture.md`, `review-*.md`, etc.). Never move source code repos — those stay where they are.
 
 ### Step 7: Report
 
@@ -120,8 +140,8 @@ Branch: feat/refund-flow → pushed to origin
 Commits: <N> commits
 Tests: all passing
 Review: APPROVED
+Archived: <task-folder> → <finalized-path>
 
-Archived: <task-name>/ → implemented/<task-name>/
 Lessons captured: <yes/no>
 Session marked as completed.
 

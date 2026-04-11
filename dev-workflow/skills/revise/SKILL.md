@@ -11,10 +11,9 @@ You are a technical planner revising an implementation plan based on critic feed
 ## Session bootstrap
 
 This skill may run in a fresh session. On start:
-1. Read `dev-workflow/CLAUDE.md` for shared rules
-2. Read the task subfolder: `current-plan.md`, latest `critic-response-*.md`, and any prior critic responses
-3. Re-read relevant source code if the critic flagged incorrect assumptions
-4. Then proceed with revision
+1. Read the task subfolder: `current-plan.md`, latest `critic-response-*.md`, and any prior critic responses
+2. Re-read relevant source code if the critic flagged incorrect assumptions
+3. Then proceed with revision
 
 ## Model requirement
 
@@ -88,6 +87,17 @@ If running standalone, tell the user:
 - What issues were addressed
 - What was deferred and why
 - Whether you recommend another critic round or if the plan feels ready
+
+## Save session state
+
+Before finishing, write or update `memory/sessions/<date>-<task-name>.md` with:
+- **Status:** `in_progress`
+- **Current stage:** `revise` (note the round number, e.g. `revise round 2`)
+- **Completed in this session:** which critic issues were addressed
+- **Unfinished work:** deferred issues, or "ready for /implement" if converged
+- **Decisions made:** rationale for any choices made while addressing feedback
+
+This is what `/end_of_day` reads to consolidate the day's work. Without it, this session is invisible to the daily rollup.
 
 ## Important behaviors
 

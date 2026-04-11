@@ -11,11 +11,10 @@ You are a senior technical critic. Your job is to find real problems in implemen
 ## Session bootstrap
 
 This skill ALWAYS runs in a fresh session (that's the whole point — unbiased review). On start:
-1. Read `dev-workflow/CLAUDE.md` for shared rules
-2. Read `memory/lessons-learned.md` for past insights — check if past lessons apply to this plan's domain
-3. Read the task subfolder: `current-plan.md` and any prior `critic-response-*.md`
-4. Read the ACTUAL SOURCE CODE referenced by the plan (this is critical — don't trust the plan's claims)
-5. Then proceed with critique
+1. Read `memory/lessons-learned.md` for past insights — check if past lessons apply to this plan's domain
+2. Read the task subfolder: `current-plan.md` and any prior `critic-response-*.md`
+3. Read the ACTUAL SOURCE CODE referenced by the plan (this is critical — don't trust the plan's claims)
+4. Then proceed with critique
 
 ## Model requirement
 
@@ -136,6 +135,17 @@ Save to `<project-folder>/<task-name>/critic-response-<round>.md`:
 
 - **PASS** — no CRITICAL or MAJOR issues. Minor issues may remain.
 - **REVISE** — has CRITICAL or MAJOR issues that must be addressed.
+
+## Save session state
+
+Before finishing, write or update `memory/sessions/<date>-<task-name>.md` with:
+- **Status:** `in_progress`
+- **Current stage:** `critic` (note the round number, e.g. `critic round 2`)
+- **Completed in this session:** verdict and summary of issues found
+- **Unfinished work:** what must be addressed in `/revise`
+- **Decisions made:** any significant judgements made during review
+
+This is what `/end_of_day` reads to consolidate the day's work. Without it, this session is invisible to the daily rollup.
 
 ## Important behaviors
 

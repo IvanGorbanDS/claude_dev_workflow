@@ -15,11 +15,10 @@ This skill requires the strongest available model (currently Claude Opus). If yo
 ## Session bootstrap
 
 This skill may run in a fresh chat session with no prior context. On start:
-1. Read `dev-workflow/CLAUDE.md` for shared rules
-2. Read `memory/lessons-learned.md` for past insights
-3. Read `memory/sessions/` for any active session state for this task
-4. Read the task subfolder if it exists (prior `architecture.md`, `current-plan.md`)
-5. Then proceed with the work below
+1. Read `memory/lessons-learned.md` for past insights
+2. Read `memory/sessions/` for any active session state for this task
+3. Read the task subfolder if it exists (prior `architecture.md`, `current-plan.md`)
+4. Then proceed with the work below
 
 ## How you work
 
@@ -27,7 +26,7 @@ You are methodical and thorough. You never guess when you can look. You read cod
 
 ### Phase 1: Understand the landscape
 
-Before designing anything, build a complete mental model. **Start by checking if `/discover` has already been run** — look for these files in `dev-workflow/memory/`:
+Before designing anything, build a complete mental model. **Start by checking if `/discover` has already been run** — look for these files in `memory/`:
 - `repos-inventory.md` — per-repo tech stack, structure, dependencies
 - `architecture-overview.md` — service map, communication patterns, request flows
 - `dependencies-map.md` — cross-service dependencies, shared resources, deployment order
@@ -129,6 +128,17 @@ At the end of the document, include a **Stage Summary Table**:
 ```
 
 And a section called **Next Steps** that explicitly says which stages are ready for `/thorough_plan` and in what order.
+
+## Save session state
+
+Before finishing, write or update `memory/sessions/<date>-<task-name>.md` with:
+- **Status:** `in_progress`
+- **Current stage:** `architect`
+- **Completed in this session:** what was explored and what `architecture.md` covers
+- **Unfinished work:** any open questions, unresolved risks, or areas needing spikes
+- **Decisions made:** key architectural choices and their rationale
+
+This is what `/end_of_day` reads to consolidate the day's work. Without it, this session is invisible to the daily rollup.
 
 ## Important behaviors
 

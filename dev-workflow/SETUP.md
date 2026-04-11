@@ -1,38 +1,38 @@
 # Development Workflow — Setup Guide
 
-## Quick Install (one command)
+## Install (two steps total)
+
+### Step 1 — User-level setup (once per machine)
 
 ```bash
-# From the dev-workflow/ directory, targeting your project:
-bash install.sh /path/to/your/project
-
-# Or from inside your project, pointing to the source:
 bash /path/to/dev-workflow/install.sh
 ```
 
-The script handles everything: copies files, creates symlinks in `.claude/skills/`, sets up CLAUDE.md, generates the quickstart guide, and configures `.gitignore`.
+Installs skills to `~/.claude/skills/` and writes workflow rules to `~/.claude/CLAUDE.md`. Safe to re-run — updates everything idempotently.
 
-After the script finishes:
+### Step 2 — Project setup (once per project, no bash needed)
+
 ```bash
 cd /path/to/your/project
 claude
 # then type: /init_workflow
 ```
 
-That's it. `/init_workflow` scans your repos and populates the memory files.
+`/init_workflow` handles all project scaffolding: creates `memory/`, configures `.claude/settings.json` permissions, runs `/discover`, and generates `QUICKSTART.md`.
 
 ---
 
 ## What the script does
 
-1. **Checks prerequisites** — verifies `claude` and `git` are installed
-2. **Copies workflow files** — all skills, CLAUDE.md, HTML guide into `<project>/dev-workflow/`
-3. **Preserves memory** — if re-installing, existing `memory/` is never overwritten
-4. **Creates Claude Code symlinks** — links each skill into `<project>/.claude/skills/` so Claude recognizes the commands
-5. **Sets up CLAUDE.md** — adds a reference to the workflow rules in your root CLAUDE.md
-6. **Generates QUICKSTART.md** — command reference card
-7. **Configures permissions** — creates `.claude/settings.json` with auto-approved permissions for reading, git, and search operations
-8. **Configures .gitignore** — excludes session/daily files (they're local-only)
+**`install.sh` — user-level, run once per machine:**
+1. **Copies skills** — all 16 skills into `~/.claude/skills/` (globally available in every project)
+2. **Writes workflow rules** — appends shared rules to `~/.claude/CLAUDE.md` (auto-loaded by Claude Code everywhere)
+
+**`/init_workflow` — run once per project inside Claude:**
+3. **Configures permissions** — creates `.claude/settings.json` with allow/deny lists
+4. **Creates memory structure** — `memory/` at project root with `sessions/`, `daily/`, `weekly/` and template files
+5. **Runs /discover** — scans repos and populates memory
+6. **Generates QUICKSTART.md** — command reference card in `dev-workflow/`
 
 ## Prerequisites
 
@@ -42,26 +42,29 @@ That's it. `/init_workflow` scans your repos and populates the memory files.
 
 ## Manual Installation (if you prefer)
 
-If you don't want to use the script:
+The script is the recommended path — it handles idempotent updates and edge cases. For reference, here's what it does manually:
 
-### 1. Copy files
+### 1. Install skills (user-level, once)
 ```bash
-cp -r /path/to/dev-workflow ~/projects/my-app/dev-workflow
-```
-
-### 2. Symlink skills
-```bash
-cd ~/projects/my-app
-mkdir -p .claude/skills
-for skill in dev-workflow/skills/*/; do
+mkdir -p ~/.claude/skills
+for skill in /path/to/dev-workflow/skills/*/; do
   name=$(basename "$skill")
-  ln -s "../../dev-workflow/skills/$name" ".claude/skills/$name"
+  cp -r "$skill" ~/.claude/skills/$name
 done
 ```
 
-### 3. Set up CLAUDE.md
+### 2. Write workflow rules (user-level, once)
 ```bash
-echo -e "\n## Development Workflow\nSee dev-workflow/CLAUDE.md for workflow rules and commands." >> CLAUDE.md
+echo "" >> ~/.claude/CLAUDE.md
+echo "# === DEV WORKFLOW START ===" >> ~/.claude/CLAUDE.md
+cat /path/to/dev-workflow/CLAUDE.md >> ~/.claude/CLAUDE.md
+echo "# === DEV WORKFLOW END ===" >> ~/.claude/CLAUDE.md
+```
+
+### 3. Create project memory structure
+```bash
+cd ~/projects/my-app
+mkdir -p memory/sessions memory/daily memory/weekly
 ```
 
 ### 4. Initialize
@@ -74,36 +77,43 @@ claude
 
 After installation, your project looks like:
 ```
+~/.claude/
+├── CLAUDE.md                ← workflow rules (auto-loaded everywhere)
+└── skills/                  ← all 16 workflow skills (global)
+    ├── discover/
+    ├── architect/
+    ├── plan/
+    ├── critic/
+    ├── revise/
+    ├── thorough_plan/
+    ├── gate/
+    ├── implement/
+    ├── review/
+    ├── rollback/
+    ├── end_of_task/
+    ├── end_of_day/
+    ├── start_of_day/
+    ├── init_workflow/
+    ├── weekly_review/
+    └── capture_insight/
+
 ~/projects/my-app/
-├── .claude/skills/          ← symlinks to workflow skills
-├── CLAUDE.md                ← references dev-workflow rules
+├── .claude/
+│   └── settings.json        ← project permissions
+├── CLAUDE.md                ← project-specific rules
+├── memory/                  ← project memory (project root)
+│   ├── sessions/
+│   ├── daily/
+│   ├── weekly/
+│   ├── lessons-learned.md
+│   ├── workflow-rules.md
+│   ├── workflow-suggestions.md
+│   └── ... (populated by /discover)
 ├── dev-workflow/
-│   ├── CLAUDE.md            ← shared workflow rules
 │   ├── QUICKSTART.md        ← command reference
 │   ├── SETUP.md             ← this file
 │   ├── Workflow-User-Guide.html
-│   ├── install.sh           ← the installer
-│   ├── memory/
-│   │   ├── sessions/
-│   │   ├── daily/
-│   │   ├── lessons-learned.md
-│   │   ├── workflow-rules.md
-│   │   └── ... (populated by /discover)
-│   └── skills/
-│       ├── discover/
-│       ├── architect/
-│       ├── plan/
-│       ├── critic/
-│       ├── revise/
-│       ├── thorough_plan/
-│       ├── gate/
-│       ├── implement/
-│       ├── review/
-│       ├── rollback/
-│       ├── end_of_task/
-│       ├── end_of_day/
-│       ├── start_of_day/
-│       └── init_workflow/
+│   └── install.sh           ← the installer
 ├── service-a/               ← your repos
 ├── service-b/
 └── frontend/
@@ -124,18 +134,33 @@ cd ~/projects/my-app && claude
 | Ship it | `/end_of_task` |
 | Wrap up for the day | `/end_of_day` |
 
-## Updating
+## Updating the workflow
 
 ```bash
-# Re-run the installer — it preserves your memory/
-bash /path/to/new/dev-workflow/install.sh /path/to/your/project
+cd /path/to/claude_dev_workflow
+git pull
+bash dev-workflow/install.sh
 ```
+
+Skills and `~/.claude/CLAUDE.md` are updated. Project `memory/` is never touched.
+
+## Migrating a legacy project
+
+If your project has the old layout (`dev-workflow/memory/` instead of `memory/` at root):
+
+```bash
+cd /path/to/legacy-project
+claude
+# type: /init_workflow
+```
+
+`/init_workflow` detects the legacy layout and offers to migrate automatically. It moves `dev-workflow/memory/` → `memory/`, cleans up old `.claude/skills/` symlinks, and optionally removes the now-unused `dev-workflow/skills/` directory. Your accumulated knowledge is fully preserved.
 
 ## Troubleshooting
 
-**Skills not recognized:** check that symlinks exist — `ls -la .claude/skills/` should show links pointing into `dev-workflow/skills/`.
+**Skills not recognized:** check that skills are in `~/.claude/skills/` — `ls ~/.claude/skills/` should list all 16 skills. Re-run `bash install.sh` to reinstall them.
 
-**Claude doesn't follow workflow rules:** make sure `CLAUDE.md` at the project root references `dev-workflow/CLAUDE.md`. The installer does this automatically.
+**Claude doesn't follow workflow rules:** check that `~/.claude/CLAUDE.md` contains the dev-workflow section (look for `# === DEV WORKFLOW START ===`). Re-run `bash install.sh` to rewrite it.
 
 **/discover finds nothing:** your repos need to be git repositories (each has a `.git/` folder) inside the project root.
 

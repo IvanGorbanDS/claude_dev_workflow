@@ -10,13 +10,24 @@ You restore context from the previous session(s) so the user can seamlessly resu
 
 ## Process
 
-### Step 1: Find the latest daily cache
+### Step 1: Check for un-promoted insights
+
+Look for `memory/daily/insights-<yesterday>.md` (yesterday's date). If it exists:
+- Count entries tagged `Promote?: yes` or `Promote?: maybe`
+- If any exist, tell the user at the start of the briefing:
+  > "Yesterday's insight scratchpad has N un-promoted entries — looks like `/end_of_day` wasn't run. Want to review them now or skip?"
+  - If they want to review: run the promotion flow from `/end_of_day` Step 3b inline before continuing
+  - If they skip: proceed normally (entries stay in the file for next time)
+
+If the file doesn't exist or has no promotable entries, skip this step silently.
+
+### Step 2: Find the latest daily cache
 
 Look in `memory/daily/` for the most recent `.md` file. This is what `/end_of_day` saved. If there's no daily cache, check `memory/sessions/` for any session files and work from those directly.
 
 If neither exists, tell the user there's no saved state and suggest running `/discover` to set up fresh context.
 
-### Step 2: Read context
+### Step 3: Read context
 
 Read these files in parallel:
 
@@ -31,7 +42,7 @@ Read these files in parallel:
    ```
    Check for uncommitted changes, stale branches, open PRs.
 
-### Step 3: Reconcile
+### Step 4: Reconcile
 
 Compare what the daily cache says should be happening with what git actually shows. Look for:
 
@@ -40,7 +51,7 @@ Compare what the daily cache says should be happening with what git actually sho
 - **Branch state** — are you on the right branch for the unfinished task?
 - **Stale PRs** — any open PRs that might have reviews or CI results overnight?
 
-### Step 4: Present the briefing
+### Step 5: Present the briefing
 
 Output a clear, concise briefing:
 
@@ -71,7 +82,7 @@ Output a clear, concise briefing:
 <Based on urgency, dependencies, and momentum — what to tackle first and why>
 ```
 
-### Step 5: Offer to resume
+### Step 6: Offer to resume
 
 After presenting the briefing, ask the user what they want to work on:
 - Resume a specific unfinished task (invoke the appropriate skill — `/implement`, `/review`, etc.)

@@ -91,12 +91,12 @@
 
 <!-- ============ QUICK REFERENCE ============ -->
 <h1>Quick Reference</h1>
-<p>Your workflow has 13 commands in three groups: the development pipeline, safety controls, and session management.</p>
+<p>Your workflow has 16 commands in four groups: the development pipeline, safety controls, session management, and knowledge capture.</p>
 
 <h2>The Pipeline</h2>
 <table>
   <tr><th>Command</th><th>What it does</th></tr>
-  <tr><td>/init_workflow</td><td>One-time project bootstrap. Creates directory structure, copies all skills, runs /discover, generates quickstart guide.</td></tr>
+  <tr><td>/init_workflow</td><td>One-time project bootstrap. Creates <code>memory/</code> structure, configures permissions, runs /discover, generates quickstart guide.</td></tr>
   <tr><td>/discover</td><td>Scans all repos, builds inventory, architecture map, and git log. Run once on setup.</td></tr>
   <tr><td>/architect</td><td>Deep exploration with Opus. Reads repos, docs, web. Produces <code>architecture.md</code> with decomposed stages.</td></tr>
   <tr><td>/thorough_plan</td><td>Orchestrates <code>/plan → /critic → /revise</code> loop (up to 5 rounds) until convergence.</td></tr>
@@ -118,8 +118,15 @@
 <h2>Session Management</h2>
 <table>
   <tr><th>Command</th><th>What it does</th></tr>
-  <tr><td>/start_of_day</td><td>Reads daily cache, checks git state, presents briefing with exactly where to resume.</td></tr>
-  <tr><td>/end_of_day</td><td>Saves session state, updates git log, consolidates unfinished work, prompts for lessons learned.</td></tr>
+  <tr><td>/start_of_day</td><td>Reads daily cache, checks git state, presents briefing with exactly where to resume. Flags un-promoted insights from yesterday if /end_of_day was skipped.</td></tr>
+  <tr><td>/end_of_day</td><td>Saves session state, updates git log, consolidates unfinished work, promotes captured insights to lessons-learned, prompts for anything else.</td></tr>
+  <tr><td>/weekly_review</td><td>Aggregates the week's progress, decisions, and outcomes into a structured review. Saves to <code>memory/weekly/</code>.</td></tr>
+</table>
+
+<h2>Knowledge Capture</h2>
+<table>
+  <tr><th>Command</th><th>What it does</th></tr>
+  <tr><td>/capture_insight</td><td>Logs a pattern, gotcha, or decision rationale to the daily scratchpad (<code>memory/daily/insights-&lt;date&gt;.md</code>) without interrupting your current task. Reviewed and promoted at /end_of_day.</td></tr>
 </table>
 
 <hr>
@@ -402,21 +409,25 @@ Suggested priority: finish the tests (tasks 5-8), then /review. Want to resume w
 <p>What gets created in your project folder:</p>
 
 <div class="tree">
+~/.claude/ <span class="comment">← user-level, shared across all projects</span><br>
+├── CLAUDE.md <span class="comment">← workflow rules, auto-loaded everywhere</span><br>
+└── skills/ <span class="comment">← all 16 workflow skills</span><br>
+<br>
 project-folder/<br>
+├── .claude/settings.json <span class="comment">← project permissions</span><br>
+├── memory/ <span class="comment">← project knowledge (at project root)</span><br>
+│   ├── repos-inventory.md <span class="comment">← from /discover</span><br>
+│   ├── architecture-overview.md <span class="comment">← from /discover</span><br>
+│   ├── dependencies-map.md <span class="comment">← from /discover</span><br>
+│   ├── git-log.md <span class="comment">← rolling commit log with rationale</span><br>
+│   ├── lessons-learned.md <span class="comment">← accumulated insights</span><br>
+│   ├── workflow-suggestions.md <span class="comment">← workflow improvement ideas</span><br>
+│   ├── sessions/ <span class="comment">← per-session state files</span><br>
+│   ├── daily/ <span class="comment">← daily rollups + insight scratchpads</span><br>
+│   └── weekly/ <span class="comment">← weekly reviews</span><br>
 ├── dev-workflow/<br>
-│   ├── CLAUDE.md <span class="comment">← shared rules for all skills</span><br>
-│   ├── memory/<br>
-│   │   ├── repos-inventory.md <span class="comment">← from /discover</span><br>
-│   │   ├── architecture-overview.md <span class="comment">← from /discover</span><br>
-│   │   ├── dependencies-map.md <span class="comment">← from /discover</span><br>
-│   │   ├── git-log.md <span class="comment">← rolling commit log with rationale</span><br>
-│   │   ├── lessons-learned.md <span class="comment">← accumulated insights</span><br>
-│   │   ├── sessions/ <span class="comment">← per-session state files</span><br>
-│   │   └── daily/ <span class="comment">← daily rollups from /end_of_day</span><br>
-│   └── skills/<br>
-│       ├── discover/ architect/ plan/ critic/ revise/<br>
-│       ├── thorough_plan/ gate/ implement/ review/<br>
-│       └── rollback/ start_of_day/ end_of_day/<br>
+│   ├── QUICKSTART.md <span class="comment">← command reference</span><br>
+│   └── Workflow-User-Guide.html<br>
 ├── refund-flow/ <span class="comment">← task subfolder</span><br>
 │   ├── architecture.md<br>
 │   ├── current-plan.md<br>
