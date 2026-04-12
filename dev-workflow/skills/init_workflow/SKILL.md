@@ -20,7 +20,19 @@ You set up the complete development workflow system in a project folder. This is
 
 ## Process
 
-### Step 1: Detect project root
+### Step 1: Ensure project is initialized with `/init`
+
+Check if the project has a `CLAUDE.md` file at its root. If it does NOT exist:
+
+1. **STOP** and tell the user:
+   > "This project hasn't been initialized with Claude Code yet. Please run `/init` first to create a `CLAUDE.md`, then re-run `/init_workflow`."
+2. Do not proceed with subsequent steps. The `/init` command sets up the project-level `CLAUDE.md` and `.claude/` directory that the workflow depends on.
+
+If `CLAUDE.md` already exists, skip this step — the project is already initialized. Proceed to Step 2.
+
+This ensures the standard Claude Code foundation is in place before layering on the dev-workflow setup.
+
+### Step 2: Detect project root
 
 Identify the project root. This is typically:
 - The current working directory
@@ -29,7 +41,7 @@ Identify the project root. This is typically:
 Confirm with the user if ambiguous:
 > "I'll set up the workflow in `<path>`. Is this the right project root?"
 
-### Step 2: Check for existing setup and detect legacy layout
+### Step 3: Check for existing setup and detect legacy layout
 
 **Legacy detection:** Check for `dev-workflow/memory/` — this is the old layout where memory was nested inside dev-workflow. If found:
 
@@ -66,7 +78,7 @@ Remove it? (yes/no)
 
 **Never overwrite memory/.** It contains accumulated knowledge.
 
-### Step 3: Configure Claude Code permissions
+### Step 4: Configure Claude Code permissions
 
 Create or update `.claude/settings.json` at the project root to allow workflow tool usage and deny destructive commands:
 
@@ -104,7 +116,7 @@ json.dump(settings, open(path, "w"), indent=2)
 
 Run this with `python3 -c "..."` or write the file directly if python3 is unavailable. Tell the user what was configured.
 
-### Step 4: Create the directory structure
+### Step 5: Create the directory structure
 
 Create the memory structure at the project root (not inside dev-workflow/):
 
@@ -174,7 +186,7 @@ For files that should start empty but exist as placeholders:
 - `memory/dependencies-map.md` — create empty, will be populated by /discover
 - `memory/git-log.md` — create empty, will be populated by /discover
 
-### Step 5: Run /discover
+### Step 6: Run /discover
 
 Automatically invoke `/discover` to scan all repositories in the project folder. This populates:
 - `memory/repos-inventory.md`
@@ -187,7 +199,7 @@ Tell the user:
 
 If /discover finds no repos (no git repositories in the project folder), that's fine — the memory files stay empty and will be populated when repos are added.
 
-### Step 6: Generate quickstart guide
+### Step 7: Generate quickstart guide
 
 The `Workflow-User-Guide.html` should already be part of the copied files. Confirm it's in place.
 
@@ -248,7 +260,7 @@ Additionally, generate a concise `QUICKSTART.md` in the `dev-workflow/` folder:
 Open `Workflow-User-Guide.html` in your browser for a full walkthrough with example conversations.
 ```
 
-### Step 7: Report
+### Step 8: Report
 
 Tell the user:
 

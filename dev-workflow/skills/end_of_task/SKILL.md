@@ -113,10 +113,16 @@ Move the completed task folder into a `finalized/` directory to keep the project
    payment-v2-migration/  →  finalized/payment-v2-migration/
    ```
 
-**How to decide:** Ask the user if it's not obvious:
-> "Is the parent feature `<feature-name>` fully done, or just this sub-task?"
+**How to detect automatically:**
 
-If just a sub-task, archive into the parent's `finalized/`. If the whole feature is done, archive the entire feature folder to the project root `finalized/`.
+1. **Resolve the task folder path** relative to the project root. For example, if the task folder is `cost-reduction/stage-1a-caching/`, the parent is `cost-reduction/`.
+2. **Check if the parent directory is a task folder** — look for planning artifacts (`current-plan.md`, `architecture.md`, `review-*.md`, `critic-response-*.md`) or other task subfolders in the parent. If the parent contains these, this is a sub-task within that parent feature.
+3. **Check for stage/phase naming patterns** — if the task folder name matches patterns like `stage-*`, `phase-*`, `part-*`, `step-*`, or `sprint-*`, AND the parent contains at least one other sibling matching a similar pattern, it is a sub-task. Both conditions are required to avoid false positives on unrelated folders.
+4. **If either check (2) or (3) matches**, archive as a sub-task: move to `<parent>/finalized/<subtask>/`. Do not ask.
+5. **If the task folder is directly under the project root** (no parent task folder detected), ask the user:
+   > "Is the feature `<task-name>` fully complete, or is there more work planned under this folder?"
+
+   If fully complete, move to `finalized/<task-name>/`. If more work remains, do not archive yet.
 
 **Steps:**
 ```bash
