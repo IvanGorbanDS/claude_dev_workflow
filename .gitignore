@@ -18,4 +18,5 @@ dev-workflow/memory/sessions/
 .env.local
 memory/
 .claude/
+finalized/
 
