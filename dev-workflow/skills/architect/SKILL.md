@@ -34,7 +34,7 @@ The goal of Phase 1 is to gather structured facts from the codebase WITHOUT doin
 - Only spawn scan agents for repos that are (a) changed since last scan, or (b) specifically relevant to the current task
 - For unchanged repos, the `/discover` output IS the scan output — no need to re-scan
 
-**If /discover output does not exist or is stale**, scan all repos.
+**If /discover output does not exist**, scan all repos. (Use `memory/repo-heads.md` to detect per-repo staleness — do not skip repos just because `/discover` was run at some point.)
 
 #### Spawning scan agents
 
