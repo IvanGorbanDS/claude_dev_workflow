@@ -14,6 +14,25 @@ Uses the strongest model (Opus) because understanding how services relate requir
 
 ## What to scan
 
+### Incremental scan — skip unchanged repos
+
+Before scanning each repo, check if a previous scan recorded the repo's HEAD commit:
+
+1. Read `memory/repo-heads.md` if it exists. This file maps repo names to their `git rev-parse HEAD` values from the last `/discover` run.
+2. For each repo in the project folder, run `git rev-parse HEAD` and compare against the stored value.
+3. **If HEAD matches the stored value: skip the full scan for that repo.** Its inventory, dependencies, and API surface have not changed. Report to the user: "Skipping <repo-name> — unchanged since last scan (HEAD: <short-hash>)."
+4. **If HEAD differs or no stored value exists: perform the full scan** as described below.
+5. After completing all scans, overwrite `memory/repo-heads.md` with the current HEAD values for all repos (including unchanged ones).
+
+Format for `memory/repo-heads.md`:
+
+| Repo | HEAD |
+|------|------|
+| <repo-name-1> | <full-sha> |
+| <repo-name-2> | <full-sha> |
+
+**Important:** When the user explicitly requests a full re-scan (e.g., "rescan everything", "force rediscover"), ignore the HEAD cache and scan all repos.
+
 Starting from the project root folder, examine every top-level directory. For each repository/service found:
 
 ### Per-repo inventory
@@ -227,6 +246,7 @@ Tell the user:
 - Recent git activity highlights (what's been actively worked on)
 - Any interesting findings (tight coupling, missing tests, potential risks observed)
 - These files are now available to `/architect`, `/plan`, `/critic`, `/review`, and `/start_of_day` as baseline context
+- Which repos were skipped (unchanged since last scan) and which were re-scanned
 
 ## When to re-run
 
@@ -235,3 +255,4 @@ Suggest re-running `/discover` when:
 - Major architectural changes happen (new services, new communication patterns)
 - Before a large `/architect` session to ensure context is fresh
 - `/start_of_day` finds the git-log.md is stale (it will suggest this)
+- When you want to force a full re-scan regardless of HEAD changes (say "rescan all repos" or similar)

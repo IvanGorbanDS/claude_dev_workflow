@@ -29,8 +29,15 @@ This skill requires the strongest available model (currently Claude Opus). Revie
 1. **Read the plan** — find and read `current-plan.md` in the task subfolder. This is your specification.
 2. **Read the architecture** — if `architecture.md` exists, read it for the broader context.
 3. **Read the critic responses** — understand what issues were identified during planning and verify they were addressed.
-4. **Read the diff** — run `git diff <base-branch>...HEAD` to see all changes. Read every line.
-5. **Read the full files** — don't just read the diff. Read the complete files that were modified to understand the context around changes.
+4. **Read the diff** — run `git diff <base-branch>...HEAD` to see all changes. Read every line carefully.
+5. **Selectively read full files** — do NOT read all modified files unconditionally. Instead, use the diff to determine which files need full-context reading. Pull the full file only when:
+   - The diff shows changes to function signatures, class hierarchies, or module exports (structural changes whose safety depends on how callers use them)
+   - The diff modifies error handling, authentication, or authorization logic (security-sensitive areas need full surrounding context)
+   - The diff touches code that interacts with external services, databases, or message queues (integration points need full trace)
+   - The diff is a partial change to a complex function where the surrounding logic is not visible in the diff context
+   - The critic responses flagged specific files as risky or requiring deep review
+
+   For simple changes (config updates, string changes, straightforward additions, test files), the diff with its surrounding context lines is sufficient. When in doubt, read the full file — the cost of missing a bug far exceeds the cost of reading extra tokens.
 
 ### Step 2: Verify against the plan
 
@@ -182,7 +189,7 @@ This is what `/end_of_day` reads to consolidate the day's work. Without it, this
 
 ## Important behaviors
 
-- **Read everything.** Partial reviews are worse than no review — they create false confidence. Read every changed file completely.
+- **Read the diff thoroughly; read full files selectively.** Start with the complete diff and read every line. Then pull full files for any change that touches structure, security, or integrations. Simple, self-contained changes do not require full-file reads. When uncertain whether full context is needed, read the full file — a missed bug is far more expensive than extra input tokens.
 - **Run the code.** Don't just read tests — run them. Don't just read the API — call it. Verify behavior, don't assume it.
 - **Be specific.** "This might cause issues" is not useful feedback. "Line 47 in auth.service.ts doesn't handle the case where refreshToken is null, which happens when the user's session was invalidated server-side" is useful.
 - **Prioritize integration safety.** Most production incidents come from integration failures, not logic bugs. Spend extra time on integration points.

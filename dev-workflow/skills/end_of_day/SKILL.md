@@ -200,6 +200,28 @@ Wait for the user's response, then append confirmed entries to `memory/lessons-l
 
 If the insights file doesn't exist or has no promotable entries, skip this step silently.
 
+### Step 3c: Prune lessons-learned if oversized
+
+Check `memory/lessons-learned.md`. Count the number of lesson entries by matching lines that begin with `## ` followed by a date pattern (YYYY-MM-DD) — i.e., lines matching the regex `^## \d{4}-\d{2}-\d{2}`. Ignore any such patterns inside HTML comments (`<!-- -->`), code blocks, or template examples.
+
+**If the count exceeds 30 entries**, present a pruning prompt to the user:
+
+> "lessons-learned.md has grown to N entries (~X tokens). Large files add a fixed token cost to every /plan, /critic, and /architect session. Would you like to prune?"
+>
+> Options:
+> 1. **Auto-prune** — I'll merge related entries, remove entries older than 90 days that haven't been referenced, and consolidate duplicates. You review before I save.
+> 2. **Manual prune** — I'll list all entries with a 1-line summary; you pick which to keep.
+> 3. **Skip** — keep the file as-is.
+
+**Auto-prune rules** (if selected):
+1. Group entries by `Applies to:` tag. If 3+ entries have the same tag and similar content, merge them into one consolidated entry preserving all unique information.
+2. Entries older than 90 days that are generic advice (e.g., "always run tests", "check error handling") can be removed — the behavior should be internalized by now.
+3. Entries that reference specific files or functions that no longer exist in the codebase can be removed (check with a quick file-existence test).
+4. Always preserve: entries tagged as applying to `/architect` or `/critic` (highest-leverage skills), entries less than 30 days old, entries the user explicitly marked as important.
+5. Show the proposed changes to the user in a before/after summary and wait for explicit confirmation before overwriting.
+
+**If the count is 30 or fewer**, skip this step silently.
+
 ### Step 4: Prompt for lessons learned
 
 Ask the user:
