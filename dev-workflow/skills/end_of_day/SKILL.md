@@ -1,7 +1,7 @@
 ---
 name: end_of_day
 description: "Consolidates all of today's work across all sessions into a daily cache for next-day resumption. Works in any session — fresh or active. Use this skill for: /end_of_day, 'wrapping up', 'done for the day', 'save my progress', 'end of day', 'EOD'. Captures what was worked on, what's unfinished, blockers, decisions made, and recent git activity. The daily cache feeds into /start_of_day for seamless resumption."
-model: sonnet
+model: haiku
 ---
 
 # End of Day
@@ -106,6 +106,8 @@ Then for each commit, briefly describe what it changed (read the diff summary, n
 git -C <repo-path> diff-tree --no-commit-id --name-status -r <hash>
 ```
 
+Keep commit descriptions to one sentence. Base them on the commit message and diff summary — do not speculate about intent beyond what the message states.
+
 The goal is to capture the *logic* of recent changes — not just file lists but *why* things changed. This helps `/start_of_day` and `/architect` understand momentum and recent direction.
 
 ### Step 3: Produce the daily cache
@@ -163,6 +165,7 @@ Check if `memory/daily/insights-<today>.md` exists. If it does:
 **Pass 2 — Deduplicate:**
 - Read `memory/lessons-learned.md`
 - If a collected entry is substantially similar to an existing lesson, drop it or flag it as a duplicate
+- An entry is a duplicate if it describes the same root cause AND the same takeaway as an existing lesson. Entries about the same topic but with different lessons are NOT duplicates — keep both and note the connection.
 
 **Pass 3 — Tier 3 check:**
 - Any entry with `Applies to: workflow` or type `workflow-friction` is a Tier 3 candidate

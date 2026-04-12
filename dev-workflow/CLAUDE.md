@@ -335,8 +335,8 @@ Keep questions specific and pointed. Don't ask "what do you want?" — ask "shou
 | /gate | Sonnet | Automated checks and human approval checkpoint |
 | /rollback | Sonnet | Safe undo of implementation phases |
 | /end_of_task | Sonnet | Commit, push branch, lessons, mark complete |
-| /end_of_day | Sonnet | Session state capture and daily cache consolidation |
+| /end_of_day | Haiku | Session state capture and daily cache consolidation (structured template work) |
 | /init_workflow | Opus | Project bootstrap, /discover invocation, structure creation |
-| /start_of_day | Sonnet | Context restoration and git state reconciliation |
-| /weekly_review | Sonnet | Aggregates weekly progress, decisions, and outcomes |
-| /capture_insight | Sonnet | Quick insight logging to daily scratchpad during task work |
+| /start_of_day | Haiku | Context restoration and git state reconciliation (structured checklist) |
+| /weekly_review | Haiku | Aggregates weekly progress, decisions, and outcomes (template-driven) |
+| /capture_insight | Haiku | Quick insight logging to daily scratchpad during task work |

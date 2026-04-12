@@ -1,7 +1,7 @@
 ---
 name: weekly_review
 description: "Aggregates the week's meaningful work into a structured review. Use this skill for: /weekly_review, 'weekly summary', 'what did I do this week', 'week recap', 'friday review', 'weekly standup', 'weekly report'. Reads daily caches, session files, git history, and lessons learned to produce a comprehensive but concise picture of the week's progress, decisions, and outcomes."
-model: sonnet
+model: haiku
 ---
 
 # Weekly Review
@@ -94,8 +94,10 @@ Produce the weekly review in this format:
 - Rollbacks: <N>
 
 ## Next Week
-<Based on in-progress work, blockers, and momentum — what should be the priorities?>
+<List the in-progress tasks that should continue, any blockers to resolve, and any new work the user mentioned. Do not speculate about priorities beyond what the data shows.>
 ```
+
+For the Highlights section: each bullet should state a concrete outcome or deliverable, not a process step. Use this pattern: "<What was delivered/decided> — <why it matters or what it unblocks>". If a task is still in progress, it is not a highlight unless it hit a significant milestone.
 
 ### Step 4: Save the review
 
@@ -142,5 +144,5 @@ Some tasks span multiple weeks. For in-progress items that started before this w
 - **Lead with outcomes, not activity.** "Shipped payment retry logic — reduces failed transactions by handling Stripe timeouts" beats "Modified 14 files across 3 services."
 - **Be honest about pace.** If a task is taking longer than expected, say so. This helps the user calibrate.
 - **Keep it scannable.** This review might be shared with a manager or team. Use tables, bullet points, and clear headers. No walls of text.
-- **Capture the narrative.** The weekly review tells the story of the week. Connect the dots between tasks — "Started the week debugging auth timeouts, which led to discovering the retry logic gap, which became the main task."
+- **Connect related work factually.** If tasks are related, note the observable connection (e.g., "Task B was created as a follow-up to Task A"). Do not infer intent, mood, or momentum. When data is sparse, keep the review short rather than padding with interpretation.
 - **Don't fabricate.** If you don't have data for a day, say "no recorded activity" rather than guessing.

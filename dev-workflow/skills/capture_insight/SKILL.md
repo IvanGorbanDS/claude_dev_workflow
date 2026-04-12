@@ -1,7 +1,7 @@
 ---
 name: capture_insight
 description: "Captures a quick insight, pattern, or discovery to the daily insights scratchpad without interrupting the current task. Use for: /capture_insight, 'note this', 'remember this pattern', 'log this decision', 'save this as a lesson', 'note that', 'remember that'. Appends a structured entry to memory/daily/insights-<date>.md."
-model: sonnet
+model: haiku
 ---
 
 # Capture Insight

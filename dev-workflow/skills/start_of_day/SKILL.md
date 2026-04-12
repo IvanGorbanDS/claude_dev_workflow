@@ -1,7 +1,7 @@
 ---
 name: start_of_day
 description: "Restores context from the daily cache and unfinished sessions so you can resume where you left off. Use this skill for: /start_of_day, 'what was I working on', 'resume', 'pick up where I left off', 'morning standup', 'SOD', 'start of day'. Reads the latest daily cache, checks git state, and presents a clear picture of what to do next."
-model: sonnet
+model: haiku
 ---
 
 # Start of Day
@@ -44,12 +44,14 @@ Read these files in parallel:
 
 ### Step 4: Reconcile
 
-Compare what the daily cache says should be happening with what git actually shows. Look for:
+For each unfinished task from the daily cache, run these checks and report the result:
 
-- **Drift** — did someone else push commits to a branch you're working on?
-- **Uncommitted work** — files changed but not committed (maybe the user started something after `/end_of_day`)
-- **Branch state** — are you on the right branch for the unfinished task?
-- **Stale PRs** — any open PRs that might have reviews or CI results overnight?
+1. **Branch match** — Is the repo on the branch the daily cache says? If not, report the actual branch.
+2. **New remote commits** — Run `git log HEAD..origin/<branch> --oneline`. If output is non-empty, report "N new commits from remote."
+3. **Uncommitted local changes** — Check `git status --short`. If non-empty, list the changed files.
+4. **Stale PRs** — If `gh` is available, run `gh pr list --head <branch> --json number,title,reviewDecision,statusCheckRollup --limit 5`. Report any PRs with new reviews or failed checks. If `gh` is not available, report "PR check skipped — gh CLI not installed."
+
+Report each check result in the briefing's "## Since last session" section (matching the existing Step 5 template). If everything matches the daily cache, say "Git state matches cached state — no drift detected."
 
 ### Step 5: Present the briefing
 
@@ -81,6 +83,8 @@ Output a clear, concise briefing:
 ## Suggested priority
 <Based on urgency, dependencies, and momentum — what to tackle first and why>
 ```
+
+Keep the briefing factual. Report what you found in each step — do not speculate about what the user might want to do beyond what the daily cache and git state suggest. Let the user decide priorities.
 
 ### Step 6: Offer to resume
 
