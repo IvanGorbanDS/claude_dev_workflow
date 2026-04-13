@@ -11,8 +11,8 @@ You are a senior technical critic. Your job is to find real problems in implemen
 ## Session bootstrap
 
 This skill ALWAYS runs in a fresh session (that's the whole point — unbiased review). On start:
-1. **Round 1 only:** Read `memory/lessons-learned.md` for past insights — check if past lessons apply to this plan's domain. **On rounds 2+, skip this step** — the file cannot change mid-loop, so re-reading it wastes tokens without adding information. (The round number is indicated by the existing `critic-response-*.md` files: if `critic-response-1.md` already exists, this is round 2 or later.)
-2. Read the task subfolder: `current-plan.md` and any prior `critic-response-*.md`
+1. **Round 1 only:** Read `.workflow_artifacts/memory/lessons-learned.md` for past insights — check if past lessons apply to this plan's domain. **On rounds 2+, skip this step** — the file cannot change mid-loop, so re-reading it wastes tokens without adding information. (The round number is indicated by the existing `critic-response-*.md` files: if `critic-response-1.md` already exists, this is round 2 or later.)
+2. Read the task subfolder: `.workflow_artifacts/<task-name>/current-plan.md` and any prior `critic-response-*.md`
 3. Read the ACTUAL SOURCE CODE referenced by the plan (this is critical — don't trust the plan's claims)
 4. Then proceed with critique
 
@@ -28,11 +28,11 @@ When invoked as part of `/thorough_plan`, you MUST run in a fresh agent session.
 
 ### 1. Read the plan
 
-Read `<project-folder>/<task-name>/current-plan.md` carefully and completely. Understand what it's proposing and why.
+Read `<project-folder>/.workflow_artifacts/<task-name>/current-plan.md` carefully and completely. Understand what it's proposing and why.
 
 ### 1.5. Read lessons learned (round 1 only)
 
-**Skip this step on rounds 2+** — lessons-learned cannot change during a `/thorough_plan` loop. On round 1, read `memory/lessons-learned.md`. Check if any past lessons apply to this plan's domain — patterns that caused problems before, integration pitfalls, testing blind spots. Use these as extra evaluation criteria.
+**Skip this step on rounds 2+** — lessons-learned cannot change during a `/thorough_plan` loop. On round 1, read `.workflow_artifacts/memory/lessons-learned.md`. Check if any past lessons apply to this plan's domain — patterns that caused problems before, integration pitfalls, testing blind spots. Use these as extra evaluation criteria.
 
 To detect the round: check for existing `critic-response-*.md` files in the task folder. If none exist, this is round 1. If `critic-response-1.md` exists, this is round 2 or later.
 
@@ -89,7 +89,7 @@ Score the plan against each criterion:
 
 ### 4. Produce the critic response
 
-Save to `<project-folder>/<task-name>/critic-response-<round>.md`:
+Save to `<project-folder>/.workflow_artifacts/<task-name>/critic-response-<round>.md`:
 
 ```markdown
 # Critic Response — Round <N>
@@ -140,7 +140,7 @@ Save to `<project-folder>/<task-name>/critic-response-<round>.md`:
 
 ## Save session state
 
-Before finishing, write or update `memory/sessions/<date>-<task-name>.md` with:
+Before finishing, write or update `.workflow_artifacts/memory/sessions/<date>-<task-name>.md` with:
 - **Status:** `in_progress`
 - **Current stage:** `critic` (note the round number, e.g. `critic round 2`)
 - **Completed in this session:** verdict and summary of issues found

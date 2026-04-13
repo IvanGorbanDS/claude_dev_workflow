@@ -1,6 +1,6 @@
 ---
 name: capture_insight
-description: "Captures a quick insight, pattern, or discovery to the daily insights scratchpad without interrupting the current task. Use for: /capture_insight, 'note this', 'remember this pattern', 'log this decision', 'save this as a lesson', 'note that', 'remember that'. Appends a structured entry to memory/daily/insights-<date>.md."
+description: "Captures a quick insight, pattern, or discovery to the daily insights scratchpad without interrupting the current task. Use for: /capture_insight, 'note this', 'remember this pattern', 'log this decision', 'save this as a lesson', 'note that', 'remember that'. Appends a structured entry to .workflow_artifacts/memory/daily/insights-<date>.md."
 model: haiku
 ---
 
@@ -32,7 +32,7 @@ For **workflow-friction** type, always set `Promote?: yes` — these are surface
 
 ### Step 3: Write to scratchpad
 
-Append to `memory/daily/insights-<YYYY-MM-DD>.md` (today's date). Create the file with a header if it doesn't exist yet:
+Append to `.workflow_artifacts/memory/daily/insights-<YYYY-MM-DD>.md` (today's date). Create the file with a header if it doesn't exist yet:
 
 ```markdown
 # Daily Insights — <YYYY-MM-DD>

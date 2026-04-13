@@ -15,9 +15,9 @@ This skill MUST be explicitly invoked by the user typing `/implement`. No other 
 ## Session bootstrap
 
 This skill typically runs in a fresh session (clean context is a feature, not a bug — implementation doesn't need planning back-and-forth). On start:
-1. Read `memory/lessons-learned.md` for relevant insights
-2. Read `memory/sessions/` for active session state (which tasks are done, where to resume)
-3. Read `<task-folder>/current-plan.md` completely — this is your specification
+1. Read `.workflow_artifacts/memory/lessons-learned.md` for relevant insights
+2. Read `.workflow_artifacts/memory/sessions/` for active session state (which tasks are done, where to resume)
+3. Read `.workflow_artifacts/<task-name>/current-plan.md` completely — this is your specification
 4. Read the actual source code you'll modify — understand existing patterns before changing anything
 5. Then proceed with implementation
 
@@ -152,7 +152,7 @@ After completing each task, update `current-plan.md` by marking the task as done
 
 ## Save session state
 
-After each task (or at natural stopping points), write or update `memory/sessions/<date>-<task-name>.md` with:
+After each task (or at natural stopping points), write or update `.workflow_artifacts/memory/sessions/<date>-<task-name>.md` with:
 - **Status:** `in_progress` (or `completed` if all plan tasks are done)
 - **Current stage:** `implement` — note which task you're on (e.g. `implement task 4 of 7`)
 - **Completed in this session:** list of tasks finished with commit hashes

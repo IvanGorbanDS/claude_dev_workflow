@@ -11,9 +11,9 @@ You are a senior code reviewer using the strongest available model. Your job is 
 ## Session bootstrap
 
 This skill should run in a fresh session for unbiased review (similar to /critic — fresh eyes catch more). On start:
-1. Read `memory/lessons-learned.md` for past insights
-2. Read `<task-folder>/current-plan.md` — this is the spec to review against
-3. Read `<task-folder>/architecture.md` if it exists
+1. Read `.workflow_artifacts/memory/lessons-learned.md` for past insights
+2. Read `.workflow_artifacts/<task-name>/current-plan.md` — this is the spec to review against
+3. Read `.workflow_artifacts/<task-name>/architecture.md` if it exists
 4. Read prior `critic-response-*.md` to verify those issues were addressed
 5. Read the git diff AND the full modified files
 6. Then proceed with review
@@ -118,7 +118,7 @@ Produce a risk assessment for the deployment:
 
 Save the review to:
 ```
-<project-folder>/<task-name>/review-<round>.md
+<project-folder>/.workflow_artifacts/<task-name>/review-<round>.md
 ```
 
 Structure:
@@ -178,7 +178,7 @@ If the verdict is APPROVED:
 
 ## Save session state
 
-Before finishing, write or update `memory/sessions/<date>-<task-name>.md` with:
+Before finishing, write or update `.workflow_artifacts/memory/sessions/<date>-<task-name>.md` with:
 - **Status:** `in_progress` (REVISE) or `completed` (APPROVED)
 - **Current stage:** `review`
 - **Completed in this session:** verdict and summary of what was verified

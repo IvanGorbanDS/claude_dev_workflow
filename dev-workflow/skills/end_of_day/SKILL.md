@@ -11,18 +11,21 @@ You consolidate all of today's work into a daily cache that `/start_of_day` can 
 ## How sessions and daily caches work
 
 ```
-memory/
-├── sessions/
-│   ├── 2026-03-17-auth-refactor.md       ← individual session states
-│   ├── 2026-03-17-payment-migration.md
-│   └── 2026-03-18-auth-refactor.md
-├── daily/
-│   ├── 2026-03-17.md                      ← daily rollup (from end_of_day)
-│   └── 2026-03-18.md
-├── git-log.md                             ← rolling log of recent commits
-├── repos-inventory.md
-├── architecture-overview.md
-└── dependencies-map.md
+.workflow_artifacts/
+├── memory/
+│   ├── sessions/
+│   │   ├── 2026-03-17-auth-refactor.md       ← individual session states
+│   │   ├── 2026-03-17-payment-migration.md
+│   │   └── 2026-03-18-auth-refactor.md
+│   ├── daily/
+│   │   ├── 2026-03-17.md                      ← daily rollup (from end_of_day)
+│   │   └── 2026-03-18.md
+│   ├── git-log.md                             ← rolling log of recent commits
+│   ├── repos-inventory.md
+│   ├── architecture-overview.md
+│   └── dependencies-map.md
+├── <task-name>/                               ← active task artifacts
+└── finalized/                                 ← completed task archives
 ```
 
 Multiple sessions can run in a day (parallel tasks, or revisiting a task). Each session writes its own state file. `/end_of_day` reads ALL session files for today, picks out the unfinished ones, and rolls them into one daily cache.
@@ -35,7 +38,7 @@ Multiple sessions can run in a day (parallel tasks, or revisiting a task). Each 
 
 **If there is active work in this session**, create or update a session file at:
 ```
-memory/sessions/<date>-<task-name>.md
+.workflow_artifacts/memory/sessions/<date>-<task-name>.md
 ```
 
 The session file captures:
@@ -77,7 +80,7 @@ The session file captures:
 
 ### Step 2: Update git-log.md
 
-Scan all repos in the project folder and update `memory/git-log.md` with recent commits. This is a rolling window — keep the last ~50 commits across all repos, newest first.
+Scan all repos in the project folder and update `.workflow_artifacts/memory/git-log.md` with recent commits. This is a rolling window — keep the last ~50 commits across all repos, newest first.
 
 ```markdown
 # Recent Git Activity
@@ -112,11 +115,11 @@ The goal is to capture the *logic* of recent changes — not just file lists but
 
 ### Step 3: Produce the daily cache
 
-Read all session files for today from `memory/sessions/<today>-*.md`. For each:
+Read all session files for today from `.workflow_artifacts/memory/sessions/<today>-*.md`. For each:
 - If status is `completed` → note it as done, no action needed
 - If status is `in_progress` or `blocked` → include in the daily cache
 
-Write the daily cache to `memory/daily/<date>.md`:
+Write the daily cache to `.workflow_artifacts/memory/daily/<date>.md`:
 
 ```markdown
 # Daily Cache — <YYYY-MM-DD>
@@ -148,7 +151,7 @@ Write the daily cache to `memory/daily/<date>.md`:
 
 ## Git activity summary
 <High-level: N commits across M repos. Key changes: ...>
-<Reference memory/git-log.md for details>
+<Reference .workflow_artifacts/memory/git-log.md for details>
 
 ## Tomorrow's priorities
 <Based on what's unfinished, suggest what to tackle first>
@@ -156,20 +159,20 @@ Write the daily cache to `memory/daily/<date>.md`:
 
 ### Step 3b: Review and promote daily insights
 
-Check if `memory/daily/insights-<today>.md` exists. If it does:
+Check if `.workflow_artifacts/memory/daily/insights-<today>.md` exists. If it does:
 
 **Pass 1 — Filter:**
 - Skip entries tagged `Promote?: no`
 - Collect entries tagged `yes` (high-confidence) and `maybe` (review needed)
 
 **Pass 2 — Deduplicate:**
-- Read `memory/lessons-learned.md`
+- Read `.workflow_artifacts/memory/lessons-learned.md`
 - If a collected entry is substantially similar to an existing lesson, drop it or flag it as a duplicate
 - An entry is a duplicate if it describes the same root cause AND the same takeaway as an existing lesson. Entries about the same topic but with different lessons are NOT duplicates — keep both and note the connection.
 
 **Pass 3 — Tier 3 check:**
 - Any entry with `Applies to: workflow` or type `workflow-friction` is a Tier 3 candidate
-- Append those to `memory/workflow-suggestions.md` in this format:
+- Append those to `.workflow_artifacts/memory/workflow-suggestions.md` in this format:
   ```markdown
   ## <date> — <source-task>
   **Suggestion:** <what should change in the workflow>
@@ -177,7 +180,7 @@ Check if `memory/daily/insights-<today>.md` exists. If it does:
   **Affects:** <relevant SKILL.md or CLAUDE.md section>
   **Status:** surfaced
   ```
-- Tell the user: "I've added N workflow improvement suggestion(s) to `memory/workflow-suggestions.md`."
+- Tell the user: "I've added N workflow improvement suggestion(s) to `.workflow_artifacts/memory/workflow-suggestions.md`."
 
 **Promotion confirmation:**
 If there are entries to promote (after filtering and dedup), present a compact list:
@@ -192,7 +195,7 @@ I captured N insights today worth keeping. Confirm which to add to lessons-learn
 Reply with the numbers to keep (e.g. "1 3"), "all", or "none".
 ```
 
-Wait for the user's response, then append confirmed entries to `memory/lessons-learned.md`:
+Wait for the user's response, then append confirmed entries to `.workflow_artifacts/memory/lessons-learned.md`:
 
 ```markdown
 ## <date> — <task-name>
@@ -205,7 +208,7 @@ If the insights file doesn't exist or has no promotable entries, skip this step 
 
 ### Step 3c: Prune lessons-learned if oversized
 
-Check `memory/lessons-learned.md`. Count the number of lesson entries by matching lines that begin with `## ` followed by a date pattern (YYYY-MM-DD) — i.e., lines matching the regex `^## \d{4}-\d{2}-\d{2}`. Ignore any such patterns inside HTML comments (`<!-- -->`), code blocks, or template examples.
+Check `.workflow_artifacts/memory/lessons-learned.md`. Count the number of lesson entries by matching lines that begin with `## ` followed by a date pattern (YYYY-MM-DD) — i.e., lines matching the regex `^## \d{4}-\d{2}-\d{2}`. Ignore any such patterns inside HTML comments (`<!-- -->`), code blocks, or template examples.
 
 **If the count exceeds 30 entries**, present a pruning prompt to the user:
 
@@ -233,7 +236,7 @@ Ask the user:
 
 (If insights were already promoted in Step 3b, this catches anything Claude missed.)
 
-If they share something, append it to `memory/lessons-learned.md` in the same format. If they say "nothing" or skip, that's fine.
+If they share something, append it to `.workflow_artifacts/memory/lessons-learned.md` in the same format. If they say "nothing" or skip, that's fine.
 
 Also: if any tasks were rolled back today, or if the critic-revise loop ran more than 3 rounds, auto-add a lesson capturing what made it difficult.
 

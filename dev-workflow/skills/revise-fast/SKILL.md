@@ -29,8 +29,8 @@ This skill runs on Sonnet for cost efficiency. It is a fast variant of `/revise`
 
 ### 1. Read the inputs
 
-- Read `<project-folder>/<task-name>/current-plan.md` — the current plan
-- Read `<project-folder>/<task-name>/critic-response-<latest>.md` — the most recent critic feedback
+- Read `<project-folder>/.workflow_artifacts/<task-name>/current-plan.md` — the current plan
+- Read `<project-folder>/.workflow_artifacts/<task-name>/critic-response-<latest>.md` — the most recent critic feedback
 - Read any prior critic responses to understand the trajectory of revisions
 - Re-read relevant source code if the critic flagged incorrect assumptions about the codebase
 
@@ -96,7 +96,7 @@ If running standalone, tell the user:
 
 ## Save session state
 
-Before finishing, write or update `memory/sessions/<date>-<task-name>.md` with:
+Before finishing, write or update `.workflow_artifacts/memory/sessions/<date>-<task-name>.md` with:
 - **Status:** `in_progress`
 - **Current stage:** `revise` (note the round number, e.g. `revise round 2`)
 - **Completed in this session:** which critic issues were addressed

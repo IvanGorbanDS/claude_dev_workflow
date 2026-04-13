@@ -18,21 +18,24 @@ claude
 # then type: /init_workflow
 ```
 
-`/init_workflow` handles all project scaffolding: creates `memory/`, configures `.claude/settings.json` permissions, runs `/discover`, and generates `QUICKSTART.md`.
+`/init_workflow` handles all project scaffolding: creates `.workflow_artifacts/` (gitignored), configures `.claude/settings.json` permissions, runs `/discover`, and generates a quickstart reference.
 
 ---
 
 ## What the script does
 
 **`install.sh` — user-level, run once per machine:**
-1. **Copies skills** — all 16 skills into `~/.claude/skills/` (globally available in every project)
+1. **Copies skills** — all 17 skills into `~/.claude/skills/` (globally available in every project)
 2. **Writes workflow rules** — appends shared rules to `~/.claude/CLAUDE.md` (auto-loaded by Claude Code everywhere)
 
 **`/init_workflow` — run once per project inside Claude:**
 3. **Configures permissions** — creates `.claude/settings.json` with allow/deny lists
-4. **Creates memory structure** — `memory/` at project root with `sessions/`, `daily/`, `weekly/` and template files
-5. **Runs /discover** — scans repos and populates memory
-6. **Generates QUICKSTART.md** — command reference card in `dev-workflow/`
+4. **Creates artifact structure** — `.workflow_artifacts/` at project root (gitignored) with `memory/sessions/`, `memory/daily/`, `memory/weekly/` and template files
+5. **Adds to .gitignore** — ensures `.workflow_artifacts/` is gitignored in the project
+6. **Runs /discover** — scans repos and populates memory
+7. **Generates quickstart** — command reference card
+
+> **After pulling workflow updates:** always re-run `bash install.sh` to propagate path changes to `~/.claude/CLAUDE.md` and `~/.claude/skills/`. Without this step, Claude will have contradictory path instructions between the global CLAUDE.md and the updated skill files.
 
 ## Prerequisites
 
@@ -61,10 +64,11 @@ cat /path/to/dev-workflow/CLAUDE.md >> ~/.claude/CLAUDE.md
 echo "# === DEV WORKFLOW END ===" >> ~/.claude/CLAUDE.md
 ```
 
-### 3. Create project memory structure
+### 3. Create project artifact structure
 ```bash
 cd ~/projects/my-app
-mkdir -p memory/sessions memory/daily memory/weekly
+mkdir -p .workflow_artifacts/memory/sessions .workflow_artifacts/memory/daily .workflow_artifacts/memory/weekly
+echo '.workflow_artifacts/' >> .gitignore
 ```
 
 ### 4. Initialize
@@ -79,12 +83,13 @@ After installation, your project looks like:
 ```
 ~/.claude/
 ├── CLAUDE.md                ← workflow rules (auto-loaded everywhere)
-└── skills/                  ← all 16 workflow skills (global)
+└── skills/                  ← all 17 workflow skills (global)
     ├── discover/
     ├── architect/
     ├── plan/
     ├── critic/
     ├── revise/
+    ├── revise-fast/
     ├── thorough_plan/
     ├── gate/
     ├── implement/
@@ -100,21 +105,20 @@ After installation, your project looks like:
 ~/projects/my-app/
 ├── .claude/
 │   └── settings.json        ← project permissions
-├── CLAUDE.md                ← project-specific rules
-├── memory/                  ← project memory (project root)
-│   ├── sessions/
-│   ├── daily/
-│   ├── weekly/
-│   ├── lessons-learned.md
-│   ├── workflow-rules.md
-│   ├── workflow-suggestions.md
-│   └── ... (populated by /discover)
-├── dev-workflow/
-│   ├── QUICKSTART.md        ← command reference
-│   ├── SETUP.md             ← this file
-│   ├── Workflow-User-Guide.html
-│   └── install.sh           ← the installer
-├── service-a/               ← your repos
+├── .workflow_artifacts/     ← all workflow artifacts (gitignored)
+│   ├── memory/              ← project memory
+│   │   ├── sessions/
+│   │   ├── daily/
+│   │   ├── weekly/
+│   │   ├── lessons-learned.md
+│   │   ├── workflow-rules.md
+│   │   ├── workflow-suggestions.md
+│   │   └── ... (populated by /discover)
+│   ├── my-feature/          ← active task artifacts
+│   │   ├── current-plan.md
+│   │   └── critic-response-1.md
+│   └── finalized/           ← completed tasks
+├── service-a/               ← your repos (clean root!)
 ├── service-b/
 └── frontend/
 ```
@@ -129,7 +133,7 @@ cd ~/projects/my-app && claude
 |---|---|
 | Start your day | `/start_of_day` |
 | Plan a big feature | `/architect` then `/thorough_plan` |
-| Fix a bug | `/plan` then `/implement` |
+| Fix a bug | `/thorough_plan small: <description>` |
 | Review implementation | `/review` |
 | Ship it | `/end_of_task` |
 | Wrap up for the day | `/end_of_day` |
@@ -142,11 +146,13 @@ git pull
 bash dev-workflow/install.sh
 ```
 
-Skills and `~/.claude/CLAUDE.md` are updated. Project `memory/` is never touched.
+Skills and `~/.claude/CLAUDE.md` are updated. Project `.workflow_artifacts/` is never touched.
+
+> **Always re-run `install.sh` after pulling updates.** Path changes in CLAUDE.md and skills must be propagated to `~/.claude/` — without this, Claude operates with stale path references.
 
 ## Migrating a legacy project
 
-If your project has the old layout (`dev-workflow/memory/` instead of `memory/` at root):
+If your project has an old layout, run `/init_workflow` in the project:
 
 ```bash
 cd /path/to/legacy-project
@@ -154,13 +160,19 @@ claude
 # type: /init_workflow
 ```
 
-`/init_workflow` detects the legacy layout and offers to migrate automatically. It moves `dev-workflow/memory/` → `memory/`, cleans up old `.claude/skills/` symlinks, and optionally removes the now-unused `dev-workflow/skills/` directory. Your accumulated knowledge is fully preserved.
+`/init_workflow` detects old layouts and offers to migrate with your confirmation:
+
+- **Oldest layout** (`dev-workflow/memory/`): moves to `.workflow_artifacts/memory/`
+- **Previous layout** (`memory/` at project root): moves to `.workflow_artifacts/memory/`; also moves `finalized/` and task folders
+- In all cases, your accumulated knowledge is fully preserved — nothing is deleted without confirmation
 
 ## Troubleshooting
 
-**Skills not recognized:** check that skills are in `~/.claude/skills/` — `ls ~/.claude/skills/` should list all 16 skills. Re-run `bash install.sh` to reinstall them.
+**Skills not recognized:** check that skills are in `~/.claude/skills/` — `ls ~/.claude/skills/` should list all 17 skills. Re-run `bash install.sh` to reinstall them.
 
 **Claude doesn't follow workflow rules:** check that `~/.claude/CLAUDE.md` contains the dev-workflow section (look for `# === DEV WORKFLOW START ===`). Re-run `bash install.sh` to rewrite it.
+
+**Claude uses old `memory/` paths:** re-run `bash install.sh` — the updated CLAUDE.md with `.workflow_artifacts/` paths wasn't propagated to `~/.claude/CLAUDE.md`.
 
 **/discover finds nothing:** your repos need to be git repositories (each has a `.git/` folder) inside the project root.
 

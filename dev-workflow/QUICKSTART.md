@@ -4,7 +4,7 @@
 
 | Command | What it does |
 |---------|-------------|
-| `/init_workflow` | One-time project bootstrap — creates memory/, configures permissions, runs /discover |
+| `/init_workflow` | One-time project bootstrap — creates .workflow_artifacts/, configures permissions, runs /discover |
 | `/discover` | Scans all repos, maps architecture and dependencies |
 | `/architect` | Designs solution architecture for a feature/change |
 | `/thorough_plan` | Creates detailed implementation plan (with critic review) |
@@ -43,7 +43,7 @@
 ## Files
 
 - `~/.claude/CLAUDE.md` — shared rules all skills follow (user-level)
-- `memory/` — accumulated knowledge (repos, architecture, lessons, sessions)
+- `.workflow_artifacts/` — all workflow artifacts: memory, task plans, session state (gitignored)
 - `~/.claude/skills/` — all workflow skill definitions (user-level)
 - `Workflow-User-Guide.html` — detailed interactive guide with scenarios
 

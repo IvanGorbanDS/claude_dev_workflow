@@ -4,8 +4,8 @@
 
 Ivan uses a structured development workflow:
 
-- `/init_workflow` — one-time project bootstrap (Opus). Creates `memory/` structure at project root, configures `.claude/settings.json`, runs /discover, generates quickstart guide. (Skills are installed user-level via `bash install.sh`, not per-project.)
-- `/discover` — scans all repos (Opus). Produces inventory, architecture, dependencies, git-log in `memory/`.
+- `/init_workflow` — one-time project bootstrap (Opus). Creates `.workflow_artifacts/` structure at project root (gitignored), configures `.claude/settings.json`, runs /discover, generates quickstart guide. (Skills are installed user-level via `bash install.sh`, not per-project.)
+- `/discover` — scans all repos (Opus). Produces inventory, architecture, dependencies, git-log in `.workflow_artifacts/memory/`.
 - `/architect` — deep exploration and architectural design (Opus). Produces architecture.md.
 - `/thorough_plan` — orchestrator (Opus) for plan→critic→revise loop (up to 5 rounds):
   - `/plan` — creates initial plan (Opus). Reads lessons-learned.md.
@@ -43,9 +43,9 @@ Ivan works with multiple repositories cloned side-by-side in the project folder 
 
 ## Task artifacts
 
-All planning artifacts go in descriptive subfolders:
+All planning artifacts go in descriptive subfolders under `.workflow_artifacts/`:
 ```
-<project-folder>/<task-name>/
+<project-folder>/.workflow_artifacts/<task-name>/
 ├── architecture.md
 ├── current-plan.md
 ├── critic-response-1.md ... critic-response-N.md
@@ -59,25 +59,28 @@ Task names are descriptive kebab-case derived from the task (e.g., `auth-refacto
 Ivan works in multiple sessions per day, sometimes on parallel tasks. The workflow tracks state per session:
 
 ```
-memory/
-├── sessions/                        ← per-session task progress (date-taskname.md)
-├── daily/
-│   ├── <date>.md                    ← daily rollup from /end_of_day
-│   └── insights-<date>.md           ← Tier 1: daily knowledge scratchpad (auto-written during tasks)
-├── weekly/                          ← weekly rollup from /weekly_review
-├── git-log.md                       ← rolling log of recent commits with logic/rationale
-├── lessons-learned.md               ← Tier 2: promoted project-level insights (read by /plan, /critic)
-├── workflow-suggestions.md          ← Tier 3: suggestions for improving the workflow repo itself
-├── repos-inventory.md
-├── architecture-overview.md
-└── dependencies-map.md
+.workflow_artifacts/
+├── memory/
+│   ├── sessions/                    ← per-session task progress (date-taskname.md)
+│   ├── daily/
+│   │   ├── <date>.md                ← daily rollup from /end_of_day
+│   │   └── insights-<date>.md       ← Tier 1: daily knowledge scratchpad
+│   ├── weekly/                      ← weekly rollup from /weekly_review
+│   ├── git-log.md                   ← rolling log of recent commits
+│   ├── lessons-learned.md           ← Tier 2: promoted project-level insights
+│   ├── workflow-suggestions.md      ← Tier 3: suggestions for improving the workflow
+│   ├── repos-inventory.md
+│   ├── architecture-overview.md
+│   └── dependencies-map.md
+├── <task-name>/                     ← active task artifacts
+└── finalized/                       ← completed task archives
 ```
 
 ### Three-tier memory system
 
-- **Tier 1 — Daily scratchpad** (`memory/daily/insights-<date>.md`): Claude writes here freely during task work — patterns, gotchas, decision rationale, surprises. Written without asking the user.
-- **Tier 2 — Project long-term** (`memory/lessons-learned.md`): Promoted from Tier 1 at `/end_of_day` with user confirmation. Read by `/plan` and `/critic` at session start.
-- **Tier 3 — Workflow-wide** (`memory/workflow-suggestions.md`): Insights that belong in the workflow repo itself (not project-specific). Claude surfaces these; the user applies them to the workflow repo manually.
+- **Tier 1 — Daily scratchpad** (`.workflow_artifacts/memory/daily/insights-<date>.md`): Claude writes here freely during task work — patterns, gotchas, decision rationale, surprises. Written without asking the user.
+- **Tier 2 — Project long-term** (`.workflow_artifacts/memory/lessons-learned.md`): Promoted from Tier 1 at `/end_of_day` with user confirmation. Read by `/plan` and `/critic` at session start.
+- **Tier 3 — Workflow-wide** (`.workflow_artifacts/memory/workflow-suggestions.md`): Insights that belong in the workflow repo itself (not project-specific). Claude surfaces these; the user applies them to the workflow repo manually.
 
 - `/start_of_day` — reads daily cache + git state, presents briefing; checks for un-promoted yesterday insights if `/end_of_day` was skipped
 - `/end_of_day` — saves current session, consolidates unfinished sessions into daily cache, promotes Tier 1 insights to Tier 2, surfaces Tier 3 suggestions

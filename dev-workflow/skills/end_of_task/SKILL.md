@@ -25,7 +25,7 @@ This skill is never auto-invoked. The user must consciously accept the work.
 
 Before touching git, verify everything is clean:
 
-1. **Review status** — look for `<task-folder>/review-*.md`. If no review file exists, STOP and tell the user: "No review found — please run `/review` first." If a review exists, read the latest one and confirm verdict is APPROVED. If not approved, stop and tell the user.
+1. **Review status** — look for `.workflow_artifacts/<task-name>/review-*.md`. If no review file exists, STOP and tell the user: "No review found — please run `/review` first." If a review exists, read the latest one and confirm verdict is APPROVED. If not approved, stop and tell the user.
 2. **Tests pass** — run the test suite one final time. If anything fails, stop.
 3. **No uncommitted changes** — run `git status`. If there are unstaged/uncommitted changes:
    - Show them to the user
@@ -76,7 +76,7 @@ Ask the user:
 
 > "Task complete. Anything that surprised you, or that the workflow should handle differently next time?"
 
-If they share something, append to `memory/lessons-learned.md`:
+If they share something, append to `.workflow_artifacts/memory/lessons-learned.md`:
 
 ```markdown
 ## <date> — <task-name>
@@ -92,41 +92,41 @@ Also auto-capture lessons if:
 
 ### Step 5: Update session state
 
-Update `memory/sessions/<date>-<task-name>.md`:
+Update `.workflow_artifacts/memory/sessions/<date>-<task-name>.md`:
 - Set status to `completed`
 - Record the final branch name and commit hash
 - Note any lessons captured
 
 ### Step 6: Archive the task folder
 
-Move the completed task folder into a `finalized/` directory to keep the project root clean.
+Move the completed task folder into `.workflow_artifacts/finalized/` to keep the project root clean.
 
 **Determine the scope:**
 
-1. **Sub-task within a global task/feature** — if the task folder lives inside a parent feature folder (e.g., `payment-v2-migration/auth-retry/`), move it into `<parent-feature>/finalized/`:
+1. **Sub-task within a global task/feature** — if the task folder lives inside a parent feature folder (e.g., `.workflow_artifacts/payment-v2-migration/auth-retry/`), move it into `.workflow_artifacts/<parent-feature>/finalized/`:
    ```
-   payment-v2-migration/auth-retry/  →  payment-v2-migration/finalized/auth-retry/
+   .workflow_artifacts/payment-v2-migration/auth-retry/  →  .workflow_artifacts/payment-v2-migration/finalized/auth-retry/
    ```
 
-2. **Global task/feature completed entirely** — if this is the top-level task folder and all work is done, move the entire folder into `finalized/` at the project root:
+2. **Global task/feature completed entirely** — if this is the top-level task folder and all work is done, move the entire folder into `.workflow_artifacts/finalized/`:
    ```
-   payment-v2-migration/  →  finalized/payment-v2-migration/
+   .workflow_artifacts/payment-v2-migration/  →  .workflow_artifacts/finalized/payment-v2-migration/
    ```
 
 **How to detect automatically:**
 
-1. **Resolve the task folder path** relative to the project root. For example, if the task folder is `cost-reduction/stage-1a-caching/`, the parent is `cost-reduction/`.
+1. **Resolve the task folder path** relative to `.workflow_artifacts/`. For example, if the task folder is `.workflow_artifacts/cost-reduction/stage-1a-caching/`, the parent is `.workflow_artifacts/cost-reduction/`.
 2. **Check if the parent directory is a task folder** — look for planning artifacts (`current-plan.md`, `architecture.md`, `review-*.md`, `critic-response-*.md`) or other task subfolders in the parent. If the parent contains these, this is a sub-task within that parent feature.
 3. **Check for stage/phase naming patterns** — if the task folder name matches patterns like `stage-*`, `phase-*`, `part-*`, `step-*`, or `sprint-*`, AND the parent contains at least one other sibling matching a similar pattern, it is a sub-task. Both conditions are required to avoid false positives on unrelated folders.
-4. **If either check (2) or (3) matches**, archive as a sub-task: move to `<parent>/finalized/<subtask>/`. Do not ask.
-5. **If the task folder is directly under the project root** (no parent task folder detected), ask the user:
+4. **If either check (2) or (3) matches**, archive as a sub-task: move to `.workflow_artifacts/<parent>/finalized/<subtask>/`. Do not ask.
+5. **If the task folder is directly under `.workflow_artifacts/`** (no parent task folder detected), ask the user:
    > "Is the feature `<task-name>` fully complete, or is there more work planned under this folder?"
 
-   If fully complete, move to `finalized/<task-name>/`. If more work remains, do not archive yet.
+   If fully complete, move to `.workflow_artifacts/finalized/<task-name>/`. If more work remains, do not archive yet.
 
 **Steps:**
 ```bash
-# Create finalized/ if it doesn't exist
+# Create .workflow_artifacts/finalized/ if it doesn't exist
 mkdir -p <target-finalized-dir>
 
 # Move the task folder

@@ -1,6 +1,6 @@
 ---
 name: init_workflow
-description: "Initializes the development workflow in a project folder. Creates the memory/ structure, runs /discover to scan the codebase, and generates a quickstart guide. Requires install.sh to have been run first (installs skills to ~/.claude/skills/ and workflow rules to ~/.claude/CLAUDE.md). Use this skill for: /init_workflow, 'initialize workflow', 'set up dev workflow', 'install workflow', 'bootstrap workflow'. Run this once per project."
+description: "Initializes the development workflow in a project folder. Creates the .workflow_artifacts/ structure, runs /discover to scan the codebase, and generates a quickstart guide. Requires install.sh to have been run first (installs skills to ~/.claude/skills/ and workflow rules to ~/.claude/CLAUDE.md). Use this skill for: /init_workflow, 'initialize workflow', 'set up dev workflow', 'install workflow', 'bootstrap workflow'. Run this once per project."
 model: opus
 ---
 
@@ -43,22 +43,48 @@ Confirm with the user if ambiguous:
 
 ### Step 3: Check for existing setup and detect legacy layout
 
+**Case: current layout (`memory/` at project root)**
+If `memory/` exists at the project root (but `.workflow_artifacts/` does not), offer migration:
+
+> ⚠️  Legacy layout detected: `memory/` exists at project root.
+> The new layout consolidates all workflow artifacts under `.workflow_artifacts/`.
+> I can migrate now:
+>   - `memory/` → `.workflow_artifacts/memory/`
+>   - `finalized/` → `.workflow_artifacts/finalized/` (if it exists)
+> Your accumulated knowledge will be preserved.
+> Migrate now? (yes/no)
+
+Migration commands (on yes):
+```bash
+mkdir -p .workflow_artifacts
+mv memory .workflow_artifacts/memory
+[ -d finalized ] && mv finalized .workflow_artifacts/finalized
+```
+
+**Task folder detection** — also scan the project root for task folders to migrate:
+- Candidate: any directory at project root that is NOT a git repo (`[ ! -d "$dir/.git" ]`) and NOT `.workflow_artifacts` itself
+- Qualifies as a task folder if it contains BOTH `current-plan.md` AND at least one of `critic-response-*.md` or `review-*.md`
+- Also qualifies: any non-git-repo directory containing a `finalized/` subdirectory (parent task container)
+- Present detected list to user, ask confirmation per folder before moving
+- Move confirmed folders: `mv <task-name> .workflow_artifacts/<task-name>`
+
 **Legacy detection:** Check for `dev-workflow/memory/` — this is the old layout where memory was nested inside dev-workflow. If found:
 
 ```
 ⚠️  Legacy layout detected: dev-workflow/memory/ exists.
-    The new layout keeps memory/ at the project root.
-    I can migrate it now: move dev-workflow/memory/ → memory/
+    The new layout keeps memory/ under .workflow_artifacts/ at the project root.
+    I can migrate it now: move dev-workflow/memory/ → .workflow_artifacts/memory/
     Your accumulated knowledge (lessons, sessions, etc.) will be preserved.
     Migrate now? (yes/no)
 ```
 
 If the user confirms, run:
 ```bash
-mv dev-workflow/memory memory
+mkdir -p .workflow_artifacts
+mv dev-workflow/memory .workflow_artifacts/memory
 ```
 
-If `memory/` already exists at root (partial migration), merge by copying missing files only — never overwrite existing ones.
+If `.workflow_artifacts/memory/` already exists (partial migration), merge by copying missing files only — never overwrite existing ones.
 
 **Old symlinks cleanup:** Check for `.claude/skills/` containing symlinks into `dev-workflow/skills/`. If found, remove them — skills are now global at `~/.claude/skills/`:
 ```bash
@@ -73,10 +99,10 @@ dev-workflow/skills/ is no longer needed (skills live at ~/.claude/skills/).
 Remove it? (yes/no)
 ```
 
-**Re-init of current layout:** If `memory/` already exists at the project root, tell the user:
-> "This project already has a memory/ setup. Re-initializing will preserve all memory files. Continue?"
+**Re-init of current layout:** If `.workflow_artifacts/` already exists at the project root, tell the user:
+> "This project already has a .workflow_artifacts/ setup. Re-initializing will preserve all memory files. Continue?"
 
-**Never overwrite memory/.** It contains accumulated knowledge.
+**Never overwrite `.workflow_artifacts/memory/`.** It contains accumulated knowledge.
 
 ### Step 4: Configure Claude Code permissions
 
@@ -118,21 +144,22 @@ Run this with `python3 -c "..."` or write the file directly if python3 is unavai
 
 ### Step 5: Create the directory structure
 
-Create the memory structure at the project root (not inside dev-workflow/):
+Create the memory structure under `.workflow_artifacts/` at the project root:
 
 ```
 <project-root>/
-├── memory/
-│   ├── sessions/                  ← per-session state files
-│   ├── daily/                     ← daily rollup from /end_of_day
-│   ├── weekly/                    ← weekly rollup from /weekly_review
-│   ├── repos-inventory.md         ← filled by /discover
-│   ├── architecture-overview.md   ← filled by /discover
-│   ├── dependencies-map.md        ← filled by /discover
-│   ├── git-log.md                 ← filled by /discover, updated by /end_of_day
-│   ├── lessons-learned.md         ← accumulates over time
-│   ├── workflow-rules.md          ← workflow memory for Claude
-│   └── workflow-suggestions.md   ← Tier 3 insight suggestions
+├── .workflow_artifacts/
+│   ├── memory/
+│   │   ├── sessions/                  ← per-session state files
+│   │   ├── daily/                     ← daily rollup from /end_of_day
+│   │   ├── weekly/                    ← weekly rollup from /weekly_review
+│   │   ├── repos-inventory.md         ← filled by /discover
+│   │   ├── architecture-overview.md   ← filled by /discover
+│   │   ├── dependencies-map.md        ← filled by /discover
+│   │   ├── git-log.md                 ← filled by /discover, updated by /end_of_day
+│   │   ├── lessons-learned.md         ← accumulates over time
+│   │   ├── workflow-rules.md          ← workflow memory for Claude
+│   │   └── workflow-suggestions.md   ← Tier 3 insight suggestions
 └── dev-workflow/
     ├── QUICKSTART.md              ← command reference (generated here)
     ├── SETUP.md
@@ -142,8 +169,12 @@ Create the memory structure at the project root (not inside dev-workflow/):
 
 Skills are already at `~/.claude/skills/` (installed by `install.sh`). Do not create a `skills/` directory in the project.
 
+```bash
+mkdir -p .workflow_artifacts/memory/sessions .workflow_artifacts/memory/daily .workflow_artifacts/memory/weekly
+```
+
 For files that should start empty but exist as placeholders:
-- `memory/lessons-learned.md` — create with the template header:
+- `.workflow_artifacts/memory/lessons-learned.md` — create with the template header:
   ```markdown
   # Lessons Learned
 
@@ -156,14 +187,14 @@ For files that should start empty but exist as placeholders:
   **Applies to:** <which skills should pay attention>
   -->
   ```
-- `memory/workflow-rules.md` — copy from `dev-workflow/memory/workflow-rules.md` if it exists in the source, or create with header:
+- `.workflow_artifacts/memory/workflow-rules.md` — copy from `dev-workflow/memory/workflow-rules.md` if it exists in the source, or create with header:
   ```markdown
   # Workflow Rules
 
   Reference summary of the dev-workflow system for Claude.
   See ~/.claude/CLAUDE.md for the full rules.
   ```
-- `memory/workflow-suggestions.md` — create with the template header:
+- `.workflow_artifacts/memory/workflow-suggestions.md` — create with the template header:
   ```markdown
   # Workflow Suggestions
 
@@ -181,18 +212,30 @@ For files that should start empty but exist as placeholders:
   **Status:** surfaced
   -->
   ```
-- `memory/repos-inventory.md` — create empty, will be populated by /discover
-- `memory/architecture-overview.md` — create empty, will be populated by /discover
-- `memory/dependencies-map.md` — create empty, will be populated by /discover
-- `memory/git-log.md` — create empty, will be populated by /discover
+- `.workflow_artifacts/memory/repos-inventory.md` — create empty, will be populated by /discover
+- `.workflow_artifacts/memory/architecture-overview.md` — create empty, will be populated by /discover
+- `.workflow_artifacts/memory/dependencies-map.md` — create empty, will be populated by /discover
+- `.workflow_artifacts/memory/git-log.md` — create empty, will be populated by /discover
+
+### Step 5.5: Add `.workflow_artifacts` to project's `.gitignore`
+
+```bash
+if [ -f .gitignore ]; then
+  grep -qxF '.workflow_artifacts/' .gitignore || echo '.workflow_artifacts/' >> .gitignore
+else
+  echo '.workflow_artifacts/' > .gitignore
+fi
+```
+
+This ensures `.workflow_artifacts/` is gitignored in every project.
 
 ### Step 6: Run /discover
 
 Automatically invoke `/discover` to scan all repositories in the project folder. This populates:
-- `memory/repos-inventory.md`
-- `memory/architecture-overview.md`
-- `memory/dependencies-map.md`
-- `memory/git-log.md`
+- `.workflow_artifacts/memory/repos-inventory.md`
+- `.workflow_artifacts/memory/architecture-overview.md`
+- `.workflow_artifacts/memory/dependencies-map.md`
+- `.workflow_artifacts/memory/git-log.md`
 
 Tell the user:
 > "Running /discover to scan your codebase..."
@@ -212,7 +255,7 @@ Additionally, generate a concise `QUICKSTART.md` in the `dev-workflow/` folder:
 
 | Command | What it does |
 |---------|-------------|
-| `/init_workflow` | One-time project bootstrap — creates memory/, configures permissions, runs /discover |
+| `/init_workflow` | One-time project bootstrap — creates .workflow_artifacts/, configures permissions, runs /discover |
 | `/discover` | Scans all repos, maps architecture and dependencies |
 | `/architect` | Designs solution architecture for a feature/change |
 | `/thorough_plan` | Creates detailed implementation plan (with critic review) |
@@ -251,7 +294,7 @@ Additionally, generate a concise `QUICKSTART.md` in the `dev-workflow/` folder:
 ## Files
 
 - `~/.claude/CLAUDE.md` — shared rules all skills follow (user-level)
-- `memory/` — accumulated knowledge (repos, architecture, lessons, sessions)
+- `.workflow_artifacts/memory/` — accumulated knowledge (repos, architecture, lessons, sessions)
 - `~/.claude/skills/` — all workflow skill definitions (user-level)
 - `Workflow-User-Guide.html` — detailed interactive guide with scenarios
 
@@ -268,7 +311,7 @@ Tell the user:
 Workflow initialized in <project-root>/dev-workflow/
 
 📁 Structure created:
-  - memory/ (repos, architecture, dependencies, lessons, sessions)
+  - .workflow_artifacts/memory/ (repos, architecture, dependencies, lessons, sessions)
   - Workflow-User-Guide.html (interactive guide)
   - QUICKSTART.md (command reference)
 
@@ -285,7 +328,7 @@ Ready to go. Start with:
 
 ## Important behaviors
 
-- **Never overwrite memory/.** If re-initializing, preserve all memory files. They contain accumulated knowledge.
+- **Never overwrite `.workflow_artifacts/memory/`.** If re-initializing, preserve all memory files. They contain accumulated knowledge.
 - **Run /discover automatically.** Don't ask — just run it as part of init. The user expects a ready-to-use setup.
 - **Keep it fast.** This should feel like a quick bootstrap, not a long ceremony.
 - **The quickstart goes in the project folder.** Not buried in skills/ — the user should see it immediately.

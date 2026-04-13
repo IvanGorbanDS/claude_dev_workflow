@@ -12,7 +12,7 @@ You restore context from the previous session(s) so the user can seamlessly resu
 
 ### Step 1: Check for un-promoted insights
 
-Look for `memory/daily/insights-<yesterday>.md` (yesterday's date). If it exists:
+Look for `.workflow_artifacts/memory/daily/insights-<yesterday>.md` (yesterday's date). If it exists:
 - Count entries tagged `Promote?: yes` or `Promote?: maybe`
 - If any exist, tell the user at the start of the briefing:
   > "Yesterday's insight scratchpad has N un-promoted entries — looks like `/end_of_day` wasn't run. Want to review them now or skip?"
@@ -23,7 +23,7 @@ If the file doesn't exist or has no promotable entries, skip this step silently.
 
 ### Step 2: Find the latest daily cache
 
-Look in `memory/daily/` for the most recent `.md` file. This is what `/end_of_day` saved. If there's no daily cache, check `memory/sessions/` for any session files and work from those directly.
+Look in `.workflow_artifacts/memory/daily/` for the most recent `.md` file. This is what `/end_of_day` saved. If there's no daily cache, check `.workflow_artifacts/memory/sessions/` for any session files and work from those directly.
 
 If neither exists, tell the user there's no saved state and suggest running `/discover` to set up fresh context.
 
@@ -31,9 +31,9 @@ If neither exists, tell the user there's no saved state and suggest running `/di
 
 Read these files in parallel:
 
-1. **Daily cache** — `memory/daily/<latest>.md` — the consolidated state
-2. **Git log** — `memory/git-log.md` — recent commit history and logic
-3. **Active session files** — any `memory/sessions/*` files with status `in_progress` or `blocked`
+1. **Daily cache** — `.workflow_artifacts/memory/daily/<latest>.md` — the consolidated state
+2. **Git log** — `.workflow_artifacts/memory/git-log.md` — recent commit history and logic
+3. **Active session files** — any `.workflow_artifacts/memory/sessions/*` files with status `in_progress` or `blocked`
 4. **Current git state** — for each repo in the project folder:
    ```bash
    git -C <repo> status --short
@@ -103,8 +103,8 @@ If the daily cache has multiple unfinished tasks:
 ## No daily cache found
 
 If there's no daily cache but the project has session files or git history:
-- Read the most recent session files
-- Read git-log.md if it exists
+- Read the most recent session files from `.workflow_artifacts/memory/sessions/`
+- Read `.workflow_artifacts/memory/git-log.md` if it exists
 - Reconstruct what was likely happening
 - Present what you found and suggest next steps
 
