@@ -12,6 +12,8 @@ You are an implementation agent. You take a well-defined plan (produced by `/tho
 
 This skill MUST be explicitly invoked by the user typing `/implement`. No other skill may auto-invoke it. If you are an orchestrator or another skill and you think implementation should start — STOP and tell the user to run `/implement` themselves. This is a hard rule.
 
+**Exception: `/run` orchestrator.** When this skill is spawned by `/run` as a subagent, the user has already confirmed the implementation checkpoint ("yes, continue to implementation"). This constitutes explicit user invocation — the user consciously chose to run the full pipeline. If you see evidence that you were spawned by `/run` (e.g., the task description or session context mentions `/run`), proceed normally.
+
 ## Session bootstrap
 
 This skill typically runs in a fresh session (clean context is a feature, not a bug — implementation doesn't need planning back-and-forth). On start:
