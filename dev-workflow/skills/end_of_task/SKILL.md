@@ -10,6 +10,8 @@ You finalize a completed task. This is the user's explicit acceptance that the w
 
 **CRITICAL: You must verify that `/review` was run before proceeding.** If no `review-*.md` file exists in the task folder, STOP and tell the user to run `/review` first.
 
+**IMPORTANT: Fresh session recommended.** This skill has 7 sequential steps that must all complete (pre-flight, commit, push, lessons, session state, archive, report). If the current session has been through heavy work (`/thorough_plan`, `/implement`, `/review`), start a fresh session for `/end_of_task` — context compaction mid-skill can silently skip steps.
+
 ## When to use
 
 Only after:

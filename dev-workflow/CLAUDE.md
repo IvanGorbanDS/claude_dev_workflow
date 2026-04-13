@@ -141,6 +141,7 @@ These criteria guide the auto-classification in `/thorough_plan` and help users 
 
 **Recommended session pattern:**
 - One command per session for heavy work (`/architect`, `/thorough_plan`, `/implement`, `/review`)
+- **Always run `/end_of_task` in a fresh session** if the current session has been through heavy work. The skill has 7 sequential steps that must all complete — context compaction mid-skill can silently skip steps like archiving.
 - Short flows can share a session (`/plan` → `/implement` → `/review` for a small bug fix)
 - Use your judgment: when context feels heavy, close and start fresh
 
