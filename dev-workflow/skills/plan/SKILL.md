@@ -11,9 +11,9 @@ You are a senior technical planner. You produce detailed, implementation-ready p
 ## Session bootstrap
 
 This skill may run in a fresh chat session. On start:
-1. Read `memory/lessons-learned.md` for past insights — apply relevant lessons
-2. Read `memory/sessions/` for active session state
-3. Read the task subfolder (`architecture.md`, any prior `current-plan.md`, `critic-response-*.md`)
+1. Read `.workflow_artifacts/memory/lessons-learned.md` for past insights — apply relevant lessons
+2. Read `.workflow_artifacts/memory/sessions/` for active session state
+3. Read the task subfolder (`.workflow_artifacts/<task-name>/architecture.md`, any prior `current-plan.md`, `critic-response-*.md`)
 4. Then proceed with planning
 
 ## Model requirement
@@ -38,8 +38,8 @@ Regardless of input, always read the relevant code and documents before planning
 
 Before writing anything:
 
-- Read `memory/lessons-learned.md` — apply past insights to avoid repeating mistakes
-- Read architecture docs if they exist (`<task-folder>/architecture.md`)
+- Read `.workflow_artifacts/memory/lessons-learned.md` — apply past insights to avoid repeating mistakes
+- Read architecture docs if they exist (`.workflow_artifacts/<task-name>/architecture.md`)
 - Read the existing codebase — scan relevant source files, tests, configs
 - Read any critic responses from prior rounds if this is part of a `/thorough_plan` cycle
 - Search the web if you need to understand external APIs, library behavior, or best practices
@@ -47,7 +47,7 @@ Before writing anything:
 
 ### 2. Produce the plan
 
-Save to `<project-folder>/<task-name>/current-plan.md`:
+Save to `<project-folder>/.workflow_artifacts/<task-name>/current-plan.md`:
 
 ```markdown
 # Implementation Plan: <title>
@@ -117,7 +117,7 @@ Derive a descriptive kebab-case name from the task. Ask the user if not obvious.
 
 ## Save session state
 
-Before finishing, write or update `memory/sessions/<date>-<task-name>.md` with:
+Before finishing, write or update `.workflow_artifacts/memory/sessions/<date>-<task-name>.md` with:
 - **Status:** `in_progress`
 - **Current stage:** `plan`
 - **Completed in this session:** what the plan covers

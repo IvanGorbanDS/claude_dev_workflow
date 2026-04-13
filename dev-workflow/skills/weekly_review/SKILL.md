@@ -23,9 +23,9 @@ date -v-Mon +%Y-%m-%d 2>/dev/null || date -d 'last monday' +%Y-%m-%d
 
 Read these in parallel:
 
-1. **Daily caches** — `memory/daily/<date>.md` for each day in the range. These are the primary source — they contain completed work, unfinished carry-forwards, decisions, and git summaries.
+1. **Daily caches** — `.workflow_artifacts/memory/daily/<date>.md` for each day in the range. These are the primary source — they contain completed work, unfinished carry-forwards, decisions, and git summaries.
 
-2. **Session files** — `memory/sessions/<date>-*.md` for dates in the range. These have finer-grained detail on individual tasks.
+2. **Session files** — `.workflow_artifacts/memory/sessions/<date>-*.md` for dates in the range. These have finer-grained detail on individual tasks.
 
 3. **Git history** — for each repo in the project folder:
    ```bash
@@ -33,11 +33,11 @@ Read these in parallel:
    ```
    Count commits, identify active branches, note merged PRs.
 
-4. **Git log** — `memory/git-log.md` for the rolling commit log with context.
+4. **Git log** — `.workflow_artifacts/memory/git-log.md` for the rolling commit log with context.
 
-5. **Lessons learned** — `memory/lessons-learned.md` — filter for entries dated within this week.
+5. **Lessons learned** — `.workflow_artifacts/memory/lessons-learned.md` — filter for entries dated within this week.
 
-6. **Task folders** — scan the project root for task subfolders that were created or modified this week. Check for `architecture.md`, `current-plan.md`, `review-*.md` artifacts to understand what stages tasks went through.
+6. **Task folders** — scan `.workflow_artifacts/` for task subfolders that were created or modified this week. Check for `architecture.md`, `current-plan.md`, `review-*.md` artifacts to understand what stages tasks went through.
 
 ### Step 3: Build the review
 
@@ -103,10 +103,10 @@ For the Highlights section: each bullet should state a concrete outcome or deliv
 
 Write the review to:
 ```
-memory/weekly/<YYYY-WNN>.md
+.workflow_artifacts/memory/weekly/<YYYY-WNN>.md
 ```
 
-Where `WNN` is the ISO week number (e.g., `2026-W12`). Create the `memory/weekly/` directory if it doesn't exist.
+Where `WNN` is the ISO week number (e.g., `2026-W12`). Create the `.workflow_artifacts/memory/weekly/` directory if it doesn't exist.
 
 ### Step 5: Present to the user
 
@@ -120,7 +120,7 @@ Then ask:
 
 > "Want me to capture any lessons from this week?"
 
-If yes, append to `memory/lessons-learned.md`.
+If yes, append to `.workflow_artifacts/memory/lessons-learned.md`.
 
 ## Handling sparse data
 

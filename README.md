@@ -102,7 +102,7 @@ Then type:
 ```
 
 This handles all project-level setup:
-- Creates `memory/` at the project root with sessions, daily, weekly dirs and template files
+- Creates `.workflow_artifacts/` at the project root (gitignored) with memory, sessions, daily, weekly dirs and template files
 - Configures `.claude/settings.json` permissions (allows reads/searches, denies destructive ops)
 - Runs `/discover` to scan your repos and populate memory
 - Generates a quickstart reference
@@ -151,9 +151,9 @@ Each skill is designed to work in its own chat session. Context windows fill up 
 
 The workflow accumulates knowledge at three levels:
 
-- **Tier 1 — Daily scratchpad** (`memory/daily/insights-<date>.md`): Claude writes here automatically during task work — patterns, gotchas, decision rationale. Use `/capture_insight` to log something explicitly.
-- **Tier 2 — Lessons learned** (`memory/lessons-learned.md`): Promoted from Tier 1 at `/end_of_day` with your confirmation. Planning and review skills read this to avoid repeating past mistakes.
-- **Tier 3 — Workflow suggestions** (`memory/workflow-suggestions.md`): Insights about the workflow itself. Surfaced at `/end_of_day` for you to apply to the workflow repo manually.
+- **Tier 1 — Daily scratchpad** (`.workflow_artifacts/memory/daily/insights-<date>.md`): Claude writes here automatically during task work — patterns, gotchas, decision rationale. Use `/capture_insight` to log something explicitly.
+- **Tier 2 — Lessons learned** (`.workflow_artifacts/memory/lessons-learned.md`): Promoted from Tier 1 at `/end_of_day` with your confirmation. Planning and review skills read this to avoid repeating past mistakes.
+- **Tier 3 — Workflow suggestions** (`.workflow_artifacts/memory/workflow-suggestions.md`): Insights about the workflow itself. Surfaced at `/end_of_day` for you to apply to the workflow repo manually.
 
 ### Plan-Critic-Revise Loop
 
@@ -167,17 +167,17 @@ Medium tasks use Sonnet for revision (up to 4 rounds). Large tasks use Opus thro
 
 ### Task Subfolder Convention
 
-All planning artifacts live in a descriptive task subfolder at the project root:
+All planning artifacts live under `.workflow_artifacts/` (gitignored, hidden at project root):
 ```
-your-project/auth-refactor/          # active task
-your-project/auth-refactor/current-plan.md
-your-project/auth-refactor/critic-response-1.md
-your-project/auth-refactor/review-1.md
+your-project/.workflow_artifacts/auth-refactor/          # active task
+your-project/.workflow_artifacts/auth-refactor/current-plan.md
+your-project/.workflow_artifacts/auth-refactor/critic-response-1.md
+your-project/.workflow_artifacts/auth-refactor/review-1.md
 ```
 
-When finalized via `/end_of_task`, the folder moves to `finalized/`:
+When finalized via `/end_of_task`, the folder moves to `.workflow_artifacts/finalized/`:
 ```
-your-project/finalized/auth-refactor/
+your-project/.workflow_artifacts/finalized/auth-refactor/
 ```
 
 ## Project Structure After Install
@@ -207,20 +207,21 @@ your-project/finalized/auth-refactor/
 your-project/                    ← any project where you ran /init_workflow
 ├── .claude/
 │   └── settings.json            ← project permissions
-├── memory/                      ← project memory (at project root)
-│   ├── sessions/                ← per-session task state
-│   ├── daily/                   ← daily insights scratchpads
-│   ├── weekly/                  ← weekly reviews
-│   ├── lessons-learned.md       ← accumulated project insights
-│   ├── workflow-suggestions.md  ← workflow improvement ideas
-│   ├── repos-inventory.md       ← populated by /discover
-│   ├── architecture-overview.md ← populated by /discover
-│   └── dependencies-map.md      ← populated by /discover
-├── my-feature/                  ← active task artifacts
-│   ├── current-plan.md
-│   └── critic-response-1.md
-├── finalized/                   ← completed tasks (archived by /end_of_task)
-├── service-a/                   ← your repos
+├── .workflow_artifacts/         ← all workflow artifacts (gitignored)
+│   ├── memory/                  ← project memory
+│   │   ├── sessions/            ← per-session task state
+│   │   ├── daily/               ← daily insights scratchpads
+│   │   ├── weekly/              ← weekly reviews
+│   │   ├── lessons-learned.md   ← accumulated project insights
+│   │   ├── workflow-suggestions.md
+│   │   ├── repos-inventory.md   ← populated by /discover
+│   │   ├── architecture-overview.md
+│   │   └── dependencies-map.md
+│   ├── my-feature/              ← active task artifacts
+│   │   ├── current-plan.md
+│   │   └── critic-response-1.md
+│   └── finalized/               ← completed tasks (archived by /end_of_task)
+├── service-a/                   ← your repos (clean root!)
 ├── service-b/
 └── frontend/
 ```
@@ -239,13 +240,15 @@ Then for each project: `cd project && claude` → `/init_workflow`
 cd claude_dev_workflow && git pull
 bash dev-workflow/install.sh
 ```
-Skills and `~/.claude/CLAUDE.md` are updated. Project `memory/` is never touched.
+Skills and `~/.claude/CLAUDE.md` are updated. Project `.workflow_artifacts/` is never touched.
+
+> **Important:** Always re-run `bash install.sh` after pulling updates. Without this step, Claude's global `~/.claude/CLAUDE.md` won't reflect path changes and will conflict with the updated skill files.
 
 ### Team member joining
-Same as new machine. Clone the workflow repo, run `install.sh`. Each project's `memory/` is local. `/init_workflow` can re-scaffold any project that's missing its memory structure.
+Same as new machine. Clone the workflow repo, run `install.sh`. Each project's `.workflow_artifacts/` is local and gitignored. `/init_workflow` can re-scaffold any project that's missing its structure.
 
 ### Legacy project (old layout)
-Run `/init_workflow` in the project. It detects the old `dev-workflow/memory/` layout, offers migration to the project root, and cleans up old symlinks.
+Run `/init_workflow` in the project. It detects old layouts (`memory/` at root, task folders at root, `finalized/` at root, or the oldest `dev-workflow/memory/` layout) and offers to migrate everything into `.workflow_artifacts/` with your confirmation.
 
 ## Documentation
 

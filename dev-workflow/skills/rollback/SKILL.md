@@ -17,7 +17,7 @@ You safely undo implementation work by mapping commits to plan tasks and reverti
 ### Step 1: Understand the state
 
 Read:
-1. **The plan** — `<task-folder>/current-plan.md` to understand task structure
+1. **The plan** — `.workflow_artifacts/<task-name>/current-plan.md` to understand task structure
 2. **Git log** — map recent commits to plan tasks (by commit message, branch, or scope)
 3. **Current diff** — any uncommitted changes that would be affected
 4. **Session state** — what phase we're in and what's been completed
@@ -127,9 +127,9 @@ git revert HEAD --no-edit
 ### Step 5: Update session state
 
 After rollback:
-- Update the session file: mark rolled-back tasks as `pending` again
+- Update the session file (`.workflow_artifacts/memory/sessions/<date>-<task-name>.md`): mark rolled-back tasks as `pending` again
 - Note the rollback in the session's decision log
-- Update git-log.md with the revert commits
+- Update `.workflow_artifacts/memory/git-log.md` with the revert commits
 
 ### Step 6: Report
 

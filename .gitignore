@@ -2,9 +2,13 @@
 .DS_Store
 ._*
 
-# Claude Code memory (session-specific, not shared)
-dev-workflow/memory/daily/
-dev-workflow/memory/sessions/
+# Workflow artifacts (session-specific, not shared)
+.workflow_artifacts/
+
+# Legacy artifact locations (pre-.workflow_artifacts layout)
+memory/
+finalized/
+artifact-consolidation/
 
 # Editor / IDE
 .vscode/
@@ -16,7 +20,5 @@ dev-workflow/memory/sessions/
 # Environment
 .env
 .env.local
-memory/
 .claude/
-finalized/
 

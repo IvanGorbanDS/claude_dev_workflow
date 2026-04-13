@@ -18,13 +18,13 @@ Uses the strongest model (Opus) because understanding how services relate requir
 
 Before scanning each repo, check if a previous scan recorded the repo's HEAD commit:
 
-1. Read `memory/repo-heads.md` if it exists. This file maps repo names to their `git rev-parse HEAD` values from the last `/discover` run.
+1. Read `.workflow_artifacts/memory/repo-heads.md` if it exists. This file maps repo names to their `git rev-parse HEAD` values from the last `/discover` run.
 2. For each repo in the project folder, run `git rev-parse HEAD` and compare against the stored value.
 3. **If HEAD matches the stored value: skip the full scan for that repo.** Its inventory, dependencies, and API surface have not changed. Report to the user: "Skipping <repo-name> — unchanged since last scan (HEAD: <short-hash>)."
 4. **If HEAD differs or no stored value exists: perform the full scan** as described below.
-5. After completing all scans, overwrite `memory/repo-heads.md` with the current HEAD values for all repos (including unchanged ones).
+5. After completing all scans, overwrite `.workflow_artifacts/memory/repo-heads.md` with the current HEAD values for all repos (including unchanged ones).
 
-Format for `memory/repo-heads.md`:
+Format for `.workflow_artifacts/memory/repo-heads.md`:
 
 | Repo | HEAD |
 |------|------|
@@ -94,7 +94,7 @@ Use subagents to scan repos in parallel when possible.
 
 ## Output
 
-Save all findings to `<project-folder>/memory/`:
+Save all findings to `<project-folder>/.workflow_artifacts/memory/`:
 
 ### `repos-inventory.md`
 

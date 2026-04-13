@@ -70,9 +70,9 @@ Within `/thorough_plan`, the orchestrator handles its own internal loop (plan→
 ### Step 1: Detect context
 
 Determine which phase just completed by reading:
-- The task subfolder for artifacts (architecture.md, current-plan.md, critic responses, review docs)
+- The task subfolder for artifacts (all under `.workflow_artifacts/<task-name>/`: architecture.md, current-plan.md, critic responses, review docs)
 - Git state (branches, uncommitted changes, recent commits)
-- Session state file if it exists
+- Session state file if it exists (`.workflow_artifacts/memory/sessions/<date>-<task-name>.md`)
 
 Identify what the *next* phase would be.
 
@@ -180,4 +180,4 @@ If automated checks failed:
 - **You are a checkpoint, not a bottleneck.** Run checks fast, present clearly, get out of the way once approved.
 - **Never auto-approve.** Even if all checks pass, wait for the human.
 - **Be honest about what you can't check.** If there's no test suite configured, say so — don't pretend everything passed.
-- **Remember the gate result.** Save it to `<task-folder>/gate-<phase>-<date>.md` for audit trail.
+- **Remember the gate result.** Save it to `.workflow_artifacts/<task-name>/gate-<phase>-<date>.md` for audit trail.

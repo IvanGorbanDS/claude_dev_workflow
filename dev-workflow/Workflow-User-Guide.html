@@ -102,7 +102,7 @@
 <h2>Planning &amp; Design</h2>
 <table>
   <tr><th>Command</th><th>What it does</th><th>Model</th></tr>
-  <tr><td>/init_workflow</td><td>One-time project bootstrap. Creates <code>memory/</code> structure, configures permissions, runs /discover.</td><td><span class="model model-opus">Opus</span></td></tr>
+  <tr><td>/init_workflow</td><td>One-time project bootstrap. Creates <code>.workflow_artifacts/</code> structure, configures permissions, runs /discover.</td><td><span class="model model-opus">Opus</span></td></tr>
   <tr><td>/discover</td><td>Scans all repos, builds inventory, architecture map, and git log. Run once on setup.</td><td><span class="model model-opus">Opus</span></td></tr>
   <tr><td>/architect</td><td>Deep system design. Spawns scan agents in parallel, then synthesizes on Opus. Produces <code>architecture.md</code>.</td><td><span class="model model-opus">Opus</span></td></tr>
   <tr><td>/thorough_plan</td><td>Orchestrates the plan-critic-revise loop. Auto-triages tasks as Small/Medium/Large.</td><td><span class="model model-opus">Opus</span></td></tr>
@@ -138,7 +138,7 @@
 <h2>Knowledge Capture</h2>
 <table>
   <tr><th>Command</th><th>What it does</th><th>Model</th></tr>
-  <tr><td>/capture_insight</td><td>Logs a pattern, gotcha, or decision rationale to <code>memory/daily/insights-&lt;date&gt;.md</code> without interrupting your current task.</td><td><span class="model model-haiku">Haiku</span></td></tr>
+  <tr><td>/capture_insight</td><td>Logs a pattern, gotcha, or decision rationale to <code>.workflow_artifacts/memory/daily/insights-&lt;date&gt;.md</code> without interrupting your current task.</td><td><span class="model model-haiku">Haiku</span></td></tr>
 </table>
 
 <hr>
@@ -182,9 +182,9 @@
 
 <h3>Run /init_workflow</h3>
 <div class="chat user">/init_workflow</div>
-<div class="chat claude">Creating memory/ structure... Configuring .claude/settings.json permissions... Running /discover...</div>
+<div class="chat claude">Creating .workflow_artifacts/ structure... Configuring .claude/settings.json permissions... Running /discover...</div>
 <div class="chat claude">Scanning the project folder... Found 4 repositories: <strong>api-gateway</strong> (TypeScript/NestJS), <strong>payment-service</strong> (Go), <strong>user-service</strong> (Python/FastAPI), <strong>notification-service</strong> (TypeScript/Node). Mapping integrations...</div>
-<div class="chat claude">Done. Saved to <code>memory/</code>: repos-inventory.md, architecture-overview.md, dependencies-map.md, git-log.md. The API gateway routes to all three backend services. Payment and notification communicate via Kafka. 47 recent commits captured.</div>
+<div class="chat claude">Done. Saved to <code>.workflow_artifacts/memory/</code>: repos-inventory.md, architecture-overview.md, dependencies-map.md, git-log.md. The API gateway routes to all three backend services. Payment and notification communicate via Kafka. 47 recent commits captured.</div>
 
 <p class="note">That's it for setup. The memory files persist across sessions. Re-run /discover only when repos change significantly.</p>
 
@@ -196,10 +196,10 @@
 
 <h3>Step 1: /architect</h3>
 <div class="chat user">/architect — I need to add customer-initiated refunds. Should go through the gateway, hit the payment service which calls Stripe, and notify the customer.</div>
-<div class="chat claude">Reading memory/architecture-overview.md for baseline context... Reading payment-service source code, Stripe SDK usage, existing transaction flow... Searching web for Stripe refund API best practices...</div>
+<div class="chat claude">Reading .workflow_artifacts/memory/architecture-overview.md for baseline context... Reading payment-service source code, Stripe SDK usage, existing transaction flow... Searching web for Stripe refund API best practices...</div>
 <div class="chat claude">[Asks 2-3 clarifying questions: partial refunds? refund window? admin override?]</div>
 <div class="chat user">Yes to partial refunds, 30-day window, admin can override the window.</div>
-<div class="chat claude">Architecture document saved to <code>refund-flow/architecture.md</code>. Decomposed into 3 stages: (1) Payment service refund logic + Stripe integration, (2) Gateway endpoint + validation, (3) Notification templates + Kafka consumer. Each stage is independently deployable.</div>
+<div class="chat claude">Architecture document saved to <code>.workflow_artifacts/refund-flow/architecture.md</code>. Decomposed into 3 stages: (1) Payment service refund logic + Stripe integration, (2) Gateway endpoint + validation, (3) Notification templates + Kafka consumer. Each stage is independently deployable.</div>
 
 <h3>Step 2: Gate</h3>
 <div class="chat claude">Running gate: <strong>architect &rarr; thorough_plan</strong>. Architecture document exists and covers objective, service map, integration points, 3 decomposed stages. 6/6 checks passed.<br><br><strong>Action required:</strong> type <code>/thorough_plan</code> to proceed, or tell me what to adjust.</div>
@@ -208,7 +208,7 @@
 <h3>Step 3: Thorough plan (automatic loop)</h3>
 <div class="chat claude">Task triaged as <strong>Large</strong> (cross-service, Stripe integration, Kafka messaging). Running all-Opus convergence loop, up to 5 rounds.</div>
 <div class="chat claude">Invoking <code>/plan</code> <span class="model model-opus">Opus</span> for stage 1 (payment service refund logic)...</div>
-<div class="chat claude">Plan created: 7 tasks covering Stripe refund client, refund domain model, idempotency handling, event publishing, error mapping, and tests. Saved to <code>refund-flow/current-plan.md</code>.</div>
+<div class="chat claude">Plan created: 7 tasks covering Stripe refund client, refund domain model, idempotency handling, event publishing, error mapping, and tests. Saved to <code>.workflow_artifacts/refund-flow/current-plan.md</code>.</div>
 <div class="chat claude">Invoking <code>/critic</code> <span class="model model-opus">Opus</span> in fresh session (round 1)...</div>
 <div class="chat claude">Round 1 complete — critic found <strong>1 MAJOR issue</strong>: plan doesn't handle Stripe's async refund status (refunds can be pending for days). Verdict: <strong>REVISE</strong>.</div>
 <div class="chat claude">Invoking <code>/revise</code> <span class="model model-opus">Opus</span> to address critic feedback...</div>
@@ -216,14 +216,14 @@
 <div class="chat claude">Round 2 complete. Critic verdict: <strong>PASS</strong>. No critical or major issues.</div>
 
 <h3>Step 4: Gate &rarr; you decide to /implement</h3>
-<div class="chat claude">Running gate: <strong>thorough_plan &rarr; implement</strong>. Plan has PASS verdict, 8 tasks with file paths and acceptance criteria, integration analysis covers Stripe + Kafka + gateway, risk mitigations are concrete. 8/8 checks passed.<br><br>The plan is ready at <code>refund-flow/current-plan.md</code>. It took 2 rounds. Main revision: added async refund status handling via Stripe webhooks.<br><br><strong>Action required:</strong> type <code>/implement</code> to start coding.</div>
+<div class="chat claude">Running gate: <strong>thorough_plan &rarr; implement</strong>. Plan has PASS verdict, 8 tasks with file paths and acceptance criteria, integration analysis covers Stripe + Kafka + gateway, risk mitigations are concrete. 8/8 checks passed.<br><br>The plan is ready at <code>.workflow_artifacts/refund-flow/current-plan.md</code>. It took 2 rounds. Main revision: added async refund status handling via Stripe webhooks.<br><br><strong>Action required:</strong> type <code>/implement</code> to start coding.</div>
 
 <p class="note">Notice: Claude stops here and waits. It will not start writing code until you explicitly say so.</p>
 
 <div class="chat user">/implement</div>
 
 <h3>Step 5: Implementation</h3>
-<div class="chat claude">Reading refund-flow/current-plan.md... <span class="model model-sonnet">Sonnet</span> Which tasks would you like me to start with? The plan suggests Tasks 1-3 first (core refund logic), then 4a (webhook), then 5-8 (tests + integration).</div>
+<div class="chat claude">Reading .workflow_artifacts/refund-flow/current-plan.md... <span class="model model-sonnet">Sonnet</span> Which tasks would you like me to start with? The plan suggests Tasks 1-3 first (core refund logic), then 4a (webhook), then 5-8 (tests + integration).</div>
 <div class="chat user">Do tasks 1-4a</div>
 <div class="chat claude">[Implements each task, makes small commits, runs tests after each]</div>
 <div class="chat claude">Tasks 1-4a complete. 5 commits on branch <code>feat/refund-flow</code>. All existing tests pass. Running gate...</div>
@@ -232,7 +232,7 @@
 <div class="chat claude">Gate: <strong>implement &rarr; review</strong>. Tests: 47 passed, 0 failed. Lint: clean. No debug code. No secrets in diff. 6/6 checks passed.<br><br><strong>Action required:</strong> type <code>/review</code> to proceed.</div>
 <div class="chat user">/review</div>
 <div class="chat claude"><span class="model model-opus">Opus</span> [Reads the diff, traces data flow, checks Stripe error handling, verifies Kafka event schema...]</div>
-<div class="chat claude">Review saved to <code>refund-flow/review-1.md</code>. Verdict: <strong>CHANGES_REQUESTED</strong>.<br>1 major issue: refund amount validation doesn't check against original transaction amount — could refund more than was paid. Suggested fix included.</div>
+<div class="chat claude">Review saved to <code>.workflow_artifacts/refund-flow/review-1.md</code>. Verdict: <strong>CHANGES_REQUESTED</strong>.<br>1 major issue: refund amount validation doesn't check against original transaction amount — could refund more than was paid. Suggested fix included.</div>
 
 <div class="chat user">/implement — fix the review issue</div>
 <div class="chat claude">[Fixes the validation, adds test for over-refund case, commits]</div>
@@ -252,7 +252,7 @@ Anything that surprised you, or that the workflow should handle differently next
 <em>Next: when you're ready, create a PR from the branch.</em>
 </div>
 <div class="chat user">The critic catching async refund patterns was great. For payment integrations, always check webhook/async patterns.</div>
-<div class="chat claude">Added to <code>lessons-learned.md</code>. Task <strong>refund-flow</strong> marked as completed.</div>
+<div class="chat claude">Added to <code>.workflow_artifacts/memory/lessons-learned.md</code>. Task <strong>refund-flow</strong> marked as completed.</div>
 
 <hr>
 
@@ -262,7 +262,7 @@ Anything that surprised you, or that the workflow should handle differently next
 
 <div class="chat user">/thorough_plan — add rate limiting to the API gateway with per-user and per-endpoint limits</div>
 <div class="chat claude">Task triaged as <strong>Medium</strong> (multiple files in one service, integration points with Redis for state). Running plan-critic-revise loop with Sonnet revise, up to 4 rounds.</div>
-<div class="chat claude"><code>/plan</code> <span class="model model-opus">Opus</span>: 5 tasks — Redis connection, rate limit middleware, per-user config, per-endpoint config, tests. Saved to <code>api-rate-limiting/current-plan.md</code>.</div>
+<div class="chat claude"><code>/plan</code> <span class="model model-opus">Opus</span>: 5 tasks — Redis connection, rate limit middleware, per-user config, per-endpoint config, tests. Saved to <code>.workflow_artifacts/api-rate-limiting/current-plan.md</code>.</div>
 <div class="chat claude"><code>/critic</code> <span class="model model-opus">Opus</span> round 1: 1 issue — plan uses fixed-window algorithm, should use sliding window to prevent burst at window boundaries. Verdict: <strong>REVISE</strong>.</div>
 <div class="chat claude"><code>/revise-fast</code> <span class="model model-sonnet">Sonnet</span>: Updated to sliding window with Redis sorted sets. Round 2 critic: <strong>PASS</strong>.</div>
 <div class="chat claude">Gate passed. <strong>Action required:</strong> type <code>/implement</code> to start coding.</div>
@@ -320,17 +320,17 @@ Removes 2 files, modifies 1. Tasks 1-2 preserved. No other branches depend on th
 
 <h2>Ending your day</h2>
 <div class="chat user">/end_of_day</div>
-<div class="chat claude"><span class="model model-haiku">Haiku</span> Saving session state for refund-flow... Current stage: implement (tasks 1-4a done, tasks 5-8 pending). Branch: <code>feat/refund-flow</code>. Updating git-log.md with 12 commits from today...</div>
+<div class="chat claude"><span class="model model-haiku">Haiku</span> Saving session state for refund-flow to <code>.workflow_artifacts/memory/</code>... Current stage: implement (tasks 1-4a done, tasks 5-8 pending). Branch: <code>feat/refund-flow</code>. Updating git-log.md with 12 commits from today...</div>
 <div class="chat claude">Anything that surprised you today, or that should work differently next time?</div>
 <div class="chat user">The critic caught the async refund thing which I totally missed. Plans for payment integrations should always ask about async/webhook patterns.</div>
-<div class="chat claude">Added to <code>lessons-learned.md</code>. Daily cache saved to <code>memory/daily/2026-03-17.md</code>. 1 session active (refund-flow, in-progress). Tomorrow's priority: finish tasks 5-8 (tests) and run /review.<br><br>Run <code>/start_of_day</code> when you're back.</div>
+<div class="chat claude">Added to <code>.workflow_artifacts/memory/lessons-learned.md</code>. Daily cache saved to <code>.workflow_artifacts/memory/daily/2026-03-17.md</code>. 1 session active (refund-flow, in-progress). Tomorrow's priority: finish tasks 5-8 (tests) and run /review.<br><br>Run <code>/start_of_day</code> when you're back.</div>
 
 <h2>Starting the next day</h2>
 <div class="chat user">/start_of_day</div>
 <div class="chat claude"><span class="model model-haiku">Haiku</span> Good morning. Reading daily cache from 2026-03-17...<br><br>
 <strong>Since last session:</strong> no new commits from others, CI green, no PR reviews.<br><br>
 <strong>Unfinished work:</strong><br>
-&bull; <strong>refund-flow</strong> — implement phase, tasks 5-8 pending (tests + integration). Branch: <code>feat/refund-flow</code>. Resume at: write unit tests for refund.service.go (Task 5 in current-plan.md).<br><br>
+&bull; <strong>refund-flow</strong> — implement phase, tasks 5-8 pending (tests + integration). Branch: <code>feat/refund-flow</code>. Resume at: write unit tests for refund.service.go (Task 5 in <code>.workflow_artifacts/refund-flow/current-plan.md</code>).<br><br>
 <strong>Key context from yesterday:</strong> Added async refund handling via Stripe webhooks after critic caught it in round 1. Amount type changed to int64 cents.<br><br>
 Suggested priority: finish the tests (tasks 5-8), then /review. Want to resume with <code>/implement</code>?</div>
 <div class="chat user">/implement</div>
@@ -373,7 +373,7 @@ Suggested priority: finish the tests (tasks 5-8), then /review. Want to resume w
 
 <div class="rule"><strong>6. /rollback is always available.</strong> It maps commits to plan tasks, shows what will change, and requires your confirmation. Safe to use at any point.</div>
 
-<div class="rule"><strong>7. Each task gets its own folder.</strong> <code>refund-flow/</code>, <code>auth-token-fix/</code> — parallel tasks never mix. Descriptive kebab-case names. Completed tasks move to <code>finalized/</code> via /end_of_task.</div>
+<div class="rule"><strong>7. Each task gets its own folder.</strong> <code>.workflow_artifacts/refund-flow/</code>, <code>.workflow_artifacts/auth-token-fix/</code> — parallel tasks never mix. Descriptive kebab-case names. Completed tasks move to <code>.workflow_artifacts/finalized/</code> via /end_of_task.</div>
 
 <hr>
 
@@ -381,11 +381,11 @@ Suggested priority: finish the tests (tasks 5-8), then /review. Want to resume w
 <h1>Three-Tier Memory</h1>
 <p>The workflow accumulates knowledge at three levels:</p>
 
-<div class="rule"><strong>Tier 1 — Daily scratchpad</strong> (<code>memory/daily/insights-&lt;date&gt;.md</code>): Claude writes here automatically during task work — patterns, gotchas, decision rationale. Use <code>/capture_insight</code> to log something explicitly.</div>
+<div class="rule"><strong>Tier 1 — Daily scratchpad</strong> (<code>.workflow_artifacts/memory/daily/insights-&lt;date&gt;.md</code>): Claude writes here automatically during task work — patterns, gotchas, decision rationale. Use <code>/capture_insight</code> to log something explicitly.</div>
 
-<div class="rule"><strong>Tier 2 — Lessons learned</strong> (<code>memory/lessons-learned.md</code>): Promoted from Tier 1 at <code>/end_of_day</code> with your confirmation. Planning and review skills read this automatically to avoid repeating past mistakes.</div>
+<div class="rule"><strong>Tier 2 — Lessons learned</strong> (<code>.workflow_artifacts/memory/lessons-learned.md</code>): Promoted from Tier 1 at <code>/end_of_day</code> with your confirmation. Planning and review skills read this automatically to avoid repeating past mistakes.</div>
 
-<div class="rule"><strong>Tier 3 — Workflow suggestions</strong> (<code>memory/workflow-suggestions.md</code>): Insights about the workflow itself. Surfaced at <code>/end_of_day</code> for you to apply to the workflow repo manually.</div>
+<div class="rule"><strong>Tier 3 — Workflow suggestions</strong> (<code>.workflow_artifacts/memory/workflow-suggestions.md</code>): Insights about the workflow itself. Surfaced at <code>/end_of_day</code> for you to apply to the workflow repo manually.</div>
 
 <hr>
 
@@ -399,12 +399,12 @@ Suggested priority: finish the tests (tasks 5-8), then /review. Want to resume w
 
 <table>
   <tr><th>Skill</th><th>Reads on startup</th></tr>
-  <tr><td>/architect</td><td>CLAUDE.md, lessons-learned.md, /discover memory files, task subfolder</td></tr>
-  <tr><td>/plan</td><td>CLAUDE.md, lessons-learned.md, architecture.md, prior critic responses</td></tr>
-  <tr><td>/critic</td><td>CLAUDE.md, lessons-learned.md, current-plan.md, <strong>actual source code</strong></td></tr>
-  <tr><td>/revise</td><td>CLAUDE.md, current-plan.md, latest critic-response</td></tr>
-  <tr><td>/implement</td><td>CLAUDE.md, lessons-learned.md, session state, current-plan.md, source code</td></tr>
-  <tr><td>/review</td><td>CLAUDE.md, lessons-learned.md, current-plan.md, architecture.md, git diff + full files</td></tr>
+  <tr><td>/architect</td><td>CLAUDE.md, <code>.workflow_artifacts/memory/lessons-learned.md</code>, /discover memory files, <code>.workflow_artifacts/&lt;task-name&gt;/</code></td></tr>
+  <tr><td>/plan</td><td>CLAUDE.md, <code>.workflow_artifacts/memory/lessons-learned.md</code>, <code>.workflow_artifacts/&lt;task-name&gt;/architecture.md</code>, prior critic responses</td></tr>
+  <tr><td>/critic</td><td>CLAUDE.md, <code>.workflow_artifacts/memory/lessons-learned.md</code>, <code>.workflow_artifacts/&lt;task-name&gt;/current-plan.md</code>, <strong>actual source code</strong></td></tr>
+  <tr><td>/revise</td><td>CLAUDE.md, <code>.workflow_artifacts/&lt;task-name&gt;/current-plan.md</code>, latest critic-response</td></tr>
+  <tr><td>/implement</td><td>CLAUDE.md, <code>.workflow_artifacts/memory/lessons-learned.md</code>, <code>.workflow_artifacts/memory/sessions/</code> state, <code>.workflow_artifacts/&lt;task-name&gt;/current-plan.md</code>, source code</td></tr>
+  <tr><td>/review</td><td>CLAUDE.md, <code>.workflow_artifacts/memory/lessons-learned.md</code>, <code>.workflow_artifacts/&lt;task-name&gt;/current-plan.md</code>, <code>.workflow_artifacts/&lt;task-name&gt;/architecture.md</code>, git diff + full files</td></tr>
 </table>
 
 <p>You never have to re-explain context. If it's in the files, the skill reads it.</p>
@@ -502,22 +502,23 @@ Suggested priority: finish the tests (tasks 5-8), then /review. Want to resume w
 <br>
 project-folder/<br>
 &boxvr; .claude/settings.json <span class="comment">&larr; project permissions</span><br>
-&boxvr; memory/ <span class="comment">&larr; project knowledge (at project root)</span><br>
-&boxv;   &boxvr; repos-inventory.md <span class="comment">&larr; from /discover</span><br>
-&boxv;   &boxvr; architecture-overview.md <span class="comment">&larr; from /discover</span><br>
-&boxv;   &boxvr; dependencies-map.md <span class="comment">&larr; from /discover</span><br>
-&boxv;   &boxvr; git-log.md <span class="comment">&larr; rolling commit log</span><br>
-&boxv;   &boxvr; lessons-learned.md <span class="comment">&larr; accumulated insights</span><br>
-&boxv;   &boxvr; workflow-suggestions.md <span class="comment">&larr; workflow improvement ideas</span><br>
-&boxv;   &boxvr; sessions/ <span class="comment">&larr; per-session state files</span><br>
-&boxv;   &boxvr; daily/ <span class="comment">&larr; daily rollups + insight scratchpads</span><br>
-&boxv;   &boxur; weekly/ <span class="comment">&larr; weekly reviews</span><br>
-&boxvr; refund-flow/ <span class="comment">&larr; active task subfolder</span><br>
-&boxv;   &boxvr; architecture.md<br>
-&boxv;   &boxvr; current-plan.md<br>
-&boxv;   &boxvr; critic-response-1.md &hellip; critic-response-N.md<br>
-&boxv;   &boxur; review-1.md &hellip; review-N.md<br>
-&boxvr; finalized/ <span class="comment">&larr; completed tasks (archived by /end_of_task)</span><br>
+&boxvr; .workflow_artifacts/ <span class="comment">&larr; all workflow artifacts (hidden at project root)</span><br>
+&boxv;   &boxvr; memory/ <span class="comment">&larr; project knowledge</span><br>
+&boxv;   &boxv;   &boxvr; repos-inventory.md <span class="comment">&larr; from /discover</span><br>
+&boxv;   &boxv;   &boxvr; architecture-overview.md <span class="comment">&larr; from /discover</span><br>
+&boxv;   &boxv;   &boxvr; dependencies-map.md <span class="comment">&larr; from /discover</span><br>
+&boxv;   &boxv;   &boxvr; git-log.md <span class="comment">&larr; rolling commit log</span><br>
+&boxv;   &boxv;   &boxvr; lessons-learned.md <span class="comment">&larr; accumulated insights</span><br>
+&boxv;   &boxv;   &boxvr; workflow-suggestions.md <span class="comment">&larr; workflow improvement ideas</span><br>
+&boxv;   &boxv;   &boxvr; sessions/ <span class="comment">&larr; per-session state files</span><br>
+&boxv;   &boxv;   &boxvr; daily/ <span class="comment">&larr; daily rollups + insight scratchpads</span><br>
+&boxv;   &boxv;   &boxur; weekly/ <span class="comment">&larr; weekly reviews</span><br>
+&boxv;   &boxvr; refund-flow/ <span class="comment">&larr; active task subfolder</span><br>
+&boxv;   &boxv;   &boxvr; architecture.md<br>
+&boxv;   &boxv;   &boxvr; current-plan.md<br>
+&boxv;   &boxv;   &boxvr; critic-response-1.md &hellip; critic-response-N.md<br>
+&boxv;   &boxv;   &boxur; review-1.md &hellip; review-N.md<br>
+&boxv;   &boxur; finalized/ <span class="comment">&larr; completed tasks (archived by /end_of_task)</span><br>
 &boxvr; service-a/ <span class="comment">&larr; your repos</span><br>
 &boxvr; service-b/<br>
 &boxur; frontend/<br>

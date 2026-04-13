@@ -12,7 +12,7 @@ This file defines the common rules and behaviors shared across all development w
 - **Keep multi-step workflow progress verbose.** When working through plans, implementations, or multi-round processes, provide status updates at each step. Don't go silent during long operations.
 
 ### Dev Workflow
-- **Never place stage plans into `finalized/` until `/end_of_task` is explicitly run.** Plans stay in their working location until the user triggers finalization.
+- **Never place stage plans into `.workflow_artifacts/finalized/` until `/end_of_task` is explicitly run.** Plans stay in their working location until the user triggers finalization.
 
 ## Project structure
 
@@ -20,9 +20,9 @@ This workspace uses a multi-repo layout. Multiple repositories are cloned side-b
 
 ## Task subfolder convention
 
-All planning and review artifacts are stored in the project folder under a descriptive task subfolder:
+All planning and review artifacts are stored under `.workflow_artifacts/` at the project root:
 ```
-<project-folder>/<task-name>/
+<project-folder>/.workflow_artifacts/<task-name>/
 ```
 
 Task names are descriptive, kebab-case, derived from the task description (e.g., `auth-refactor`, `payment-v2-migration`, `api-rate-limiting`). Ask the user for a name when it's not obvious from context.
@@ -31,20 +31,20 @@ When running parallel tasks, each gets its own subfolder. Never mix artifacts fr
 
 ### Archiving completed work
 
-When a task is finalized via `/end_of_task`, its folder is moved into a `finalized/` directory:
+When a task is finalized via `/end_of_task`, its folder is moved into `.workflow_artifacts/finalized/`:
 
-- **Sub-task completed** — moves into `<parent-feature>/finalized/`:
+- **Sub-task completed** — moves into `.workflow_artifacts/<parent-feature>/finalized/`:
   ```
-  payment-v2/auth-retry/  →  payment-v2/finalized/auth-retry/
+  .workflow_artifacts/payment-v2/auth-retry/  →  .workflow_artifacts/payment-v2/finalized/auth-retry/
   ```
-- **Entire feature completed** — moves into `finalized/` at the project root:
+- **Entire feature completed** — moves into `.workflow_artifacts/finalized/`:
   ```
-  payment-v2/  →  finalized/payment-v2/
+  .workflow_artifacts/payment-v2/  →  .workflow_artifacts/finalized/payment-v2/
   ```
 
-This keeps the project root clean — only active work is visible at the top level. Completed work is preserved in `finalized/` for reference.
+This keeps both the project root and `.workflow_artifacts/` clean — only active task folders are visible at the top of `.workflow_artifacts/`. Completed work is preserved in `.workflow_artifacts/finalized/` for reference.
 
-**IMPORTANT: Never move task folders into `finalized/` during planning or implementation.** Keep them in their working location throughout the entire workflow. The `finalized/` directory is reserved for completed, shipped work only. Artifacts are moved there exclusively when `/end_of_task` is explicitly invoked by the user.
+**IMPORTANT: Never move task folders into `.workflow_artifacts/finalized/` during planning or implementation.** Keep them in their working location throughout the entire workflow. The `finalized/` directory is reserved for completed, shipped work only. Artifacts are moved there exclusively when `/end_of_task` is explicitly invoked by the user.
 
 ## Workflow sequence
 
@@ -80,8 +80,8 @@ Small tasks skip `/architect` and the critic loop. `/thorough_plan` detects the 
 When in doubt, default to Medium. The user can always override with an explicit tag.
 
 Each stage feeds into the next, with `/gate` checkpoints requiring explicit human approval:
-- `/init_workflow` bootstraps the workflow in a new project. Creates `memory/` structure, configures permissions, runs `/discover`, generates quickstart guide. Run once per project. (Skills and rules are installed separately via `bash install.sh`.)
-- `/discover` scans all repos and saves inventory, architecture overview, and dependency map to `memory/`. Run once on setup, re-run when repos change.
+- `/init_workflow` bootstraps the workflow in a new project. Creates `.workflow_artifacts/` structure, configures permissions, runs `/discover`, generates quickstart guide. Run once per project. (Skills and rules are installed separately via `bash install.sh`.)
+- `/discover` scans all repos and saves inventory, architecture overview, and dependency map to `.workflow_artifacts/memory/`. Run once on setup, re-run when repos change.
 - `/architect` produces `architecture.md` with stages decomposed for planning (uses `/discover` output as baseline context)
 - **GATE** — user reviews architecture, explicitly approves
 - `/thorough_plan` triages the task and routes accordingly:
@@ -104,9 +104,9 @@ Not every task needs every stage. Small tasks typically skip `/architect` entire
 Session lifecycle:
 - `/start_of_day` — restores context from daily cache and checks git state. Run at the beginning of a work session.
 - `/end_of_day` — saves session state and consolidates unfinished work into a daily cache. Run when wrapping up.
-- `/weekly_review` — aggregates the week's progress into a structured review. Run on Friday (or whenever you want a week-level summary). Saves to `memory/weekly/`.
+- `/weekly_review` — aggregates the week's progress into a structured review. Run on Friday (or whenever you want a week-level summary). Saves to `.workflow_artifacts/memory/weekly/`.
 
-Multiple sessions can run in a day (parallel tasks). Each session writes its own state to `memory/sessions/`. `/end_of_day` rolls unfinished sessions into `memory/daily/<date>.md`.
+Multiple sessions can run in a day (parallel tasks). Each session writes its own state to `.workflow_artifacts/memory/sessions/`. `/end_of_day` rolls unfinished sessions into `.workflow_artifacts/memory/daily/<date>.md`.
 
 ## Task triage criteria
 
@@ -146,14 +146,14 @@ These criteria guide the auto-classification in `/thorough_plan` and help users 
 
 **Every skill must be self-bootstrapping.** When a skill starts in a fresh session, it must:
 1. Read `CLAUDE.md` for shared rules
-2. Read `memory/lessons-learned.md` for past insights (planning/review skills)
-3. Read the task subfolder artifacts it needs (`current-plan.md`, `architecture.md`, `critic-response-N.md`, etc.)
-4. Read `memory/sessions/<latest>` for current session state if resuming
+2. Read `.workflow_artifacts/memory/lessons-learned.md` for past insights (planning/review skills)
+3. Read the task subfolder artifacts it needs (`.workflow_artifacts/<task-name>/current-plan.md`, `architecture.md`, `critic-response-N.md`, etc.)
+4. Read `.workflow_artifacts/memory/sessions/<latest>` for current session state if resuming
 5. Read actual source code — never rely on a previous session's memory of the code
 
 The user should never have to re-explain context that's already in the files. If a skill can't find what it needs, it asks the user — but the default is to read from disk.
 
-**When closing a session:** any skill that did meaningful work should update the session state file (`memory/sessions/<date>-<task-name>.md`) before the session ends. This is the handoff to the next session.
+**When closing a session:** any skill that did meaningful work should update the session state file (`.workflow_artifacts/memory/sessions/<date>-<task-name>.md`) before the session ends. This is the handoff to the next session.
 
 ## Common rules for all skills
 
@@ -244,9 +244,9 @@ PR description format:
 - <Rollback plan>
 
 ## Related
-- Plan: <task-name>/current-plan.md
-- Architecture: <task-name>/architecture.md (if applicable)
-- Review: <task-name>/review-N.md (if applicable)
+- Plan: .workflow_artifacts/<task-name>/current-plan.md
+- Architecture: .workflow_artifacts/<task-name>/architecture.md (if applicable)
+- Review: .workflow_artifacts/<task-name>/review-N.md (if applicable)
 ```
 
 ### Web research
@@ -264,7 +264,7 @@ Don't guess about external system behavior — verify it.
 As you work through any task, watch for patterns, surprises, and friction points worth remembering. When you notice one, write it to the daily insights scratchpad immediately — do not wait for `/end_of_day`:
 
 ```
-memory/daily/insights-<YYYY-MM-DD>.md
+.workflow_artifacts/memory/daily/insights-<YYYY-MM-DD>.md
 ```
 
 Write an entry when you encounter:
@@ -276,13 +276,13 @@ Write an entry when you encounter:
 
 **Write without asking the user first.** This is your scratchpad. Keep entries short (2-4 sentences). Tag each with `Promote?: yes | maybe | no` based on how reusable it seems across future sessions.
 
-Do NOT use the insights scratchpad for task progress tracking — that belongs in `memory/sessions/<date>-<task>.md`.
+Do NOT use the insights scratchpad for task progress tracking — that belongs in `.workflow_artifacts/memory/sessions/<date>-<task>.md`.
 
 You can also invoke `/capture_insight` explicitly to log something the user calls out mid-task.
 
 ### Lessons learned
 
-The file `memory/lessons-learned.md` accumulates insights from completed tasks. It captures what surprised us, what went wrong, and what to do differently next time.
+The file `.workflow_artifacts/memory/lessons-learned.md` accumulates insights from completed tasks. It captures what surprised us, what went wrong, and what to do differently next time.
 
 **Reading:** Every planning skill (`/plan`, `/critic`, `/architect`) should read `lessons-learned.md` at the start to avoid repeating known mistakes.
 
@@ -302,7 +302,7 @@ Keep entries concise — 2-4 lines each. This file grows over time and becomes t
 Every skill that does meaningful work (architect, plan, critic, revise, implement, review) should update the session state file as it progresses. Write or update:
 
 ```
-memory/sessions/<date>-<task-name>.md
+.workflow_artifacts/memory/sessions/<date>-<task-name>.md
 ```
 
 At minimum, update the `Current stage`, `Completed in this session`, and `Unfinished work` sections as tasks complete. This way, if the session is interrupted, `/end_of_day` (or the next `/start_of_day`) has accurate state to work from.
