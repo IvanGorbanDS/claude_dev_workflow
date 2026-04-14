@@ -1,6 +1,6 @@
 # Development Workflow — Shared Rules
 
-This file defines the common rules and behaviors shared across all development workflow skills: `/init_workflow`, `/discover`, `/architect`, `/plan`, `/critic`, `/revise`, `/thorough_plan` (orchestrator), `/gate`, `/implement`, `/review`, `/rollback`, `/end_of_task`, `/end_of_day`, `/start_of_day`, `/weekly_review`, and `/capture_insight`.
+This file defines the common rules and behaviors shared across all development workflow skills: `/init_workflow`, `/discover`, `/architect`, `/plan`, `/critic`, `/revise`, `/thorough_plan` (orchestrator), `/run` (end-to-end orchestrator), `/gate`, `/implement`, `/review`, `/rollback`, `/end_of_task`, `/end_of_day`, `/start_of_day`, `/weekly_review`, and `/capture_insight`.
 
 ## Working Rules
 
@@ -64,6 +64,14 @@ The intended flow depends on the task profile (Small / Medium / Large). `/thorou
 
 Small tasks skip `/architect` and the critic loop. `/thorough_plan` detects the Small profile (via `small:` tag or auto-classification) and runs a single `/plan` pass without critic review.
 
+### Automated flow (`/run`)
+
+```
+/run → (discover?) → (architect?) → GATE → /thorough_plan → GATE → /implement → GATE → /review → GATE → /end_of_task
+```
+
+`/run` chains all phases automatically, pausing at each GATE for user confirmation. It accepts the same profile tags as `/thorough_plan` (`small:`, `medium:`, `large:`, `strict:`, `max_rounds: N`). Discover is skipped if recent (<7 days) discovery files exist. Architect is skipped for Small tasks. Each phase runs in its own subagent session.
+
 ### Task profiles
 
 | Profile | Triggered by | Planning | Critic loop | Gate intensity | Typical cost |
@@ -89,6 +97,7 @@ Each stage feeds into the next, with `/gate` checkpoints requiring explicit huma
   - **Medium:** runs the plan→critic→revise convergence loop (Opus plan, Sonnet revise, Opus critic, max 4 rounds)
   - **Large:** runs the convergence loop in strict mode (all Opus, max 5 rounds)
   - Override with `max_rounds: N` for any profile (ignored for Small)
+- `/run` chains the entire workflow end-to-end: discover (if stale) → architect (if not Small) → thorough_plan → implement → review → end_of_task. Pauses at each gate for user confirmation. Accepts same profile tags as `/thorough_plan`. Use when you want the full pipeline in one command.
 - **GATE** — automated checks (plan completeness, risk coverage), user reviews plan, explicitly approves
 - `/implement` executes tasks from the converged plan, writing code and tests
 - **GATE** — automated checks (scope depends on task profile — Standard for Small/Medium, Full for Large)
@@ -100,6 +109,8 @@ Each stage feeds into the next, with `/gate` checkpoints requiring explicit huma
 Not every task needs every stage. Small tasks typically skip `/architect` entirely. Bug fixes might only need `/implement` + `/review` (bypassing `/thorough_plan` entirely). But gates ALWAYS run between phases.
 
 **CRITICAL RULE: `/implement` and `/end_of_task` require explicit user commands.** No skill may auto-invoke either. After `/thorough_plan` converges, the workflow STOPS and waits for `/implement`. After `/review` approves and the gate passes, the workflow STOPS and waits for `/end_of_task`. The user must consciously decide to start writing code AND to ship it.
+
+**Exception: `/run` orchestrator.** When the user invokes `/run`, they have explicitly requested the full end-to-end pipeline. `/run` may invoke `/implement` and `/end_of_task` on the user's behalf, but still pauses at each gate checkpoint for confirmation before proceeding. The user's `/run` invocation constitutes the conscious decision; the gate confirmations provide the safety checkpoints.
 
 Session lifecycle:
 - `/start_of_day` — restores context from daily cache and checks git state. Run at the beginning of a work session.
@@ -141,6 +152,8 @@ These criteria guide the auto-classification in `/thorough_plan` and help users 
 
 **Recommended session pattern:**
 - One command per session for heavy work (`/architect`, `/thorough_plan`, `/implement`, `/review`)
+- **`/run` gets its own session.** It orchestrates subagent sessions for each phase, so it stays lean — but start it fresh so the orchestrator has maximum context for managing the full pipeline.
+- **Always run `/end_of_task` in a fresh session** if the current session has been through heavy work. The skill has 7 sequential steps that must all complete — context compaction mid-skill can silently skip steps like archiving.
 - Short flows can share a session (`/plan` → `/implement` → `/review` for a small bug fix)
 - Use your judgment: when context feels heavy, close and start fresh
 
@@ -299,7 +312,7 @@ Keep entries concise — 2-4 lines each. This file grows over time and becomes t
 
 ### Session state tracking
 
-Every skill that does meaningful work (architect, plan, critic, revise, implement, review) should update the session state file as it progresses. Write or update:
+Every skill that does meaningful work (architect, plan, critic, revise, implement, review, run) should update the session state file as it progresses. Write or update:
 
 ```
 .workflow_artifacts/memory/sessions/<date>-<task-name>.md
@@ -330,6 +343,7 @@ Keep questions specific and pointed. Don't ask "what do you want?" — ask "shou
 | /revise | Opus | Addressing critic feedback requires strong reasoning (used in strict mode) |
 | /revise-fast | Sonnet | Cost-efficient revision (used by /thorough_plan in normal mode, rounds 2+) |
 | /thorough_plan | Opus | Orchestrates task triage and plan→critic→revise loop. Routes Small tasks to single-pass /plan; Medium uses Sonnet /revise-fast; Large/strict: uses all-Opus. Critic always Opus. |
+| /run | Opus | End-to-end orchestrator managing phase transitions, user checkpoints, and subagent dispatch. Needs strong reasoning for conditional logic and error recovery. |
 | /implement | Sonnet | Efficient code generation, plan already defines what to do |
 | /review | Opus | Thorough analysis, integration safety, risk assessment |
 | /gate | Sonnet | Automated checks and human approval checkpoint |

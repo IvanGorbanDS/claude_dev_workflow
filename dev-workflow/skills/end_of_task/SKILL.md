@@ -10,6 +10,8 @@ You finalize a completed task. This is the user's explicit acceptance that the w
 
 **CRITICAL: You must verify that `/review` was run before proceeding.** If no `review-*.md` file exists in the task folder, STOP and tell the user to run `/review` first.
 
+**IMPORTANT: Fresh session recommended.** This skill has 7 sequential steps that must all complete (pre-flight, commit, push, lessons, session state, archive, report). If the current session has been through heavy work (`/thorough_plan`, `/implement`, `/review`), start a fresh session for `/end_of_task` — context compaction mid-skill can silently skip steps.
+
 ## When to use
 
 Only after:
@@ -18,6 +20,8 @@ Only after:
 3. The user explicitly says to finalize (e.g., `/end_of_task`, "ship it", "we're done")
 
 This skill is never auto-invoked. The user must consciously accept the work.
+
+**Exception: `/run` orchestrator.** When this skill is spawned by `/run` as a subagent, the user has already confirmed the finalization checkpoint ("yes, finalize and push"). This constitutes explicit user acceptance — the user consciously chose to run the full pipeline and confirmed at Checkpoint D. All preconditions (APPROVED review, passed gate) are still enforced. If you see evidence that you were spawned by `/run`, proceed normally through all 7 steps.
 
 ## Process
 
