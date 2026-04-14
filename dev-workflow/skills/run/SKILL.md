@@ -19,7 +19,8 @@ When starting:
 2. Read `.workflow_artifacts/memory/lessons-learned.md` for relevant insights (if it exists)
 3. Read `.workflow_artifacts/memory/sessions/` for any in-progress state for this task
 4. Check git state across all repos
-5. Append your session to the cost ledger: `.workflow_artifacts/<task-name>/cost-ledger.md` (see cost tracking rules in CLAUDE.md) — phase: `run-orchestrator`
+
+Note: The cost ledger is initialized during Setup (see "Initialize cost ledger" below). The orchestrator's own session is recorded there as the first entry.
 
 ## Setup
 
