@@ -1,6 +1,6 @@
 # Development Workflow — Shared Rules
 
-This file defines the common rules and behaviors shared across all development workflow skills: `/init_workflow`, `/discover`, `/architect`, `/plan`, `/critic`, `/revise`, `/thorough_plan` (orchestrator), `/run` (end-to-end orchestrator), `/gate`, `/implement`, `/review`, `/rollback`, `/end_of_task`, `/end_of_day`, `/start_of_day`, `/weekly_review`, and `/capture_insight`.
+This file defines the common rules and behaviors shared across all development workflow skills: `/init_workflow`, `/discover`, `/architect`, `/plan`, `/critic`, `/revise`, `/thorough_plan` (orchestrator), `/run` (end-to-end orchestrator), `/gate`, `/implement`, `/review`, `/rollback`, `/end_of_task`, `/end_of_day`, `/start_of_day`, `/weekly_review`, `/cost_snapshot`, and `/capture_insight`.
 
 ## Working Rules
 
@@ -403,3 +403,4 @@ Keep questions specific and pointed. Don't ask "what do you want?" — ask "shou
 | /start_of_day | Haiku | Context restoration and git state reconciliation (structured checklist) |
 | /weekly_review | Haiku | Aggregates weekly progress, decisions, and outcomes (template-driven) |
 | /capture_insight | Haiku | Quick insight logging to daily scratchpad during task work |
+| /cost_snapshot | Haiku | Read-only cost reporting from ledger files and ccusage (lightweight) |
