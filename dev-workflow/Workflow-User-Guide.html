@@ -103,7 +103,7 @@
 <table>
   <tr><th>Command</th><th>What it does</th><th>Model</th></tr>
   <tr><td>/init_workflow</td><td>One-time project bootstrap. Creates <code>.workflow_artifacts/</code> structure, configures permissions, runs /discover.</td><td><span class="model model-opus">Opus</span></td></tr>
-  <tr><td>/discover</td><td>Scans all repos, builds inventory, architecture map, and git log. Run once on setup.</td><td><span class="model model-opus">Opus</span></td></tr>
+  <tr><td>/discover</td><td>Scans all repos, builds inventory, architecture map, and git log. Run once on setup. Also populates <code>.workflow_artifacts/cache/</code> with per-repo and per-module code summaries (knowledge cache) for faster subsequent skill runs.</td><td><span class="model model-opus">Opus</span></td></tr>
   <tr><td>/architect</td><td>Deep system design. Spawns scan agents in parallel, then synthesizes on Opus. Produces <code>architecture.md</code>.</td><td><span class="model model-opus">Opus</span></td></tr>
   <tr><td>/thorough_plan</td><td>Orchestrates the plan-critic-revise loop. Auto-triages tasks as Small/Medium/Large.</td><td><span class="model model-opus">Opus</span></td></tr>
   <tr><td>/plan</td><td>Creates the initial detailed plan. Reads <code>lessons-learned.md</code>. Can be used standalone.</td><td><span class="model model-opus">Opus</span></td></tr>
@@ -184,7 +184,7 @@
 <div class="chat user">/init_workflow</div>
 <div class="chat claude">Creating .workflow_artifacts/ structure... Configuring .claude/settings.json permissions... Running /discover...</div>
 <div class="chat claude">Scanning the project folder... Found 4 repositories: <strong>api-gateway</strong> (TypeScript/NestJS), <strong>payment-service</strong> (Go), <strong>user-service</strong> (Python/FastAPI), <strong>notification-service</strong> (TypeScript/Node). Mapping integrations...</div>
-<div class="chat claude">Done. Saved to <code>.workflow_artifacts/memory/</code>: repos-inventory.md, architecture-overview.md, dependencies-map.md, git-log.md. The API gateway routes to all three backend services. Payment and notification communicate via Kafka. 47 recent commits captured.</div>
+<div class="chat claude">Done. Saved to <code>.workflow_artifacts/memory/</code>: repos-inventory.md, architecture-overview.md, dependencies-map.md, git-log.md. The API gateway routes to all three backend services. Payment and notification communicate via Kafka. 47 recent commits captured. Also wrote <code>.workflow_artifacts/cache/</code> with repo and module summaries (~5–20K tokens) to speed up <code>/plan</code>, <code>/implement</code>, and <code>/review</code>.</div>
 
 <p class="note">That's it for setup. The memory files persist across sessions. Re-run /discover only when repos change significantly.</p>
 
