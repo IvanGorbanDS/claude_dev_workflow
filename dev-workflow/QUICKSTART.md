@@ -40,10 +40,19 @@
 4. **`/end_of_task` pushes the branch only.** Create your PR separately when ready.
 5. **Lessons accumulate.** The more you use the workflow, the smarter it gets about your codebase.
 
+## Knowledge cache
+
+The workflow maintains a structured summary cache of your code under `.workflow_artifacts/cache/`, so subsequent runs of `/plan`, `/critic`, `/implement`, and `/review` don't re-read unchanged files from scratch.
+
+- `/discover` populates the cache. `/implement` updates entries for files it modifies. Other skills read from it; none require it to exist.
+- Safe to delete at any time — skills fall back to reading source directly, and the next `/discover` rebuilds the cache.
+- Benefits on larger projects: faster `/architect` runs, reduced re-reads across planning rounds, lower token cost per lifecycle.
+
 ## Files
 
 - `~/.claude/CLAUDE.md` — shared rules all skills follow (user-level)
 - `.workflow_artifacts/` — all workflow artifacts: memory, task plans, session state (gitignored)
+- `.workflow_artifacts/cache/` — auto-maintained code summary cache (knowledge cache)
 - `~/.claude/skills/` — all workflow skill definitions (user-level)
 - `Workflow-User-Guide.html` — detailed interactive guide with scenarios
 
