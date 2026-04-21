@@ -129,26 +129,6 @@ The user should never have to re-explain context that's already in the files. If
 
 ## Common rules for all skills
 
-### Integration analysis
-
-Every skill that touches planning or review must analyze integrations. When a change affects how services, modules, or systems interact:
-
-1. **Map the integration points** — identify every boundary crossed (HTTP calls, message queues, shared databases, file systems, event buses)
-2. **Assess failure modes** — what happens when each integration fails? Timeout? Error? Stale data?
-3. **Check backward compatibility** — can this change deploy independently, or does it require coordinated deployment?
-4. **Verify contracts** — request/response formats, error codes, authentication headers
-5. **Consider data consistency** — especially across multiple stores or services
-
-### Risk de-risking
-
-All planning and review work must actively de-risk:
-
-- Identify unknowns and propose spikes/POCs to resolve them before full implementation
-- Prefer feature flags for risky changes so they can be toggled without a deploy
-- Plan for parallel running of old and new code paths during migration
-- Ensure monitoring and alerting exist (or are planned) for new integration points
-- Define rollback plans for every significant change
-
 ### Git workflow
 
 #### Branch hygiene before new tasks
