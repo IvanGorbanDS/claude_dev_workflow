@@ -119,33 +119,6 @@ Session lifecycle:
 
 Multiple sessions can run in a day (parallel tasks). Each session writes its own state to `.workflow_artifacts/memory/sessions/`. `/end_of_day` rolls unfinished sessions into `.workflow_artifacts/memory/daily/<date>.md`.
 
-## Task triage criteria
-
-These criteria guide the auto-classification in `/thorough_plan` and help users choose the right explicit tag.
-
-### Small
-- Touches 1-3 closely related files in a single module
-- No integration points affected (no API contract changes, no cross-service calls)
-- Well-understood pattern: bug fix, config change, add simple endpoint, rename, typo fix
-- Failure is localized — affects one feature, easy to detect and revert
-- No data model changes, no auth changes, no shared-state modifications
-
-### Medium (default when uncertain)
-- Touches multiple files across 1-2 modules or services
-- May affect integration points but contracts remain backward-compatible
-- Some unknowns but similar work has been done in this codebase before
-- Failure affects a subsystem but is contained and recoverable
-- Adding a new feature with tests, refactoring a module, adding retry/resilience logic
-
-### Large
-- Touches multiple services, repos, or architectural layers
-- Affects data consistency, authentication, authorization, or multi-service contracts
-- Significant unknowns, new patterns, or involves migration of existing data/systems
-- Failure could affect multiple services or all users
-- Database migrations, auth overhauls, API versioning, payment flow changes
-
-**Rule: when the classification is ambiguous, choose Medium.** It is the safe default — the critic loop catches issues that a single-pass plan might miss, at a modest cost premium.
-
 ## Session independence
 
 **Each skill is designed to run in its own chat session.** Context windows fill up — this is expected. The file-based artifacts (`current-plan.md`, `critic-response-N.md`, session state, `architecture.md`, etc.) ARE the shared memory between sessions.
