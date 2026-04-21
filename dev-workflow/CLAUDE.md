@@ -50,27 +50,13 @@ This keeps both the project root and `.workflow_artifacts/` clean — only activ
 
 The intended flow depends on the task profile (Small / Medium / Large). `/thorough_plan` is the universal entry point — it triages and routes automatically.
 
-### Full flow (Medium and Large tasks)
+### Canonical flow
 
 ```
 /discover → /architect → GATE → /thorough_plan → GATE → /implement → GATE → /review → GATE → /end_of_task
 ```
 
-### Shortcut flow (Small tasks)
-
-```
-/thorough_plan (auto-routes to single-pass /plan) → GATE → /implement → GATE → /review → GATE → /end_of_task
-```
-
-Small tasks skip `/architect` and the critic loop. `/thorough_plan` detects the Small profile (via `small:` tag or auto-classification) and runs a single `/plan` pass without critic review.
-
-### Automated flow (`/run`)
-
-```
-/run → (discover?) → (architect?) → GATE → /thorough_plan → GATE → /implement → GATE → /review → GATE → /end_of_task
-```
-
-`/run` chains all phases automatically, pausing at each GATE for user confirmation. It accepts the same profile tags as `/thorough_plan` (`small:`, `medium:`, `large:`, `strict:`, `max_rounds: N`). Discover is skipped if recent (<7 days) discovery files exist. Architect is skipped for Small tasks. Each phase runs in its own subagent session.
+Variations: (a) Small tasks skip `/architect` and the critic loop — `/thorough_plan` auto-routes to a single `/plan` pass. (b) `/run` chains every phase automatically, each phase in its own subagent session, pausing at each GATE for confirmation; accepts the same profile tags as `/thorough_plan`. (c) Discover is skipped if a recent (<7 days) discovery file exists.
 
 ### Task profiles
 
