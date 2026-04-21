@@ -255,16 +255,6 @@ Every skill that does meaningful work should record its session to the task's co
 
 **Conditional skills:** `/discover`, `/gate`, `/start_of_day`, `/capture_insight`, and `/triage` skip cost recording if no task context is active.
 
-### Asking questions
-
-It's always better to ask than to assume. Use the AskUserQuestion tool when:
-- The requirement is ambiguous
-- There are multiple valid approaches with different tradeoffs
-- You need domain-specific knowledge the code doesn't reveal
-- The decision has significant downstream impact
-
-Keep questions specific and pointed. Don't ask "what do you want?" — ask "should the retry logic use exponential backoff (safer, slower recovery) or fixed intervals (simpler, faster recovery)?"
-
 ### Knowledge cache
 
 The cache lives under `.workflow_artifacts/cache/`. Three rules govern all skills:
