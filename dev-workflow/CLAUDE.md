@@ -50,27 +50,13 @@ This keeps both the project root and `.workflow_artifacts/` clean — only activ
 
 The intended flow depends on the task profile (Small / Medium / Large). `/thorough_plan` is the universal entry point — it triages and routes automatically.
 
-### Full flow (Medium and Large tasks)
+### Canonical flow
 
 ```
 /discover → /architect → GATE → /thorough_plan → GATE → /implement → GATE → /review → GATE → /end_of_task
 ```
 
-### Shortcut flow (Small tasks)
-
-```
-/thorough_plan (auto-routes to single-pass /plan) → GATE → /implement → GATE → /review → GATE → /end_of_task
-```
-
-Small tasks skip `/architect` and the critic loop. `/thorough_plan` detects the Small profile (via `small:` tag or auto-classification) and runs a single `/plan` pass without critic review.
-
-### Automated flow (`/run`)
-
-```
-/run → (discover?) → (architect?) → GATE → /thorough_plan → GATE → /implement → GATE → /review → GATE → /end_of_task
-```
-
-`/run` chains all phases automatically, pausing at each GATE for user confirmation. It accepts the same profile tags as `/thorough_plan` (`small:`, `medium:`, `large:`, `strict:`, `max_rounds: N`). Discover is skipped if recent (<7 days) discovery files exist. Architect is skipped for Small tasks. Each phase runs in its own subagent session.
+Variations: (a) Small tasks skip `/architect` and the critic loop — `/thorough_plan` auto-routes to a single `/plan` pass. (b) `/run` chains every phase automatically, each phase in its own subagent session, pausing at each GATE for confirmation; accepts the same profile tags as `/thorough_plan`. (c) Discover is skipped if a recent (<7 days) discovery file exists.
 
 ### Task profiles
 
@@ -119,33 +105,6 @@ Session lifecycle:
 
 Multiple sessions can run in a day (parallel tasks). Each session writes its own state to `.workflow_artifacts/memory/sessions/`. `/end_of_day` rolls unfinished sessions into `.workflow_artifacts/memory/daily/<date>.md`.
 
-## Task triage criteria
-
-These criteria guide the auto-classification in `/thorough_plan` and help users choose the right explicit tag.
-
-### Small
-- Touches 1-3 closely related files in a single module
-- No integration points affected (no API contract changes, no cross-service calls)
-- Well-understood pattern: bug fix, config change, add simple endpoint, rename, typo fix
-- Failure is localized — affects one feature, easy to detect and revert
-- No data model changes, no auth changes, no shared-state modifications
-
-### Medium (default when uncertain)
-- Touches multiple files across 1-2 modules or services
-- May affect integration points but contracts remain backward-compatible
-- Some unknowns but similar work has been done in this codebase before
-- Failure affects a subsystem but is contained and recoverable
-- Adding a new feature with tests, refactoring a module, adding retry/resilience logic
-
-### Large
-- Touches multiple services, repos, or architectural layers
-- Affects data consistency, authentication, authorization, or multi-service contracts
-- Significant unknowns, new patterns, or involves migration of existing data/systems
-- Failure could affect multiple services or all users
-- Database migrations, auth overhauls, API versioning, payment flow changes
-
-**Rule: when the classification is ambiguous, choose Medium.** It is the safe default — the critic loop catches issues that a single-pass plan might miss, at a modest cost premium.
-
 ## Session independence
 
 **Each skill is designed to run in its own chat session.** Context windows fill up — this is expected. The file-based artifacts (`current-plan.md`, `critic-response-N.md`, session state, `architecture.md`, etc.) ARE the shared memory between sessions.
@@ -157,38 +116,13 @@ These criteria guide the auto-classification in `/thorough_plan` and help users 
 - Short flows can share a session (`/plan` → `/implement` → `/review` for a small bug fix)
 - Use your judgment: when context feels heavy, close and start fresh
 
-**Every skill must be self-bootstrapping.** When a skill starts in a fresh session, it must:
-1. Read `CLAUDE.md` for shared rules
-2. Read `.workflow_artifacts/memory/lessons-learned.md` for past insights (planning/review skills)
-3. Read the task subfolder artifacts it needs (`.workflow_artifacts/<task-name>/current-plan.md`, `architecture.md`, `critic-response-N.md`, etc.)
-4. Read `.workflow_artifacts/memory/sessions/<latest>` for current session state if resuming
-5. Read actual source code — never rely on a previous session's memory of the code
+**Every skill must be self-bootstrapping:** on a fresh-session start, it reads CLAUDE.md, `.workflow_artifacts/memory/lessons-learned.md` (planning/review skills), the relevant task subfolder artifacts, the latest session state, and the actual source code — never relying on a previous session's memory. The per-skill SKILL.md lists the exact files for that skill.
 
 The user should never have to re-explain context that's already in the files. If a skill can't find what it needs, it asks the user — but the default is to read from disk.
 
 **When closing a session:** any skill that did meaningful work should update the session state file (`.workflow_artifacts/memory/sessions/<date>-<task-name>.md`) before the session ends. This is the handoff to the next session.
 
 ## Common rules for all skills
-
-### Integration analysis
-
-Every skill that touches planning or review must analyze integrations. When a change affects how services, modules, or systems interact:
-
-1. **Map the integration points** — identify every boundary crossed (HTTP calls, message queues, shared databases, file systems, event buses)
-2. **Assess failure modes** — what happens when each integration fails? Timeout? Error? Stale data?
-3. **Check backward compatibility** — can this change deploy independently, or does it require coordinated deployment?
-4. **Verify contracts** — request/response formats, error codes, authentication headers
-5. **Consider data consistency** — especially across multiple stores or services
-
-### Risk de-risking
-
-All planning and review work must actively de-risk:
-
-- Identify unknowns and propose spikes/POCs to resolve them before full implementation
-- Prefer feature flags for risky changes so they can be toggled without a deploy
-- Plan for parallel running of old and new code paths during migration
-- Ensure monitoring and alerting exist (or are planned) for new integration points
-- Define rollback plans for every significant change
 
 ### Git workflow
 
@@ -233,34 +167,6 @@ PR creation is always an explicit, separate user action — never auto-created b
    - Security issues (exposed secrets, injection vulnerabilities)
    - Accidental file inclusions (.env, node_modules, etc.)
 4. **Call the planner for tests if needed** — if significant new code lacks tests and writing them is non-trivial, escalate to `/thorough_plan` to plan the test strategy before writing them
-
-PR description format:
-```markdown
-## Summary
-<What this PR does in 2-3 sentences>
-
-## Changes
-- <Specific change 1>
-- <Specific change 2>
-
-## Testing
-- <What was tested and how>
-- <How to run the tests>
-
-## Integration impact
-- <Affected services/components>
-- <Deployment order if coordination needed>
-
-## Risk assessment
-- <What could break>
-- <How to verify>
-- <Rollback plan>
-
-## Related
-- Plan: .workflow_artifacts/<task-name>/current-plan.md
-- Architecture: .workflow_artifacts/<task-name>/architecture.md (if applicable)
-- Review: .workflow_artifacts/<task-name>/review-N.md (if applicable)
-```
 
 ### Web research
 
@@ -326,7 +232,7 @@ The session state file template includes a `## Cost` section:
 
 ```markdown
 ## Cost
-- Session UUID: <UUID obtained from JSONL filename approach — see Cost tracking rules>
+- Session UUID: <UUID — see Cost tracking rules for acquisition>
 - Phase: <phase>
 - Recorded in cost ledger: yes/no
 ```
@@ -335,55 +241,26 @@ This is informational — the cost ledger (`.workflow_artifacts/<task-name>/cost
 
 ### Cost tracking
 
-Every skill that does meaningful work should record its session to the task's cost ledger at the start of the session. This enables `/end_of_task` to aggregate the total cost of a task across all sessions, including sessions that crashed or were force-closed.
+Every skill that does meaningful work should record its session to the task's cost ledger at the start of the session. This enables `/end_of_task` to aggregate total cost across all sessions, including crashed sessions.
 
-**Step 1: Obtain the session UUID (JSONL filename approach — primary method)**
+**Ledger path:** `.workflow_artifacts/<task-name>/cost-ledger.md`. Create with header `# Cost Ledger — <task-name>` if new.
 
-The Claude Code runtime writes a JSONL file for the active session at `~/.claude/projects/<project-hash>/`. The filename is `<uuid>.jsonl`. Since the active session's JSONL is written to continuously, it is always the most recently modified file:
+**Row format:** `<session-uuid> | <YYYY-MM-DD> | <phase> | <primary-model> | task | <brief note>`
 
-```bash
-# Determine project hash: project folder path with / replaced by -
-# Example: /Users/alice/projects/myapp → Users-alice-projects-myapp
-ls -t ~/.claude/projects/<project-hash>/*.jsonl 2>/dev/null | head -1
-# Extract UUID: strip directory path and .jsonl extension
-```
-
-If no `.jsonl` file is found (rare — session hasn't made an API call yet), use `unknown-<ISO-timestamp>` as the UUID. If the `CLAUDE_SESSION_ID` environment variable is set (future Claude Code versions may add this), use it as an alternative — but do not depend on it being present.
-
-**Step 2: Append to the cost ledger**
-
-Append one line to `.workflow_artifacts/<task-name>/cost-ledger.md`:
-
-```
-<session-uuid> | <YYYY-MM-DD> | <phase> | <primary-model> | task | <brief note>
-```
-
-If the ledger file doesn't exist yet, create it with the header line first:
-```
-# Cost Ledger — <task-name>
-```
+**UUID acquisition:** Most recently modified `<uuid>.jsonl` under `~/.claude/projects/<project-hash>/` (project-hash = project path with `/` replaced by `-`). Fall back to `unknown-<ISO-timestamp>` if none found.
 
 **Phase values:** `discover`, `architect`, `plan`, `critic`, `revise`, `implement`, `review`, `gate`, `end-of-task`, `run-orchestrator`, `thorough-plan`, `rollback`, `init-workflow`, `start-of-day`, `end-of-day`, `weekly-review`, `capture-insight`, `triage`, `ad-hoc`
 
-**Category:** Always write `task`. The user may manually edit the ledger to change a row to `off-topic` if a session drifted from the task. Skills do NOT auto-detect off-topic work.
+**Category:** Always write `task`. The ledger is append-only — never delete or rewrite rows.
 
-**The cost ledger is append-only during a task.** Never delete or rewrite rows.
-
-**Conditional skills:** `/discover`, `/gate`, `/start_of_day`, `/capture_insight`, and `/triage` should only record to the cost ledger if a task name is clearly determinable from context (a task folder path or explicit task name was passed). If no task context is active, skip cost recording silently.
-
-### Asking questions
-
-It's always better to ask than to assume. Use the AskUserQuestion tool when:
-- The requirement is ambiguous
-- There are multiple valid approaches with different tradeoffs
-- You need domain-specific knowledge the code doesn't reveal
-- The decision has significant downstream impact
-
-Keep questions specific and pointed. Don't ask "what do you want?" — ask "should the retry logic use exponential backoff (safer, slower recovery) or fixed intervals (simpler, faster recovery)?"
+**Conditional skills:** `/discover`, `/gate`, `/start_of_day`, `/capture_insight`, and `/triage` skip cost recording if no task context is active.
 
 ### Knowledge cache
 
-The workflow maintains a hierarchical file-based knowledge cache under `.workflow_artifacts/cache/`. This cache provides structured summaries of source code files and modules, enabling skills to navigate the codebase without re-reading unchanged source files.
+The cache lives under `.workflow_artifacts/cache/`. Three rules govern all skills:
+- **(a) Cache is advisory, not authoritative** — a missing or stale cache entry is never an error; skills may always read source files directly.
+- **(b) Any skill that modifies source files MUST update the corresponding cache entry** (enforced per-skill in each skill's inline "Cache write-through" section). The `.workflow_artifacts/cache/` directory is the host.
+- **(c) Rollback by deletion** — deleting `.workflow_artifacts/cache/` fully restores pre-cache behavior; no skill should fail if the cache directory is absent.
 
 #### Cache directory structure
 
@@ -435,85 +312,13 @@ tokens: <approximate token count of this cache entry>
 
 Sections may be omitted when not applicable (e.g., a config file has no Key Exports).
 
-#### Token budgets
-
-| Entry type | Target tokens | When to create |
-|-----------|---------------|---------------|
-| Root `_index.md` | 100-200 | Always (one per project) |
-| Repo `_index.md` | 200-300 | Always (one per repo) |
-| Repo `_deps.md` | 100-200 | Always (one per repo) |
-| Module `_index.md` | 150-300 | Directories with 3+ source files |
-| File `<stem>.md` | 50-150 | Key files only: entry points, APIs, models, configs, complex logic |
-
-Rule of thumb: source files < 50 lines go into the module `_index.md` instead of getting their own entry. Source files > 500 lines may use up to 200 tokens.
-
 #### Staleness tracking
 
-`_staleness.md` tracks the git HEAD per repo at the time of last cache update:
+`_staleness.md` stores repo-level HEAD; skills read it to decide which cache entries are still valid; successor to `repo-heads.md` (fall back if absent).
 
-````markdown
-| Repo | HEAD | Updated |
-|------|------|---------|
-| <repo-name> | <full SHA> | <ISO timestamp> |
-````
+#### Per-skill patterns
 
-Skills check staleness by comparing `git rev-parse HEAD` against the stored value. If HEAD differs, `git diff --name-only <cached-head> <current-head>` identifies exactly which files changed. Cache entries for unchanged files remain valid.
-
-#### Behavioral rules
-
-1. **Cache is advisory, not authoritative.** Skills may always read source files directly. A missing or stale cache entry is never an error — the skill just reads from source (current behavior).
-2. **Any skill that **modifies** a source file MUST update the cache entry via the write-through pattern below. Skills that only read source MAY update a stale or missing cache entry as a side effect (best-effort), but are not required to.**
-3. **Cache writes must not block or fail the skill.** If a cache write fails (disk full, permission error), warn and continue.
-4. **Skills should load cache entries in deterministic order** (root index, then repo indexes, then module indexes) to maximize prompt cache hits.
-5. **`_staleness.md` is the successor to `repo-heads.md`.** Skills that previously read `repo-heads.md` should read `_staleness.md` instead. For backward compatibility, if `_staleness.md` does not exist, fall back to `repo-heads.md`.
-6. **Rollback:** Deleting `.workflow_artifacts/cache/` restores pre-cache behavior. No skill should fail if the cache directory is missing.
-
-See '**Cache-read bootstrap pattern**' and '**Cache write-through pattern**' below for the canonical instruction blocks that skills adapt into their SKILL.md.
-
-#### Cache-read bootstrap pattern
-
-Skills that consult the cache at session bootstrap should follow this pattern. The exact language in each SKILL.md may adapt it to the skill's context, but the logical steps must match.
-
-1. **Guard** — If `.workflow_artifacts/cache/_index.md` does not exist, skip all cache steps and fall through to direct source reads (preserves pre-cache behavior for new installs or after cache deletion).
-
-2. **Read staleness file** — Read `.workflow_artifacts/cache/_staleness.md`. If absent, fall back to `.workflow_artifacts/memory/repo-heads.md` for backward compatibility. If neither exists, treat all repos as stale.
-
-3. **Per-repo staleness check** — For each repo relevant to the current task, compare `git rev-parse HEAD` against the hash stored in `_staleness.md`.
-
-4. **Non-stale repos — load cache in deterministic order** — Read cache entries in this order: root `_index.md` → repo `_index.md` → repo `_deps.md` → module `_index.md` for task-relevant directories → file-level `<stem>.md` for task-relevant files. Deterministic order keeps the session prefix stable, maximizing Anthropic prompt-cache hit rates.
-
-5. **Stale repos — targeted source reads** — Run `git diff --name-only <cached-head> <current-head>` to identify changed files. Trust cache entries for files NOT in that set. Read source directly for files in the changed set that are relevant to the current task.
-
-Cache entries are context aids, not authoritative content. Skills that need exact code content (e.g., `/implement` before modifying a file, `/review` reading diffs) always read source regardless of cache state.
-
-**Note on per-skill copies:** Each skill's SKILL.md today contains its own inline version of this pattern, adapted to its job. This section is the canonical reference. When updating the pattern globally, update each SKILL.md individually — subagents read their own SKILL.md at startup, not CLAUDE.md (see lessons-learned 2026-04-13). Do not attempt to replace per-skill inline copies with a pointer to this section; they must remain self-contained.
-
-#### Cache write-through pattern
-
-Any skill that modifies, creates, or deletes source files should update the knowledge cache to match. Today only `/implement` does this; the pattern below is the shared reference for any future skill that also writes source.
-
-**When to update:** After each task commit (not after every individual file edit — batch by commit). Cache updates are best-effort; never block or fail a commit because of a cache write error.
-
-**Guard:** Skip entirely if `.workflow_artifacts/cache/` does not exist or `_index.md` is absent. Cache writes only make sense against an existing, initialized cache.
-
-**File operations:**
-
-- **Modified file:** After editing, read the file fresh (post-edit content). Write or overwrite the cache entry at `.workflow_artifacts/cache/<repo>/<dir>/<file-stem>.md` using the standard frontmatter + sections format defined in the "Cache entry format" section above. Use the post-commit `git rev-parse HEAD` (repo-level SHA, not per-file blob) as the `hash` field — staleness is tracked at repo level via `_staleness.md`. Set `updated_by` to the skill name. Target density: 50–150 tokens.
-
-- **New file:** Create the cache entry at the same path convention. Ensure the parent directory exists (`mkdir -p` via Bash or rely on the Write tool, which creates parent dirs automatically).
-
-- **Deleted file:** Delete the corresponding cache entry file. Leave the parent module `_index.md` intact — its content remains valid until the next `/discover` rescan.
-
-**`_staleness.md` update:** After all file-level cache writes, update the row for the affected repo in `.workflow_artifacts/cache/_staleness.md`. Set `HEAD` to the post-commit `git rev-parse HEAD` and `Updated` to the current ISO timestamp. If `_staleness.md` does not yet have a row for this repo, add one. If the file does not exist, create it with this header first:
-
-```
-| Repo | HEAD | Updated |
-|------|------|---------|
-```
-
-**Error handling:** Cache writes are best-effort. On any failure (disk full, permission error, etc.), log a warning and continue — never fail the task or skip a commit because of a cache write error.
-
-**Note on per-skill copies:** `/implement`'s SKILL.md (section "Cache write-through") is the concrete implementation of this pattern for the current workflow. Future skills that modify source must read this canonical section AND add their own inline cache-write instructions to their SKILL.md — subagents read their own SKILL.md, not CLAUDE.md (see lessons-learned 2026-04-13).
+Cache-read bootstrap and cache write-through patterns live inline in each skill's SKILL.md. Subagents read their own SKILL.md at startup, not this file — see lessons-learned 2026-04-13. Do not replace inline copies with a pointer.
 
 ## Model assignments
 
