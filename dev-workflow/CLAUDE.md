@@ -332,6 +332,7 @@ The caveman-token-optimization v2 architecture (see `.workflow_artifacts/caveman
 - `dev-workflow/CLAUDE.md` (this file).
 - `dev-workflow/memory/lessons-learned.md`.
 - `dev-workflow/memory/terse-rubric.md` (the rubric itself — compressing it recreates the v1 CRIT-2 circular dependency).
+- `~/.claude/memory/terse-rubric.md` (deployed copy — read by skills at runtime; overwritten on re-install from the source above).
 
 **Contract-approval files:**
 - `<task>/architecture.md`.

@@ -24,6 +24,7 @@ Files matching any entry below are always English — display as-is with the Tie
 # Exact paths:
 dev-workflow/CLAUDE.md
 dev-workflow/memory/terse-rubric.md
+.claude/memory/terse-rubric.md
 .workflow_artifacts/memory/MEMORY.md
 .workflow_artifacts/memory/lessons-learned.md
 

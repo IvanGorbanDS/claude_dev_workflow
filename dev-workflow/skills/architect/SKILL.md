@@ -253,6 +253,6 @@ The scan/synthesize split exists to avoid paying Opus rates for bulk file readin
 
 ## Tier 3 critic outputs
 
-When `/architect` spawns `/critic --target=architecture.md` as a subagent (Phase 4), write `architecture-critic-N.md` in terse style per `dev-workflow/memory/terse-rubric.md`.
+When `/architect` spawns `/critic --target=architecture.md` as a subagent (Phase 4), write `architecture-critic-N.md` in terse style per `~/.claude/memory/terse-rubric.md`.
 
 `architecture.md` itself is Tier 1 (English) per architecture §3.2 — do not apply the rubric to it.
