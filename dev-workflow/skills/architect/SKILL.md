@@ -221,6 +221,48 @@ At the end of the document, include a **Stage Summary Table**:
 
 And a section called **Next Steps** that explicitly says which stages are ready for `/thorough_plan` and in what order.
 
+### Phase 4: Architecture critique
+
+After producing `architecture.md`, spawn `/critic --target=architecture.md` as a fresh Opus subagent to review the architecture before the user gate.
+
+#### Spawning the critic
+
+- **MUST be a fresh agent session** — same rule as `/thorough_plan`'s critic invocation. The architect who wrote the document cannot also be its unbiased critic.
+- Pass the task name so the critic can locate `<task-name>/architecture.md` and write its output to `<task-name>/architecture-critic-N.md`.
+- The `--target=architecture.md` flag (or equivalent context) tells the critic to switch to architecture mode (see `/critic` Architecture Mode).
+
+#### Handling the critic response
+
+Read the critic's output (`architecture-critic-N.md`) and act based on the verdict:
+
+**On PASS:**
+- Surface the critic's summary to the user: "Architecture critique passed — [brief summary of strengths noted]."
+- Proceed to the gate prompt (see below).
+
+**On REVISE (round 1):**
+- Present the CRITICAL and MAJOR issues to the user.
+- Offer two options:
+  1. **Revise in-session** — address the critic's issues by updating `architecture.md` directly, then re-spawn the critic for round 2.
+  2. **Proceed with caveats** — note the unresolved issues in the gate prompt and let the user decide whether to accept.
+
+**On REVISE (round 2) or max rounds reached:**
+- Present all remaining issues to the user.
+- Do NOT auto-revise further. Let the user decide: accept as-is, revise manually, or ask the architect to address specific issues.
+
+**Max rounds: 2.** Architecture critique is a sanity check, not a convergence loop. Two rounds is sufficient — if fundamental issues remain after two rounds, escalate to the user.
+
+#### Gate prompt
+
+After the critic loop completes (PASS or user decision on REVISE), present a gate prompt:
+
+> **Architecture gate checkpoint**
+>
+> `architecture.md` has been produced and reviewed by the critic.
+> - Critic verdict: [PASS / REVISE with N unresolved issues]
+> - [If REVISE: list unresolved CRITICAL/MAJOR issues]
+>
+> Please review `architecture.md` and approve before running `/thorough_plan`.
+
 ## Save session state
 
 Before finishing, write or update `.workflow_artifacts/memory/sessions/<date>-<task-name>.md` with:

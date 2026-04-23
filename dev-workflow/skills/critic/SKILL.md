@@ -12,10 +12,11 @@ You are a senior technical critic. Your job is to find real problems in implemen
 
 This skill ALWAYS runs in a fresh session (that's the whole point — unbiased review). On start:
 1. **Round 1 only:** Read `.workflow_artifacts/memory/lessons-learned.md` for past insights — check if past lessons apply to this plan's domain. **On rounds 2+, skip this step** — the file cannot change mid-loop, so re-reading it wastes tokens without adding information. (The round number is indicated by the existing `critic-response-*.md` files: if `critic-response-1.md` already exists, this is round 2 or later.)
-2. Read the task subfolder: `.workflow_artifacts/<task-name>/current-plan.md` and any prior `critic-response-*.md`
-3. Read the ACTUAL SOURCE CODE referenced by the plan (this is critical — don't trust the plan's claims)
-4. Append your session to the cost ledger: `.workflow_artifacts/<task-name>/cost-ledger.md` (see cost tracking rules in CLAUDE.md) — phase: `critic`
-5. Then proceed with critique
+2. **Detect mode:** Check if invocation context contains `--target=architecture.md`, or if the task folder has `architecture.md` but no `current-plan.md`. If either condition is true, switch to **Architecture Mode** (see below). Otherwise, continue with standard plan critique mode.
+3. Read the task subfolder: in plan mode, read `current-plan.md` and any prior `critic-response-*.md`. In architecture mode, read `architecture.md` and any prior `architecture-critic-*.md`.
+4. Read the ACTUAL SOURCE CODE referenced by the plan (this is critical — don't trust the plan's claims)
+5. Append your session to the cost ledger: `.workflow_artifacts/<task-name>/cost-ledger.md` (see cost tracking rules in CLAUDE.md) — phase: `critic`
+6. Then proceed with critique
 
 ## Model requirement
 
@@ -143,6 +144,118 @@ Save to `<project-folder>/.workflow_artifacts/<task-name>/critic-response-<round
 | De-risking | good/fair/poor | <brief> |
 ```
 
+## Architecture Mode
+
+When mode detection (Session bootstrap step 2) identifies this as an architecture critique, use this process instead of the standard Process section above.
+
+### 1. Read the architecture
+
+Read `<project-folder>/.workflow_artifacts/<task-name>/architecture.md` carefully and completely. This is a Tier 1 (English) document covering: context/problem, current state, proposed architecture, integration analysis, risk register, de-risking strategy, and stage decomposition.
+
+### 1.5. Read lessons learned (round 1 only)
+
+Same rule as plan mode — skip on rounds 2+. On round 1, read `.workflow_artifacts/memory/lessons-learned.md`. Check if past lessons apply to this architecture's domain.
+
+To detect the round: count existing `architecture-critic-*.md` files in the task folder. If none exist, this is round 1.
+
+### 2. Read the actual codebase
+
+Same cache-first logic as plan mode (see standard Process step 2). Verify that the architecture's claims about the current state match reality:
+
+- Check the knowledge cache first (same staleness rules as step 2 in standard Process)
+- Read files the architecture references — do they exist, do they work as described?
+- Check APIs, interfaces, and integration points referenced in the architecture
+- Scan for related code the architecture might have missed
+
+### 3. Evaluate
+
+Score the architecture against these criteria:
+
+**Design soundness**
+- Is the proposed architecture appropriate for the problem?
+- Are technology choices well-justified?
+- Are there simpler alternatives that would work?
+- Does it avoid over-engineering?
+
+**Section completeness**
+- Are all required sections present and substantive (context, current state, proposed architecture, integration analysis, risk register, de-risking, stage decomposition)?
+- Are sections deep enough to be actionable, not just placeholders?
+
+**Integration analysis quality**
+- Are failure modes identified for each integration point?
+- Are retry/fallback strategies concrete?
+- Are data consistency guarantees specified?
+- Are migration paths from current state to target state realistic?
+
+**Risk register quality**
+- Are risks specific to this architecture (not generic boilerplate)?
+- Does each risk have likelihood, impact, and a concrete mitigation?
+- Are there obvious risks missing?
+
+**Stage decomposition quality**
+- Are stages independently deployable and testable?
+- Do stages provide incremental value?
+- Are dependencies between stages correctly identified?
+- Is the ordering practical?
+- Are complexity estimates reasonable?
+
+**Non-functional requirements**
+- Are performance requirements addressed?
+- Is observability/monitoring planned?
+- Are security considerations covered?
+- Is the operational model (deployment, rollback, scaling) described?
+
+### 4. Produce the architecture critic response
+
+Write `architecture-critic-N.md` in terse style per `~/.claude/memory/terse-rubric.md`.
+
+Detect N by counting existing `architecture-critic-*.md` files in the task folder and incrementing.
+
+Save to `<project-folder>/.workflow_artifacts/<task-name>/architecture-critic-<N>.md`:
+
+```markdown
+# Architecture Critic Response — Round <N>
+
+## Verdict: PASS | REVISE
+
+## Summary
+<2-3 sentence overview of architecture quality and main concerns>
+
+## Issues
+
+### Critical (blocks proceeding to planning)
+- **[CRIT-1] <title>**
+  - What: <precise description>
+  - Why it matters: <what breaks or is missing>
+  - Where: <specific section in architecture.md>
+  - Suggestion: <direction for fixing>
+
+### Major (significant gap, should address)
+- **[MAJ-1] <title>**
+  - What: <description>
+  - Why it matters: <impact>
+  - Suggestion: <how to address>
+
+### Minor (improvement, use judgment)
+- **[MIN-1] <title>**
+  - Suggestion: <improvement>
+
+## What's good
+<Acknowledge what the architecture does well>
+
+## Scorecard
+| Criterion | Score | Notes |
+|-----------|-------|-------|
+| Design soundness | good/fair/poor | <brief> |
+| Section completeness | good/fair/poor | <brief> |
+| Integration analysis | good/fair/poor | <brief> |
+| Risk register | good/fair/poor | <brief> |
+| Stage decomposition | good/fair/poor | <brief> |
+| Non-functional requirements | good/fair/poor | <brief> |
+```
+
+Same verdict rules as plan mode: PASS = no CRITICAL or MAJOR; REVISE = has CRITICAL or MAJOR.
+
 ## Verdict rules
 
 - **PASS** — no CRITICAL or MAJOR issues. Minor issues may remain.
@@ -152,7 +265,7 @@ Save to `<project-folder>/.workflow_artifacts/<task-name>/critic-response-<round
 
 Before finishing, write or update `.workflow_artifacts/memory/sessions/<date>-<task-name>.md` with:
 - **Status:** `in_progress`
-- **Current stage:** `critic` (note the round number, e.g. `critic round 2`)
+- **Current stage:** `critic` (note the round number and mode, e.g. `critic round 2` or `architecture critic round 1`)
 - **Completed in this session:** verdict and summary of issues found
 - **Unfinished work:** what must be addressed in `/revise`
 - **Decisions made:** any significant judgements made during review
