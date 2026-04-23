@@ -89,6 +89,22 @@ done
 
 success "Copied $SKILL_COUNT skills to ~/.claude/skills/"
 
+# ── Step 2b: Copy terse-rubric to ~/.claude/memory/ ──
+header "Step 2b: Copying terse-rubric to ~/.claude/memory/..."
+
+USER_MEMORY_DIR="$HOME/.claude/memory"
+RUBRIC_SRC="$SCRIPT_DIR/memory/terse-rubric.md"
+RUBRIC_DST="$USER_MEMORY_DIR/terse-rubric.md"
+
+if [ ! -f "$RUBRIC_SRC" ]; then
+  error "Expected rubric at $RUBRIC_SRC but not found — aborting"
+  exit 1
+fi
+
+mkdir -p "$USER_MEMORY_DIR"
+cp "$RUBRIC_SRC" "$RUBRIC_DST"
+success "Copied terse-rubric.md to ~/.claude/memory/"
+
 # ── Step 3: Write workflow rules to ~/.claude/CLAUDE.md ──
 header "Step 3: Writing workflow rules to ~/.claude/CLAUDE.md..."
 
@@ -130,6 +146,9 @@ echo -e "${BOLD}╚════════════════════�
 echo ""
 echo -e "  ${GREEN}$SKILL_COUNT skills${NC} installed in ~/.claude/skills/"
 echo -e "  ${GREEN}Workflow rules${NC} written to ~/.claude/CLAUDE.md"
+echo -e "  ${GREEN}Terse rubric${NC} copied to ~/.claude/memory/terse-rubric.md"
+echo ""
+echo -e "  ${BLUE}Tip:${NC} re-run bash install.sh to refresh skills, CLAUDE.md, and the rubric together."
 echo ""
 echo -e "  ${BOLD}Next: scaffold a project${NC}"
 echo ""
