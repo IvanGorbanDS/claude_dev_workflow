@@ -29,7 +29,19 @@ When invoked as part of `/thorough_plan`, you MUST run in a fresh agent session.
 
 ### 1. Read the plan
 
-Read `<project-folder>/.workflow_artifacts/<task-name>/current-plan.md` carefully and completely. Understand what it's proposing and why.
+Read `<project-folder>/.workflow_artifacts/<task-name>/current-plan.md` carefully and completely. Apply the §5.7.1 detection rule below to determine v2 vs v3 format BEFORE invoking the Read tool, so the read strategy matches the file shape.
+
+# v3-format detection (architecture.md §5.7.1 — copy verbatim)
+# A file is v3-format iff:
+#   - the first 50 lines following the closing `---` of the YAML frontmatter
+#     contain a heading matching the regex ^## For human\s*$
+# Otherwise the file is v2-format.
+# On v3-format detection: read sections per format-kit.md for this artifact type.
+# On v2-format (or no frontmatter): read the whole file as legacy v2.
+# Detection MUST be string-comparison only — no LLM call (per lesson 2026-04-23
+# on LLM-replay non-determinism).
+
+If v3-format: read the body sections per `format-kit.md` §2 `current-plan.md` enumeration. The `## For human` block is the human-facing summary; the `## Tasks`, `## State`, `## Decisions`, `## Risks`, etc. are the structured body to critique. Critique against the body; do NOT critique the `## For human` block (it is a derived summary, not a contract). If v2-format (legacy): read the whole file as the v2 mechanism did.
 
 ### 1.5. Read lessons learned (round 1 only)
 

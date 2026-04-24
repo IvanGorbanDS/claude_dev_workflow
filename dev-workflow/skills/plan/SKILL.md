@@ -15,7 +15,8 @@ This skill may run in a fresh chat session. On start:
 2. Read `.workflow_artifacts/memory/sessions/` for active session state
 3. Read the task subfolder (`.workflow_artifacts/<task-name>/architecture.md`, any prior `current-plan.md`, `critic-response-*.md`)
 4. Append your session to the cost ledger: `.workflow_artifacts/<task-name>/cost-ledger.md` (see cost tracking rules in CLAUDE.md) — phase: `plan`
-5. Then proceed with planning
+5. Read deployed v3 references at session start: `~/.claude/memory/format-kit.md` and `~/.claude/memory/glossary.md`
+6. Then proceed with planning
 
 ## Model requirement
 
@@ -53,69 +54,50 @@ Before writing anything:
 
 ### 2. Produce the plan
 
-Save to `<project-folder>/.workflow_artifacts/<task-name>/current-plan.md`:
+The plan is a Class B artifact (`current-plan.md`) per artifact-format-architecture v3 §4.1. Write it using the §5.3 5-step Class B mechanism:
 
-```markdown
-# Implementation Plan: <title>
+**Step 1: Body generation.**
+Reference files (apply HERE at the body-generation WRITE-SITE — per format-kit.md §1; this is the only place these references apply, per lesson 2026-04-23):
+- `~/.claude/memory/format-kit.md` — primitives + standard sections per artifact type
+- `~/.claude/memory/glossary.md` — abbreviation whitelist + status glyphs
+- `~/.claude/memory/terse-rubric.md` — prose discipline (compose with format-kit per §5)
 
-## Objective
-<What we're building and why, in 2-3 sentences>
+Compose the format-aware body for `current-plan.md` per format-kit.md §2 enumeration: `## State` (YAML), `## Tasks` (terse numbered list with status glyphs ✓ ✗ ⏳ 🚫 + acceptance bullets), `## Decisions` (caveman prose, only if non-trivial), `## Risks` (markdown table with id/risk/likelihood/impact/mitigation/rollback), `## Procedures` (pseudo-code, optional), `## References` (terse list, only if cross-refs exist). Apply `format-kit.md` §1 pick rules per section. DO NOT include the `## For human` block yet — that's Step 2 + Step 3. Write the body to a temp file using the Bash tool: `<plan-path>.body.tmp`.
 
-## Scope
-**In scope:** <explicit list>
-**Out of scope:** <explicit exclusions>
+**Step 2: Summary generation (with empty-output check).** Invoke the deployed Haiku summary script via the Bash tool:
+  `python3 ~/.claude/scripts/summarize_for_human.py <plan-path>.body.tmp`
+Capture stdout (the summary text) and exit code. The script's contract is documented at architecture §5.3.1 and in the script's docstring. Timeout: 30s (script-enforced).
+- If exit code is non-zero: treat as Step 2 failure → trigger Step 5 retry path.
+- If exit code is 0 BUT stdout (after stripping whitespace) is empty: treat as Step 2 failure → trigger Step 5 retry path. (An empty/whitespace-only summary is NOT acceptable; do not silently emit `## For human\n\n\n`.)
+- Otherwise: proceed to Step 3 with the captured stdout as `summary_raw`.
 
-## Pre-implementation checklist
-- [ ] <Required access, permissions, API keys>
-- [ ] <Dependencies to install or upgrade>
-- [ ] <Environment setup>
-- [ ] <Feature flags to create>
+**Step 3: Compose and write the single file (with `## For human` heading dedup).** The Haiku prompt template instructs Haiku to "Produce a `## For human` summary" — Haiku may or may not emit the heading itself. To guarantee exactly one heading in the assembled file:
+  (a) Take `summary_raw` from Step 2.
+  (b) Strip a leading `## For human` heading if present, using the regex `^##\s*For\s+human\s*\n+` (case-sensitive, greedy on trailing newlines). Call the result `summary_body`.
+  (c) Compose the final `current-plan.md` content as: `<frontmatter (YAML)>\n## For human\n\n<summary_body>\n\n<body content read back from <plan-path>.body.tmp>`.
+  (d) Write to `<plan-path>.tmp` using the Write tool.
+This guarantees the assembled file contains exactly one `## For human` line, regardless of Haiku output shape.
 
-## Tasks
+**Step 4: Structural validation.** Invoke the deployed validator via the Bash tool:
+  `python3 ~/.claude/scripts/validate_artifact.py <plan-path>.tmp`
+(Filename auto-detection identifies the type as `current-plan`; the explicit `--type current-plan` flag is unnecessary.) Exit code 0 = PASS; non-zero = at least one V-01..V-07 invariant failed (stderr names which). The validator is deterministic and side-effect-free.
 
-### Task 1: <title>
-**Description:** <what to do>
-**Files:** <create or modify — specific paths>
-**Acceptance criteria:**
-- <How you know it's done>
-**Effort:** small | medium | large
-**Depends on:** none | Task N
+**Step 5: Retry / English-fallback (failure-class-aware).** Differentiate the retry path by which step failed:
 
-### Task 2: ...
-(continue for all tasks)
+  - **Step 2 failure path (Haiku non-zero exit OR exit-0-but-empty-stdout):**
+    (a) Re-run ONLY Step 2 once (re-invoke `summarize_for_human.py` against the unchanged `<plan-path>.body.tmp`). The script pins `temperature=0.0`; re-running may catch transient network errors. Do NOT re-run Step 1.
+    (b) If the re-run ALSO fails: fall back to v2-style single-file write (see fallback below).
 
-## Integration analysis
+  - **Step 4 validation failure path (non-zero validator exit):** parse validator stderr (each line begins `FAIL V-NN: ...`) to identify the failing invariant ID(s):
+    (a) **V-06 / V-07 failures:** body is fine; summary/composition is wrong. Re-run Steps 2–4 once.
+    (b) **V-02 / V-03 / V-05 failures:** re-run Steps 1–4 once with the explicit body-discipline instruction prepended: "all standard sections required, no inventions, summary 5–8 lines, do not output any heading".
+    (c) **V-01 / V-04 failures:** treat as body issues (re-run Steps 1–4).
 
-### <Integration point 1>
-- **Current behavior:** <how it works now>
-- **New behavior:** <what changes>
-- **Failure modes:** <what can go wrong, how to handle>
-- **Backward compatibility:** <can this deploy independently?>
-- **Coordination:** <teams/services to notify>
+  - **English-fallback (after retry also fails):** fall back to v2-style single-file write — regenerate the body using terse-rubric only (no format-kit, no `## For human` block). Write to `<plan-path>.tmp` directly. Skip Step 4 validation. Log a `format-kit-skipped` warning to the user with the failing invariant ID(s). The artifact still gets written; the safety property holds.
 
-## Risk analysis
+**Step 6: Atomic rename.** Move `<plan-path>.tmp` to `<plan-path>` (overwriting any prior `current-plan.md`). Clean up `<plan-path>.body.tmp`. Use the Bash tool: `mv <plan-path>.tmp <plan-path> && rm -f <plan-path>.body.tmp`.
 
-| Risk | Likelihood | Impact | Mitigation | Rollback |
-|------|-----------|--------|------------|----------|
-| <risk> | low/med/high | low/med/high | <how to prevent> | <how to undo> |
-
-## Testing strategy
-
-### Unit tests
-- <function/module>: <what to test>
-
-### Integration tests
-- <interaction>: <what to verify>
-
-### E2E tests
-- <user flow>: <what to exercise>
-
-### Edge cases
-- <specific scenario to cover>
-
-## Implementation order
-<Numbered sequence optimized for early feedback, risk reduction, minimal WIP>
-```
+The final file at `<plan-path>` IS what `/critic`, `/implement`, `/review`, `/gate` will read. Do NOT write a `.original.md` side-file.
 
 ## Task subfolder naming
 

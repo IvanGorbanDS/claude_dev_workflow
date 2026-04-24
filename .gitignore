@@ -2,6 +2,11 @@
 .DS_Store
 ._*
 
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
 # Workflow artifacts (session-specific, not shared)
 .workflow_artifacts/
 
@@ -21,7 +26,7 @@ artifact-consolidation/
 .env
 .env.local
 .claude/
-
+/
 # /expand --save output files (scratch; use sparingly)
 *.expanded-*.md
 

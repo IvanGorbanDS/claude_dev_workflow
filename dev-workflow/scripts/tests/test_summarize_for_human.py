@@ -130,3 +130,68 @@ def test_integration_haiku_call():
         f"Output appears to use terse glyph syntax — expected plain English. "
         f"Lines: {non_blank_lines}"
     )
+
+
+# ── T-11: current-plan body fixture smoke tests ───────────────────────────────
+
+def test_smoke_current_plan_body_no_credentials():
+    """Body.tmp fixture is accepted (not rejected as wrong format) — fails only on missing key."""
+    body = os.path.join(FIXTURES_DIR, 'v3-current-plan.body.tmp.md')
+    rc, _, stderr = run_summarize(body, env_overrides={'ANTHROPIC_API_KEY': ''})
+    assert rc != 0
+    # Must fail due to missing key, NOT because of a file-format or parse error
+    assert 'ANTHROPIC_API_KEY missing' in stderr, (
+        f"Expected ANTHROPIC_API_KEY error, got: {stderr!r}"
+    )
+
+
+def test_summarize_returns_empty_handled_by_caller():
+    """Tripwire: script must exit 0 (not non-zero) on successful Haiku call,
+    even if output is unexpectedly empty. Callers (§5.3 Step 2) are responsible
+    for detecting empty stdout and triggering the retry path."""
+    with open(SUMMARIZE, encoding='utf-8') as f:
+        source = f.read()
+    # Script must NOT force a non-zero exit for empty output — that check is the
+    # caller's job per §5.3 Step 2. Verify no sys.exit(1) on empty-output guard.
+    # (We check the exit-0 path exists for successful API responses.)
+    assert 'sys.exit(0)' in source or 'return' in source, (
+        "Script must have a success exit path"
+    )
+    # And the script must not contain logic that exits non-zero specifically for empty output
+    # (it may print to stdout and exit 0 — the caller strips whitespace and checks emptiness)
+    lines_with_empty_exit = [
+        l for l in source.splitlines()
+        if 'empty' in l.lower() and 'sys.exit(1)' in l
+    ]
+    assert not lines_with_empty_exit, (
+        f"Script exits non-zero for empty output — caller should handle this: {lines_with_empty_exit}"
+    )
+
+
+@pytest.mark.integration
+@pytest.mark.skipif(
+    not os.environ.get('ANTHROPIC_API_KEY'),
+    reason="ANTHROPIC_API_KEY not set — integration test skipped"
+)
+def test_integration_current_plan_body():
+    """Live Haiku call against the current-plan body.tmp fixture. Requires ANTHROPIC_API_KEY."""
+    import time
+    body = os.path.join(FIXTURES_DIR, 'v3-current-plan.body.tmp.md')
+    start = time.time()
+    rc, stdout, stderr = run_summarize(body)
+    elapsed = time.time() - start
+
+    assert rc == 0, f"Expected exit 0, got {rc}. stderr: {stderr}"
+    assert elapsed < 30, f"Expected < 30s wall time, got {elapsed:.1f}s"
+
+    # Per §5.3 Step 3(a), Haiku may or may not emit a leading `## For human` heading;
+    # the writer-skill dedup strips it. The script's contract is just non-empty output.
+    # If Haiku does emit the heading, the visible summary lines are stdout minus that heading.
+    non_blank_lines = [l for l in stdout.strip().splitlines() if l.strip()]
+    # Strip a leading `## For human` heading if present (mirrors writer-skill Step 3(a))
+    if non_blank_lines and non_blank_lines[0].strip().startswith('## For human'):
+        non_blank_lines = non_blank_lines[1:]
+    assert 1 <= len(non_blank_lines) <= 12, (
+        f"Expected 1-12 non-blank summary lines (post-dedup), "
+        f"got {len(non_blank_lines)}: {non_blank_lines}"
+    )
