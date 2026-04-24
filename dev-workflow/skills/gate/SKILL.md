@@ -95,6 +95,7 @@ Based on what exists and what's next, run the appropriate checks:
 - [ ] (Medium/Large only) Convergence summary with PASS verdict from critic
 - [ ] (Large only) Integration analysis covers all affected service boundaries
 - [ ] (Large only) Risk mitigations are concrete
+- [ ] Read the `## For human` summary block from `current-plan.md` (per architecture §5.7.1 detection rule — see Step 3a below) and display it to the user as part of the gate summary's 'Summary of what was produced' section. If no `## For human` block is detected (legacy v2-format file), fall back to displaying the first 2 KB of `current-plan.md` as v2 always did. v2 fallback path MUST be retained — do not error on missing block.
 
 **After /implement → before /review (Standard or Full gate — determined by task profile):**
 
@@ -118,6 +119,22 @@ Based on what exists and what's next, run the appropriate checks:
 - [ ] Run type checker if applicable
 - [ ] Branch is up to date with base branch
 - [ ] No merge conflicts
+
+### Step 3a: Read summary for display (Checkpoint B only)
+
+For Checkpoint B (post-`/plan` → pre-`/implement`), determine the `current-plan.md` format and extract the human-facing summary using the §5.7.1 detection rule below.
+
+# v3-format detection (architecture.md §5.7.1 — copy verbatim)
+# A file is v3-format iff:
+#   - the first 50 lines following the closing `---` of the YAML frontmatter
+#     contain a heading matching the regex ^## For human\s*$
+# Otherwise the file is v2-format.
+# On v3-format detection: read sections per format-kit.md for this artifact type.
+# On v2-format (or no frontmatter): read the whole file as legacy v2.
+# Detection MUST be string-comparison only — no LLM call (per lesson 2026-04-23
+# on LLM-replay non-determinism).
+
+If v3-format: capture the lines from the line after `## For human` until the next `## ` heading; pass that text to Step 3 as the `Summary of what was produced` content. If v2-format: read the first 2 KB of the file as the summary content (legacy fallback).
 
 ### Step 3: Present the gate summary
 

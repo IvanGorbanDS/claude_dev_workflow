@@ -1,14 +1,14 @@
 ---
 name: expand
 model: sonnet
-description: "Expands compressed (terse) workflow artifacts back to English for human reading. Use for: /expand <path>, 'show me the English version of', 'expand this file', 'what does this terse file say'. Dispatches: file-switch (reads .original.md side-file for Tier 2 contract files), no-op display (Tier 1 English files), LLM re-expansion (Tier 3 ephemeral files — lossy, banner-flagged). Never used as a contract approval path."
+description: "Expands compressed (terse) workflow artifacts back to English for human reading. Use for: /expand <path>, 'show me the English version of', 'expand this file', 'what does this terse file say'. Dispatches: Class B summary detection (reads ## For human block at top of v3 artifacts), no-op display (Tier 1 English files), LLM re-expansion (Tier 3 ephemeral files — lossy, banner-flagged). Never used as a contract approval path."
 ---
 
 # Expand
 
-Expands a caveman-compressed (terse) workflow artifact back into human-readable English. Dispatches to one of three paths: no-op display for Tier 1 English files, file-switch for Tier 2 contract files (reads `.original.md`), or LLM re-expansion for Tier 3 ephemeral files (lossy, banner-flagged). Invoke as `/expand <path>` or `/expand <path> --save`.
+Expands a caveman-compressed (terse) workflow artifact back into human-readable English. Dispatches to one of three paths: no-op display for Tier 1 English files, Class B summary detection (reads `## For human` block at top of v3 contract artifacts), or LLM re-expansion for Tier 3 ephemeral files (lossy, banner-flagged). Invoke as `/expand <path>` or `/expand <path> --save`.
 
-This skill implements architecture §5.4's 8-step pipeline. It is the user-facing escape hatch for the caveman-token-optimization v2 architecture — not a contract-approval path.
+This skill implements architecture §5.6's 7-step pipeline. It is the user-facing escape hatch for the caveman-token-optimization v2 architecture — not a contract-approval path.
 
 ## Session bootstrap
 
@@ -32,7 +32,6 @@ dev-workflow/memory/terse-rubric.md
 .workflow_artifacts/<task>/architecture.md
 .workflow_artifacts/<task>/review-*.md
 .workflow_artifacts/<task>/cost-ledger.md
-.workflow_artifacts/<task>/*.original.md
 
 # Glob patterns:
 .workflow_artifacts/memory/weekly/*.md
@@ -41,7 +40,7 @@ dev-workflow/memory/terse-rubric.md
 
 **Note:** Adding a Tier 1 path requires updating this file — this is an exception pattern per lesson 2026-04-13 (`run-skill`) and is documented inline here so it is discoverable when other Tier 1 additions are made.
 
-## 8-step pipeline
+## 7-step pipeline
 
 Execute steps in order. Stop at the first step that produces output.
 
@@ -59,13 +58,27 @@ Read the file. If it is 0 bytes → print `/expand: <path> is empty, nothing to 
 
 Attempt to decode the first 1024 bytes as UTF-8. If decoding fails (non-UTF-8 content) → print `/expand: <path> is not UTF-8 text; /expand operates on markdown only` and exit. No LLM call.
 
-### Step 4: `.original.md` suffix check
+### Step 4: Class B summary detection
 
-If `<path>` ends in `.original.md` → display the file content as-is. Print banner:
+# v3-format detection (architecture.md §5.7.1 — copy verbatim)
+# A file is v3-format iff:
+#   - the first 50 lines following the closing `---` of the YAML frontmatter
+#     contain a heading matching the regex ^## For human\s*$
+# Otherwise the file is v2-format.
+# On v3-format detection: read sections per format-kit.md for this artifact type.
+# On v2-format (or no frontmatter): read the whole file as legacy v2.
+# Detection MUST be string-comparison only — no LLM call (per lesson 2026-04-23
+# on LLM-replay non-determinism).
 
-```
-Already expanded (.original.md side-file)
-```
+If `<path>` matches a Class B path (`current-plan.md`, `architecture.md`, `review-*.md`, `daily/<date>.md`, `weekly/*.md`) AND the file contains a `## For human` heading within the first 50 lines per the rule above → display the message:
+
+  `<path>` is a Class B artifact with a built-in `## For human` summary at the top.
+  Showing summary; pass `--full` to see the structured body.
+
+Then display the `## For human` block content.
+
+`/expand <path> --full` displays the full body.
+`/expand <path> --section <name>` displays a single named section (works on Class A and Class B).
 
 Done — no LLM call.
 
@@ -74,7 +87,7 @@ Done — no LLM call.
 Check whether the resolved path matches any entry in the Tier 1 path list above. Matching rules:
 
 - **Exact paths:** compare the resolved absolute path's suffix against each exact entry (e.g., `dev-workflow/CLAUDE.md` matches any resolved path ending in `dev-workflow/CLAUDE.md`).
-- **Per-task patterns:** resolve `<task>` to the active task name if determinable from context or current session state; otherwise match with the literal pattern `<task>` as a wildcard segment. `review-*.md` and `*.original.md` are glob-style wildcards within the segment.
+- **Per-task patterns:** resolve `<task>` to the active task name if determinable from context or current session state; otherwise match with the literal pattern `<task>` as a wildcard segment. `review-*.md` is a glob-style wildcard within the segment.
 - **Glob patterns:** match using standard shell-glob semantics (`*` matches within a directory segment; `<date>` matches any `YYYY-MM-DD`-shaped segment).
 
 If the path matches any entry → display the file content as-is. Print banner:
@@ -85,17 +98,7 @@ Already English (Tier 1 file: <matching-pattern>)
 
 Done — no LLM call.
 
-### Step 6: File-switch check
-
-If `<path>.original.md` exists alongside the target file → display the contents of `<path>.original.md`. Print banner:
-
-```
-File-switch expansion (exact — reads <path>.original.md)
-```
-
-Done — no LLM call.
-
-### Step 7: Size warning
+### Step 6: Size warning
 
 If the file is larger than 500 KB → print:
 
@@ -107,7 +110,7 @@ Cost estimate formula: `(size_bytes / 4) * 1.5 * 15 / 1_000_000` dollars (bytes�
 
 Wait for user input. On `n` → exit with no action.
 
-### Step 8: LLM re-expansion
+### Step 7: LLM re-expansion
 
 Invoke Sonnet with the re-expansion prompt below. Display the result with the warning banner:
 
@@ -133,12 +136,12 @@ Invoke Sonnet with the re-expansion prompt below. Display the result with the wa
 
 Every LLM re-expansion output starts with:
 
-> ⚠️ **LLM re-expansion.** This is a best-effort reconstruction from the terse source. The reconstructed text is not byte-identical to what other skills read. Do NOT use this expansion to approve a contract artifact like `current-plan.md` — for contract artifacts, `/gate` reads `.original.md` directly.
+> ⚠️ **LLM re-expansion.** This is a best-effort reconstruction from the terse source. The reconstructed text is not byte-identical to what other skills read. Do NOT use this expansion to approve a contract artifact like `current-plan.md` — for Class B contract artifacts, `/gate` reads the `## For human` summary block at the top of the artifact directly (per architecture v3 §5.5).
 
 (Emoji is explicitly permitted in this banner — it is a UX signal, not content decoration, per architecture §5.4.)
 
 ## Important behaviors
 
-- **Never use re-expansion for contract approval.** The user-approved version of any contract artifact is the `.original.md` side-file (Tier 2), not a lossy LLM reconstruction. If a user tries to approve `current-plan.md` via `/expand`, warn them to use the `.original.md` file with `/gate` instead.
+- **Never use re-expansion for contract approval.** Class B contract artifacts (`current-plan.md`, `architecture.md`, `review-*.md`) carry their user-facing summary in a `## For human` block at the top of the file, read directly by `/gate`. If a user tries to approve a contract artifact via `/expand`, direct them to `/gate` instead — `/gate` reads the structural file, not a lossy LLM reconstruction.
 - **`--save` is opt-in.** Without `--save`, no file is written to disk. The expansion is displayed to the user only. Do not auto-save.
 - **Path ambiguity resolution:** prefer project-root-relative resolution over `.workflow_artifacts/`-relative. If both resolve to existing files, use the project-root-relative match and note the ambiguity to the user.
