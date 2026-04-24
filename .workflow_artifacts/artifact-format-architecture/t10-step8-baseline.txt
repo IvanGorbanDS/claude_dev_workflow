@@ -1,0 +1,46 @@
+FAIL V-02: heading "## Convergence Summary" not in allowed set for artifact type
+FAIL V-02: heading "## Objective" not in allowed set for artifact type
+FAIL V-02: heading "## Scope" not in allowed set for artifact type
+FAIL V-02: heading "## Affected files" not in allowed set for artifact type
+FAIL V-02: heading "## Pre-implementation checklist" not in allowed set for artifact type
+FAIL V-02: heading "## Integration analysis" not in allowed set for artifact type
+FAIL V-02: heading "## Risk register" not in allowed set for artifact type
+FAIL V-02: heading "## Testing strategy" not in allowed set for artifact type
+FAIL V-02: heading "## Rollback plan" not in allowed set for artifact type
+FAIL V-02: heading "## De-risking strategy" not in allowed set for artifact type
+FAIL V-02: heading "## Implementation order" not in allowed set for artifact type
+FAIL V-02: heading "## Notes for `/critic` (round 1) and `/revise` (if invoked)" not in allowed set for artifact type
+FAIL V-04: unbalanced XML tag <tag> opened at line 657 (no matching </tag>)
+FAIL V-05: reference R-12 at line 20 has no definition
+FAIL V-05: reference R-12 at line 253 has no definition
+FAIL V-05: reference R-12 at line 253 has no definition
+FAIL V-05: reference T-99 at line 357 has no definition
+FAIL V-05: reference T-99 at line 357 has no definition
+FAIL V-05: reference T-99 at line 577 has no definition
+FAIL V-05: reference R-09 at line 577 has no definition
+FAIL V-05: reference R-10 at line 577 has no definition
+FAIL V-05: reference R-12 at line 577 has no definition
+FAIL V-05: reference R-09 at line 577 has no definition
+FAIL V-05: reference T-99 at line 577 has no definition
+FAIL V-05: reference R-09 at line 577 has no definition
+FAIL V-05: reference R-10 at line 577 has no definition
+FAIL V-05: reference R-12 at line 580 has no definition
+FAIL V-05: reference T-99 at line 584 has no definition
+FAIL V-05: reference R-09 at line 584 has no definition
+FAIL V-05: reference R-10 at line 584 has no definition
+FAIL V-05: reference R-12 at line 670 has no definition
+FAIL V-05: reference T-99 at line 813 has no definition
+FAIL V-05: reference R-12 at line 813 has no definition
+FAIL V-05: reference T-99 at line 833 has no definition
+FAIL V-05: reference R-09 at line 833 has no definition
+FAIL V-05: reference R-10 at line 833 has no definition
+FAIL V-05: reference R-12 at line 833 has no definition
+FAIL V-05: reference R-12 at line 833 has no definition
+FAIL V-05: reference R-12 at line 833 has no definition
+FAIL V-05: reference T-99 at line 845 has no definition
+FAIL V-05: reference R-09 at line 845 has no definition
+FAIL V-05: reference R-10 at line 845 has no definition
+FAIL V-06: ## For human section missing or not first heading after frontmatter
+FAIL V-07: required section "## For human" missing for this artifact type
+FAIL V-07: required section "## State" missing for this artifact type
+FAIL V-07: required section "## Risks" missing for this artifact type
