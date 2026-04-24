@@ -184,13 +184,14 @@ def test_integration_current_plan_body():
     assert rc == 0, f"Expected exit 0, got {rc}. stderr: {stderr}"
     assert elapsed < 30, f"Expected < 30s wall time, got {elapsed:.1f}s"
 
+    # Per §5.3 Step 3(a), Haiku may or may not emit a leading `## For human` heading;
+    # the writer-skill dedup strips it. The script's contract is just non-empty output.
+    # If Haiku does emit the heading, the visible summary lines are stdout minus that heading.
     non_blank_lines = [l for l in stdout.strip().splitlines() if l.strip()]
+    # Strip a leading `## For human` heading if present (mirrors writer-skill Step 3(a))
+    if non_blank_lines and non_blank_lines[0].strip().startswith('## For human'):
+        non_blank_lines = non_blank_lines[1:]
     assert 1 <= len(non_blank_lines) <= 12, (
-        f"Expected 1-12 non-blank lines, got {len(non_blank_lines)}: {non_blank_lines}"
-    )
-    # Must not start with ## For human (Step 3(a) strips it, but script may include it)
-    # The validator's V-06 dedup check is tested separately; here we just check line count
-    first_non_blank = next((l for l in stdout.splitlines() if l.strip()), '')
-    assert not first_non_blank.startswith('## '), (
-        f"Summary should not start with a heading: {first_non_blank!r}"
+        f"Expected 1-12 non-blank summary lines (post-dedup), "
+        f"got {len(non_blank_lines)}: {non_blank_lines}"
     )
