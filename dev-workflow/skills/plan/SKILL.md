@@ -65,7 +65,7 @@ Reference files (apply HERE at the body-generation WRITE-SITE — per format-kit
 Compose the format-aware body for `current-plan.md` per format-kit.md §2 enumeration: `## State` (YAML), `## Tasks` (terse numbered list with status glyphs ✓ ✗ ⏳ 🚫 + acceptance bullets), `## Decisions` (caveman prose, only if non-trivial), `## Risks` (markdown table with id/risk/likelihood/impact/mitigation/rollback), `## Procedures` (pseudo-code, optional), `## References` (terse list, only if cross-refs exist). Apply `format-kit.md` §1 pick rules per section. DO NOT include the `## For human` block yet — that's Step 2 + Step 3. Write the body to a temp file using the Bash tool: `<plan-path>.body.tmp`.
 
 **Step 2: Summary generation (with empty-output check).** Invoke the deployed Haiku summary script via the Bash tool:
-  `python3 ~/.claude/scripts/summarize_for_human.py <plan-path>.body.tmp`
+  `bash ~/.claude/scripts/with_env.sh python3 ~/.claude/scripts/summarize_for_human.py <plan-path>.body.tmp`
 Capture stdout (the summary text) and exit code. The script's contract is documented at architecture §5.3.1 and in the script's docstring. Timeout: 30s (script-enforced).
 - If exit code is non-zero: treat as Step 2 failure → trigger Step 5 retry path.
 - If exit code is 0 BUT stdout (after stripping whitespace) is empty: treat as Step 2 failure → trigger Step 5 retry path. (An empty/whitespace-only summary is NOT acceptable; do not silently emit `## For human\n\n\n`.)
