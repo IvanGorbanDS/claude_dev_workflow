@@ -62,6 +62,8 @@ Reference files (apply HERE at the body-generation WRITE-SITE — per format-kit
 - `~/.claude/memory/glossary.md` — abbreviation whitelist + status glyphs
 - `~/.claude/memory/terse-rubric.md` — prose discipline (compose with format-kit per §5)
 
+# V-05 reminder: T-NN/D-NN/R-NN/F-NN/Q-NN/S-NN are FILE-LOCAL.
+# When referring to a sibling artifact's task or risk, use plain English (e.g., "the parent plan's T-04"), NOT a bare T-NN token. See format-kit.md §1 / glossary.md.
 Compose the format-aware body for `current-plan.md` per format-kit.md §2 enumeration: `## State` (YAML), `## Tasks` (terse numbered list with status glyphs ✓ ✗ ⏳ 🚫 + acceptance bullets), `## Decisions` (caveman prose, only if non-trivial), `## Risks` (markdown table with id/risk/likelihood/impact/mitigation/rollback), `## Procedures` (pseudo-code, optional), `## References` (terse list, only if cross-refs exist). Apply `format-kit.md` §1 pick rules per section. DO NOT include the `## For human` block yet — that's Step 2 + Step 3. Write the body to a temp file using the Bash tool: `<plan-path>.body.tmp`.
 
 **Step 2: Summary generation (with empty-output check).** Invoke the deployed Haiku summary script via the Bash tool:

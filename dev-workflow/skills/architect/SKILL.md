@@ -217,6 +217,8 @@ Reference files (apply HERE at the body-generation WRITE-SITE — per format-kit
 - `~/.claude/memory/glossary.md` — abbreviation whitelist + status glyphs
 - `~/.claude/memory/terse-rubric.md` — prose discipline (compose with format-kit per §5)
 
+# V-05 reminder: T-NN/D-NN/R-NN/F-NN/Q-NN/S-NN are FILE-LOCAL.
+# When referring to a sibling artifact's task or risk, use plain English (e.g., "the parent plan's T-04"), NOT a bare T-NN token. See format-kit.md §1 / glossary.md.
 Compose the format-aware body for `architecture.md` per format-kit.md §2 enumeration:
 - `## Context` — caveman prose: what are we solving and why, constraints, business context.
 - `## Current state` — caveman prose: how things work today, pain points.

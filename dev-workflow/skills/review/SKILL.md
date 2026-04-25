@@ -153,6 +153,8 @@ Reference files (apply HERE at the body-generation WRITE-SITE — per format-kit
 - `~/.claude/memory/glossary.md` — abbreviation whitelist + status glyphs
 - `~/.claude/memory/terse-rubric.md` — prose discipline (compose with format-kit per §5)
 
+# V-05 reminder: T-NN/D-NN/R-NN/F-NN/Q-NN/S-NN are FILE-LOCAL.
+# When referring to a sibling artifact's task or risk, use plain English (e.g., "the parent plan's T-04"), NOT a bare T-NN token. See format-kit.md §1 / glossary.md.
 Compose the format-aware body per the `review` artifact-type sections in format-kit.md §2:
 - `## Summary` — caveman prose: 2-3 sentence review outcome summary.
 - `## Verdict` — one line: `APPROVED`, `CHANGES_REQUESTED`, or `BLOCKED`.

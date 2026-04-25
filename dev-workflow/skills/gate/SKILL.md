@@ -201,6 +201,8 @@ Use the §5.4 Class A writer mechanism. Reference files (apply HERE at the body-
 - `~/.claude/memory/glossary.md` — abbreviation whitelist + status glyphs
 - `~/.claude/memory/terse-rubric.md` — prose discipline
 
+# V-05 reminder: T-NN/D-NN/R-NN/F-NN/Q-NN/S-NN are FILE-LOCAL.
+# When referring to a sibling artifact's task or risk, use plain English (e.g., "the parent plan's T-04"), NOT a bare T-NN token. See format-kit.md §1 / glossary.md.
 Compose the format-aware body per format-kit.md §2 `gate-{phase}-{date}.md` enumeration:
 - `## Automated checks` — REQUIRED — terse numbered list with status glyphs ✓/✗ per check, brief detail per row.
 - `## Verdict` — REQUIRED — single word `PASS` or `FAIL`.
