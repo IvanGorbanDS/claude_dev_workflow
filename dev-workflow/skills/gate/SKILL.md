@@ -106,7 +106,7 @@ Based on what exists and what's next, run the appropriate checks:
 - [ ] No debug code (console.log, debugger, print, TODO: remove)
 - [ ] No secrets in diff
 - [ ] No uncommitted changes
-- [ ] Read the `## For human` summary block from `architecture.md` if it exists AND was modified this task (per Step 3a below). Display as part of "Summary of what was produced" alongside the implementation deliverables. If `architecture.md` is v2-legacy or does not exist, skip silently.
+- [ ] Read the `## For human` summary block from `architecture.md` if it exists on disk AND contains a `## For human` block within the first 50 lines after frontmatter (per Step 3a below). Display as part of "Summary of what was produced" alongside the implementation deliverables. If `architecture.md` is v2-legacy or does not exist, skip silently.
 
 *Full gate (Large tasks) — includes everything in Standard, plus:*
 - [ ] All planned tasks are implemented (cross-reference plan task list)
@@ -129,7 +129,7 @@ Based on what exists and what's next, run the appropriate checks:
 For Checkpoints A, B, C, and D, determine the relevant Class B artifact's format and extract the human-facing summary using the §5.7.1 detection rule below.
 - Checkpoint A (post-`/architect` → pre-`/thorough_plan`): read `architecture.md`.
 - Checkpoint B (post-`/plan` → pre-`/implement`): read `current-plan.md`.
-- Checkpoint C (post-`/implement` → pre-`/review`): read `architecture.md` if it exists and was modified this task (check `git log --oneline <path>` against HEAD).
+- Checkpoint C (post-`/implement` → pre-`/review`): read `architecture.md` if it exists on disk AND has a `## For human` block within the first 50 lines after frontmatter (file-existence + format-presence fallback for gitignored `architecture.md`; git log signal is no longer required because tasks living entirely under `.workflow_artifacts/` are gitignored and git log returns empty).
 - Checkpoint D (post-`/review` → pre-`/end-of-task`): read `review-<latest-round>.md`.
 
 # v3-format detection (architecture.md §5.7.1 — copy verbatim)
