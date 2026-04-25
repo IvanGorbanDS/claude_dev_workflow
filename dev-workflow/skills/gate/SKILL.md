@@ -184,6 +184,8 @@ Do NOT proceed. Do NOT invoke the next skill. Do NOT suggest "I'll go ahead and 
 
 The user must explicitly invoke the next phase. This is non-negotiable.
 
+**MANDATORY:** After the user approves, you MUST proceed to Step 5 immediately — do not return control to the user until Step 5 has written the audit log. The audit log persistence is non-skippable on approval.
+
 If automated checks failed:
 - Present the failures clearly
 - Suggest fixes
@@ -191,6 +193,8 @@ If automated checks failed:
 - Re-run the gate after fixes if needed
 
 ### Step 5: Write audit log (after user approves)
+
+If you are reading this skill's instructions inline (orchestrator-invoked, not subagent-dispatched), you are still required to write the audit log before yielding control. The persistence requirement applies regardless of invocation mode.
 
 Once the user explicitly approves the gate (i.e., after the STOP-and-wait in Step 4 returns with approval), persist the gate result to disk as a Class A artifact at `{project-folder}/.workflow_artifacts/{task-name}/gate-{phase}-{date}.md`.
 
