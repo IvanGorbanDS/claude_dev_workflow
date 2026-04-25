@@ -57,7 +57,9 @@ HTML_VOID = frozenset([
 # Known limitation (MIN-4-R3): trailing \s also accepts discussion-bullet false-positive defs
 # e.g. "   - **R-12 on line 455**:" produces a false-positive def for R-12
 # This was accepted as a known limitation because tightening to [:|] breaks table-row matching.
-V05_DEF_RE = re.compile(r'^[\s|>*+#.\-\d]*([DTRFQS]-\d+)[\s:|]')
+# Round-2 update: leading char class extended with status glyphs (✓ ✗ ⏳ 🚫) per parent Stage 3
+# smoke issue 2 — writers using format-kit canonical "1. ⏳ T-NN: ..." form were tripping V-05.
+V05_DEF_RE = re.compile(r'^[\s|>*+#.\-\d✓✗⏳🚫]*([DTRFQS]-\d+)[\s:|]')
 
 # V-05: body reference regex — any ID-shaped string in body text
 V05_REF_RE = re.compile(r'\b([DTRFQS]-\d+)\b')

@@ -170,6 +170,71 @@ def test_v05_fail_undefined_ref():
     assert 'T-99' in stderr
 
 
+# ── V-05: status-glyph definition matching (Stage 4 T-02) ────────────────────
+
+def test_v05_def_re_matches_check_glyph():
+    """✓ glyph between list-marker and T-NN must be a valid def."""
+    import importlib.util, sys as _sys
+    spec = importlib.util.spec_from_file_location('validate_artifact', VALIDATOR)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    m = mod.V05_DEF_RE.match('1. ✓ T-01: completed')
+    assert m is not None
+    assert m.group(1) == 'T-01'
+
+
+def test_v05_def_re_matches_cross_glyph():
+    """✗ glyph between list-marker and T-NN must be a valid def."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location('validate_artifact', VALIDATOR)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    m = mod.V05_DEF_RE.match('2. ✗ T-02: failed')
+    assert m is not None
+    assert m.group(1) == 'T-02'
+
+
+def test_v05_def_re_matches_hourglass_glyph():
+    """⏳ glyph between list-marker and T-NN must be a valid def."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location('validate_artifact', VALIDATOR)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    m = mod.V05_DEF_RE.match('3. ⏳ T-03: pending')
+    assert m is not None
+    assert m.group(1) == 'T-03'
+
+
+def test_v05_def_re_matches_blocked_glyph():
+    """🚫 glyph between list-marker and T-NN must be a valid def."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location('validate_artifact', VALIDATOR)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    m = mod.V05_DEF_RE.match('4. 🚫 T-04: blocked')
+    assert m is not None
+    assert m.group(1) == 'T-04'
+
+
+def test_v05_def_re_does_not_match_ascii_glyph_substitute():
+    """☑ (out-of-scope ASCII variant) must NOT match as a glyph def."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location('validate_artifact', VALIDATOR)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    m = mod.V05_DEF_RE.match('5. ☑ T-05: substituted')
+    assert m is None
+
+
+def test_v05_round_trip_with_canonical_glyphs():
+    """current-plan with '1. ⏳ T-01:' form must pass V-05 end-to-end."""
+    rc, stderr = run_validator(
+        artifact=fixture('v05-pass-glyph-roundtrip.md'), artifact_type='current-plan'
+    )
+    assert rc == 0, f'Expected V-05 pass; stderr: {stderr}'
+    assert 'FAIL V-05' not in stderr
+
+
 # ── V-06: ## For human section ────────────────────────────────────────────────
 
 def test_v06_pass_class_b_with_summary():
