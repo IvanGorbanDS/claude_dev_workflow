@@ -40,6 +40,10 @@ This file is the abbreviation whitelist for all dev-workflow skills. It extends 
   expand: blocked
   rule: VERBATIM — status glyph for blocked items (waiting on external dependency or explicit blocker); downstream skills grep for it; do not substitute ⛔ or similar
 
+- term: T-NN / D-NN / R-NN / F-NN / Q-NN / S-NN
+  expand: file-local cross-reference IDs (Tasks, Decisions, Risks, Findings, Questions, Stages)
+  rule: file-local namespace — references resolve only within the same artifact. Cross-artifact references must use plain English (e.g., "the parent Stage 3 smoke task" not "T-15 from the Stage 3 plan"). The validate_artifact.py V-05 invariant flags any reference without a local definition.
+
 ---
 
 The four status glyphs (✓ ✗ ⏳ 🚫) are load-bearing for Class A and Class B "sequenced items with status" sections (per format-kit §1). Glossary entries ensure writers don't invent variant glyph semantics inline. Downstream skills (`/critic`, `/implement`, `/review`) may grep these glyphs to extract task state — VERBATIM-keep is required across all artifacts that use sequenced-item sections.

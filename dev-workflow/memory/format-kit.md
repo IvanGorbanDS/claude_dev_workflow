@@ -68,6 +68,8 @@ Do not use XML tags for decorative structure; use only when machine-extraction i
 - `Q-NN` — open questions
 - `S-NN` — stages
 
+**ID namespaces are file-local.** Definitions and references resolve within a single artifact only. To refer to a task or risk defined in a sibling artifact (e.g., a critic-response referring to a plan task, or a Stage N plan referring to a parent Stage N-1 task), use plain English ("the parent Stage 3 smoke task" or "the round-1 critic's CRIT-1 issue"), NOT a bare T-NN/CRIT-N token. The validator's V-05 invariant flags any [DTRFQS]-NN reference without a local definition.
+
 ### Pick rules (seven)
 
 ```
