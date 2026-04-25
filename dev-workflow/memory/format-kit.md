@@ -112,6 +112,7 @@ Machine-readable sidecar: `dev-workflow/memory/format-kit.sections.json` (consum
 | `## Procedures` | OPTIONAL | Pseudo-code | Per-task procedural detail when steps have conditionals |
 | `## References` | REQUIRED IF any cross-refs; else omit | Terse list | Cross-references to other artifacts, documents, or external resources |
 | `## Notes` | OPTIONAL | Caveman prose | Miscellaneous implementer notes |
+| `## Convergence Summary` | OPTIONAL | YAML or terse list | Critic-loop convergence metadata: rounds, verdict, key revisions, remaining concerns. Written by /thorough_plan after convergence; absent on single-pass Small plans. |
 | `## Acceptance` | OPTIONAL | Terse numbered list | Task-level acceptance criteria when too detailed for the Tasks section |
 | `## Revision history` | OPTIONAL | Terse numbered list or table | Changelog per planning round |
 

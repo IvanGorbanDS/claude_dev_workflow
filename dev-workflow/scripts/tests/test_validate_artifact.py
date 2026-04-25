@@ -484,3 +484,26 @@ def test_review_allowed_section_set_matches_sidecar():
         f"  expected: {expected_allowed}\n"
         f"  actual:   {review['allowed_sections']}"
     )
+
+
+# ── T-03: ## Convergence Summary in current-plan allowed_sections ─────────────
+
+def test_convergence_summary_in_current_plan_allowed_sections():
+    """'## Convergence Summary' must appear in current-plan allowed_sections in deployed sidecar."""
+    import json
+    deployed = os.path.join(os.path.expanduser('~'), '.claude', 'memory', 'format-kit.sections.json')
+    with open(deployed) as f:
+        d = json.load(f)
+    allowed = d['artifact_types']['current-plan']['allowed_sections']
+    assert '## Convergence Summary' in allowed, (
+        f"'## Convergence Summary' not in current-plan allowed_sections: {allowed}"
+    )
+
+
+def test_convergence_summary_heading_passes_validator():
+    """current-plan fixture with ## Convergence Summary section must pass V-02."""
+    rc, stderr = run_validator(
+        artifact=fixture('v03-convergence-summary-pass.md'), artifact_type='current-plan'
+    )
+    assert rc == 0, f'Expected validator pass; stderr: {stderr}'
+    assert 'FAIL V-02' not in stderr
