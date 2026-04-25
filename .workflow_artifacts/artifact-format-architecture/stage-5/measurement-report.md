@@ -1,6 +1,6 @@
 # v2→v3 Savings Measurement Report
 
-Script SHA: run `git log -1 --format=%H -- dev-workflow/scripts/measure_v3_savings.py` to get it.
+Script SHA: b1a9c50f3ae90d1bc07422ba9b155d14b7a2d944
 
 **Comparison caveat:** v2 baselines are real historical artifacts from the cost-reduction project (tasks of greater complexity than the v3 Stage 4 smoke). The byte deltas are NOT matched-task. See `dev-workflow/scripts/tests/fixtures/v2-historical/PROVENANCE.md`.
 

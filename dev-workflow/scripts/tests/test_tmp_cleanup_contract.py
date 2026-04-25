@@ -41,25 +41,19 @@ def test_step6_uses_semicolon_separator():
 
 
 def test_step6_rm_targets_both_tmp_files():
-    """Step 6 rm must target BOTH .body.tmp AND .tmp (dual-target cleanup)."""
+    """Step 6 rm must target BOTH .body.tmp AND .tmp as distinct positional args."""
     for name in CLASS_B_WRITERS:
         text = _text(name)
-        # Find lines containing the atomic rename / Step 6 cleanup
-        step6_lines = [
-            line for line in text.splitlines()
-            if "rm -f" in line and ("body.tmp" in line or ".tmp" in line)
-            and "mv " in line or (
-                "rm -f" in line and "body.tmp" in line and ".tmp" in line
-            )
-        ]
-        # At least one rm line must mention BOTH body.tmp and .tmp
-        dual_target = [
-            line for line in text.splitlines()
-            if "rm -f" in line and "body.tmp" in line and ".tmp" in line
-        ]
+        # Require two distinct .tmp arguments in a single rm -f call.
+        # Substring containment ("body.tmp" in line and ".tmp" in line) is always
+        # True when body.tmp is present, so we use a regex requiring two separate
+        # whitespace-separated targets.
+        dual_target = re.search(
+            r"rm\s+-f\s+\S+\.body\.tmp\s+\S+\.tmp\b", text
+        )
         assert dual_target, (
-            f"{name}/SKILL.md: no rm line targets both .body.tmp AND .tmp "
-            f"(dual-target cleanup missing)"
+            f"{name}/SKILL.md: no rm -f line with two distinct targets "
+            f"(<path>.body.tmp <path>.tmp) — dual-target cleanup missing"
         )
 
 
@@ -116,27 +110,60 @@ def test_english_fallback_cleans_body_tmp():
 
 
 def test_negative_case_caught():
-    """Assertion machinery must FAIL on a synthetic SKILL.md with the old broken && pattern.
+    """Assertion machinery must FAIL on synthetic SKILL.md texts with each broken pattern.
 
     Guards against the tests regressing to no-ops (lesson 2026-04-24).
+    Three synthetic cases: (1) old && separator, (2) single-target rm, (3) missing pre-write sweep.
     """
-    synthetic = (
+    # Case 1: old '&&' separator instead of ';'
+    synthetic_and = (
         "**Step 6: Atomic rename.**\n"
         "`mv <plan-path>.tmp <plan-path> && rm -f <plan-path>.body.tmp`\n"
     )
-    # Confirm the bad pattern IS found in the synthetic text (test machinery works)
-    bad_pattern = re.findall(r"mv\s+\S+\.tmp\s+\S+\s*&&\s*\(?rm", synthetic)
+    bad_pattern = re.findall(r"mv\s+\S+\.tmp\s+\S+\s*&&\s*\(?rm", synthetic_and)
     assert bad_pattern, (
         "Test machinery flaw: bad '&& rm' pattern not found in synthetic text"
     )
-    # Confirm the good pattern is NOT found (the assertion would fail on this synthetic)
-    good_pattern = re.findall(r"mv\s+\S+\.tmp\s+\S+\s*;\s*\(?rm", synthetic)
+    good_pattern = re.findall(r"mv\s+\S+\.tmp\s+\S+\s*;\s*\(?rm", synthetic_and)
     assert not good_pattern, (
         "Test machinery flaw: good '; (rm' pattern found in synthetic text that should be broken"
     )
-    # Verify our test would actually catch this: simulate what test_step6_uses_semicolon_separator does
     caught_bad = bool(bad_pattern)
     would_fail = caught_bad and not good_pattern
     assert would_fail, (
         "test_step6_uses_semicolon_separator would NOT catch the broken && pattern"
+    )
+
+    # Case 2: single-target rm — body.tmp only, no separate .tmp target.
+    # Old substring check ("body.tmp" in line and ".tmp" in line) passes this because
+    # ".tmp" is a substring of "body.tmp". New regex must reject it.
+    synthetic_single_target = (
+        "**Step 6: Atomic rename.**\n"
+        "`mv <plan-path>.tmp <plan-path> ; (rm -f <plan-path>.body.tmp 2>/dev/null || true)`\n"
+    )
+    dual_target_match = re.search(
+        r"rm\s+-f\s+\S+\.body\.tmp\s+\S+\.tmp\b", synthetic_single_target
+    )
+    assert dual_target_match is None, (
+        "Test machinery flaw: dual-target regex matched single-target synthetic text — "
+        "test_step6_rm_targets_both_tmp_files would NOT catch a single-target regression"
+    )
+
+    # Case 3: SKILL.md missing 'pre-write sweep' — test_step1_pre_write_sweep_present must reject it.
+    synthetic_no_sweep = (
+        "**Step 1: Write body.**\n"
+        "Write the plan body to `<plan-path>.body.tmp`.\n"
+        "**Step 2: Do next thing.**\n"
+    )
+    sweep_lines = [
+        line for line in synthetic_no_sweep.splitlines()
+        if "pre-write sweep" in line.lower() or (
+            "rm -f" in line and "body.tmp" in line and ".tmp" in line
+            and "Step 6" not in line and "Step 5" not in line
+            and "fallback" not in line.lower()
+        )
+    ]
+    assert not sweep_lines, (
+        "Test machinery flaw: pre-write sweep found in synthetic text that should lack it — "
+        "test_step1_pre_write_sweep_present would NOT catch a missing sweep"
     )
