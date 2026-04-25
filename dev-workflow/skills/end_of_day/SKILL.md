@@ -34,7 +34,7 @@ Multiple sessions can run in a day (parallel tasks, or revisiting a task). Each 
 
 ### Step 1: Save current session state (skip if no active task)
 
-Write session-state files in v3 format per the §5.4 Class A writer mechanism (reference format-kit.md / glossary.md / terse-rubric.md at the body write-site; session artifact type per format-kit §2; validate via validate_artifact.py with retry-once-then-English-fallback). Write `daily/insights-{date}.md` in v3 format per the §5.4 Class A mechanism — append-only structure (each insight as an entry per the template at Step 3 of /capture_insight); body uses caveman prose with terse-rubric for the entry content; no V-02 section-set strict-match (insights file uses the default minimal section set since each entry is its own implicit "section"); validate via validate_artifact.py and accept default fallback semantics on V-failure. `daily/{date}.md` (the rendered daily briefing) remains Class B per parent Stage 3 work — the file gets a `## For human` block prepended (composed directly by Haiku in the same generation as the body — no summarize_for_human.py invocation). The terse-rubric applies inside prose-shaped sections only (composed with format-kit per format-kit §5).
+Write session-state files in v3 format per the §5.4 Class A writer mechanism (reference format-kit.md / glossary.md / terse-rubric.md at the body write-site; session artifact type per format-kit §2; validate via validate_artifact.py with retry-once-then-English-fallback). Write `daily/insights-{date}.md` in v3 format per the §5.4 Class A mechanism — append-only structure (each insight as an entry per the template at Step 3 of /capture_insight); body uses caveman prose with terse-rubric for the entry content; no V-02 section-set strict-match (insights file uses the default minimal section set since each entry is its own implicit "section"); validate via validate_artifact.py and accept default fallback semantics on V-failure. `daily/{date}.md` (the rendered daily briefing) remains Class B per parent Stage 3 work — the file gets a `## For human` block prepended (composed directly by Haiku in the same generation as the body — no script invocation). The terse-rubric applies inside prose-shaped sections only (composed with format-kit per format-kit §5).
 
 **If this session has no active task** (e.g. you opened a fresh session just to run `/end_of_day`), skip the session-state write and proceed to Step 2. The existing session files on disk are the source of truth.
 
@@ -97,7 +97,7 @@ Write the daily cache to `.workflow_artifacts/memory/daily/<date>.md`:
 
 ## For human
 
-<5-8 line plain-English summary: what was the day's focus; which tasks made progress; what is the biggest open blocker; what to do tomorrow. Written directly by the Haiku writer in the same generation as the body — NOT via summarize_for_human.py>
+<5-8 line plain-English summary: what was the day's focus; which tasks made progress; what is the biggest open blocker; what to do tomorrow. Written directly by the Haiku writer in the same generation as the body — NOT via a summary script>
 
 ## Summary
 <1-2 sentences: what was the day's focus, what got done, what's left>
