@@ -234,7 +234,7 @@ Compose the format-aware body for `architecture.md` per format-kit.md §2 enumer
 Apply `format-kit.md` §1 pick rules per section. DO NOT include the `## For human` block yet — that's Step 2 + Step 3. Write the body to a temp file: `<path>.body.tmp`.
 
 **Step 2: Summary generation (with empty-output check).** Invoke the deployed Haiku summary script via the Bash tool:
-  `python3 ~/.claude/scripts/summarize_for_human.py <path>.body.tmp`
+  `bash ~/.claude/scripts/with_env.sh python3 ~/.claude/scripts/summarize_for_human.py <path>.body.tmp`
 Capture stdout (the summary text) and exit code.
 - If exit code is non-zero: treat as Step 2 failure → trigger Step 5 retry path.
 - If exit code is 0 BUT stdout (after stripping whitespace) is empty: treat as Step 2 failure → trigger Step 5 retry path.
@@ -264,7 +264,7 @@ Filename auto-detection identifies the type as `architecture` (matches `^archite
 
   - **English-fallback (after retry also fails):** fall back to v2-style write — regenerate body using terse-rubric only (no format-kit, no `## For human` block). Write to `<path>.tmp` directly. Skip Step 4. Log a `format-kit-skipped` warning to the user with the failing invariant ID(s).
 
-**Step 6: Atomic rename.** `mv <path>.tmp <path> && rm -f <path>.body.tmp`. The final file at `<path>` IS what `/critic`, `/thorough_plan`, `/gate` will read. Do NOT write a `.original.md` side-file.
+**Step 6: Atomic rename.** `mv <path>.tmp <path> && (rm -f <path>.body.tmp 2>/dev/null || true)`. The final file at `<path>` IS what `/critic`, `/thorough_plan`, `/gate` will read. Do NOT write a `.original.md` side-file.
 
 ## Save session state
 
@@ -298,6 +298,6 @@ The scan/synthesize split exists to avoid paying Opus rates for bulk file readin
 
 ## Tier 3 critic outputs
 
-When `/architect` spawns `/critic --target=architecture.md` as a subagent (Phase 4), write `architecture-critic-N.md` in terse style per `~/.claude/memory/terse-rubric.md`.
+When `/architect` spawns `/critic --target=architecture.md` as a subagent (Phase 4), the resulting `architecture-critic-N.md` is **Class A** per artifact-format-architecture v3 §4.1, written via the §5.4 Class A writer mechanism per `/critic/SKILL.md` (Stage 4 wiring): format-aware body per format-kit §2 critic-response section set (verdict/summary/issues/what's good/scorecard); validator auto-detects type as critic-response via the T-08 match_paths extension to `architecture-critic-*.md`; retry-once-then-English-fallback on V-failure.
 
-`architecture.md` itself is **Class B** per artifact-format-architecture v3 §4.1 — the `## For human` summary block at the top is English (written by Haiku per Step 2 above); the body is format-aware structured per `format-kit.md` §2 (tables, YAML, terse lists with glyphs, prose only where prose-shaped). The v2 terse-rubric applies inside prose sections only (composed with format-kit per §5.1). The `architecture-critic-N.md` sibling remains Class A and stays in v2 terse-rubric style (Stage 4 will add a format-kit reference to that write-site; Stage 3 does not).
+`architecture.md` itself is **Class B** per artifact-format-architecture v3 §4.1 — the `## For human` summary block at the top is English (written by Haiku per Step 2 above); the body is format-aware structured per `format-kit.md` §2 (tables, YAML, terse lists with glyphs, prose only where prose-shaped). The v2 terse-rubric applies inside prose sections only (composed with format-kit per §5.1).

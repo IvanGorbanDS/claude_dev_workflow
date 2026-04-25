@@ -166,7 +166,7 @@ Compose the format-aware body per the `review` artifact-type sections in format-
 Apply `format-kit.md` §1 pick rules per section. DO NOT include the `## For human` block yet — that's Step 2 + Step 3. Write the body to `<path>.body.tmp`.
 
 **Step 2: Summary generation (with empty-output check).** Invoke the deployed Haiku summary script:
-  `python3 ~/.claude/scripts/summarize_for_human.py <path>.body.tmp`
+  `bash ~/.claude/scripts/with_env.sh python3 ~/.claude/scripts/summarize_for_human.py <path>.body.tmp`
 Capture stdout and exit code.
 - If exit code is non-zero: treat as Step 2 failure → trigger Step 5 retry path.
 - If exit code is 0 BUT stdout (after stripping whitespace) is empty: treat as Step 2 failure → trigger Step 5 retry path.
@@ -191,7 +191,7 @@ Filename auto-detection identifies type as `review` (matches `^review-` regex in
   - **Step 4 V-01/V-04 failures:** Treat as body issues; re-run Steps 1–4.
   - **English-fallback (after retry also fails):** Fall back to v2-style write — regenerate body using terse-rubric only (no format-kit, no `## For human` block). Write to `<path>.tmp` directly. Skip Step 4. Log a `format-kit-skipped` warning with the failing invariant ID(s).
 
-**Step 6: Atomic rename.** `mv <path>.tmp <path> && rm -f <path>.body.tmp`. Do NOT write a `.original.md` side-file.
+**Step 6: Atomic rename.** `mv <path>.tmp <path> && (rm -f <path>.body.tmp 2>/dev/null || true)`. Do NOT write a `.original.md` side-file.
 
 ## After the review
 
@@ -206,14 +206,15 @@ If the verdict is APPROVED:
 
 ## Save session state
 
-Write session-state files in terse style per `~/.claude/memory/terse-rubric.md`. `review-<round>.md` is **Class B** per artifact-format-architecture v3 §4.1 — the `## For human` summary block is English (Haiku-generated per Step 2 of the Output-format section above); the body is format-aware structured per `format-kit.md` §2. The terse-rubric applies inside prose sections only. Session state (`.workflow_artifacts/memory/sessions/<date>-<task>.md`) remains Class A and gets v2 terse-rubric style until Stage 4 retrofits it.
+Write session-state files in v3 format per the §5.4 Class A writer mechanism (mirrors the implement/SKILL.md pattern; reference format-kit.md / glossary.md / terse-rubric.md at the body write-site; validate via validate_artifact.py with auto-detection → session type; retry-once-then-English-fallback on V-failure; atomic rename with graceful .body.tmp cleanup). `review-{round}.md` remains **Class B** per artifact-format-architecture v3 §4.1 — the parent Stage 3 work wired its Class B writer mechanism in the Output-format section above; this Save-session-state section governs ONLY the Class A session file at `.workflow_artifacts/memory/sessions/{date}-{task}.md`.
 
-Before finishing, write or update `.workflow_artifacts/memory/sessions/<date>-<task-name>.md` with:
-- **Status:** `in_progress` (REVISE) or `completed` (APPROVED)
-- **Current stage:** `review`
-- **Completed in this session:** verdict and summary of what was verified
-- **Unfinished work:** if REVISE — list of issues that must be fixed before re-review
-- **Decisions made:** any significant risk assessments or integration concerns raised
+Before finishing, write or update `.workflow_artifacts/memory/sessions/<date>-<task-name>.md` with these required sections:
+- **## Status:** `in_progress` (REVISE) or `completed` (APPROVED)
+- **## Current stage:** `review`
+- **## Completed in this session:** verdict and summary of what was verified, with status glyphs ✓/✗
+- **## Unfinished work:** if REVISE — list of issues that must be fixed before re-review
+- **## Cost:** YAML block with Session UUID, Phase, Recorded in cost ledger
+- **## Decisions made:** any significant risk assessments or integration concerns raised (optional)
 
 This is what `/end_of_day` reads to consolidate the day's work. Without it, this session is invisible to the daily rollup.
 

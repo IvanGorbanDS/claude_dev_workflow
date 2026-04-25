@@ -57,7 +57,9 @@ HTML_VOID = frozenset([
 # Known limitation (MIN-4-R3): trailing \s also accepts discussion-bullet false-positive defs
 # e.g. "   - **R-12 on line 455**:" produces a false-positive def for R-12
 # This was accepted as a known limitation because tightening to [:|] breaks table-row matching.
-V05_DEF_RE = re.compile(r'^[\s|>*+#.\-\d]*([DTRFQS]-\d+)[\s:|]')
+# Round-2 update: leading char class extended with status glyphs (✓ ✗ ⏳ 🚫) per parent Stage 3
+# smoke issue 2 — writers using format-kit canonical "1. ⏳ T-NN: ..." form were tripping V-05.
+V05_DEF_RE = re.compile(r'^[\s|>*+#.\-\d✓✗⏳🚫]*([DTRFQS]-\d+)[\s:|]')
 
 # V-05: body reference regex — any ID-shaped string in body text
 V05_REF_RE = re.compile(r'\b([DTRFQS]-\d+)\b')
@@ -139,6 +141,10 @@ def detect_type(filepath, type_override):
     parent = os.path.basename(os.path.dirname(filepath))
     if re.match(r'^current-plan', name):
         return 'current-plan'
+    if re.match(r'^architecture-critic-', name):
+        return 'critic-response'   # architecture-critic-N.md uses critic-response section set
+    if re.match(r'^architecture-overview', name):
+        return 'architecture-overview'
     if re.match(r'^architecture', name):
         return 'architecture'
     if re.match(r'^review-', name):
@@ -149,6 +155,12 @@ def detect_type(filepath, type_override):
         return 'session'
     if re.match(r'^gate-', name):
         return 'gate'
+    if re.match(r'^repos-inventory', name):
+        return 'repos-inventory'
+    if re.match(r'^dependencies-map', name):
+        return 'dependencies-map'
+    if re.match(r'^git-log', name):
+        return 'git-log'
     return 'default'
 
 
@@ -391,7 +403,9 @@ def check_v07(text, required_sections, failures):
         if stripped.startswith('## '):
             found_headings.add(stripped.rstrip())
     for req in required_sections:
-        if req not in found_headings:
+        # Accept heading-line-form: "## Verdict: PASS" satisfies required "## Verdict"
+        satisfied = any(h == req or h.startswith(req + ':') or h.startswith(req + ' ') for h in found_headings)
+        if not satisfied:
             failures.append(
                 f'FAIL V-07: required section "{req}" missing for this artifact type'
             )

@@ -68,6 +68,8 @@ Do not use XML tags for decorative structure; use only when machine-extraction i
 - `Q-NN` — open questions
 - `S-NN` — stages
 
+**ID namespaces are file-local.** Definitions and references resolve within a single artifact only. To refer to a task or risk defined in a sibling artifact (e.g., a critic-response referring to a plan task, or a Stage N plan referring to a parent Stage N-1 task), use plain English ("the parent Stage 3 smoke task" or "the round-1 critic's CRIT-1 issue"), NOT a bare T-NN/CRIT-N token. The validator's V-05 invariant flags any [DTRFQS]-NN reference without a local definition.
+
 ### Pick rules (seven)
 
 ```
@@ -112,6 +114,7 @@ Machine-readable sidecar: `dev-workflow/memory/format-kit.sections.json` (consum
 | `## Procedures` | OPTIONAL | Pseudo-code | Per-task procedural detail when steps have conditionals |
 | `## References` | REQUIRED IF any cross-refs; else omit | Terse list | Cross-references to other artifacts, documents, or external resources |
 | `## Notes` | OPTIONAL | Caveman prose | Miscellaneous implementer notes |
+| `## Convergence Summary` | OPTIONAL | YAML or terse list | Critic-loop convergence metadata: rounds, verdict, key revisions, remaining concerns. Written by /thorough_plan after convergence; absent on single-pass Small plans. |
 | `## Acceptance` | OPTIONAL | Terse numbered list | Task-level acceptance criteria when too detailed for the Tasks section |
 | `## Revision history` | OPTIONAL | Terse numbered list or table | Changelog per planning round |
 

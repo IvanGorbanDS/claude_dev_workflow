@@ -170,6 +170,71 @@ def test_v05_fail_undefined_ref():
     assert 'T-99' in stderr
 
 
+# ── V-05: status-glyph definition matching (Stage 4 T-02) ────────────────────
+
+def test_v05_def_re_matches_check_glyph():
+    """✓ glyph between list-marker and T-NN must be a valid def."""
+    import importlib.util, sys as _sys
+    spec = importlib.util.spec_from_file_location('validate_artifact', VALIDATOR)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    m = mod.V05_DEF_RE.match('1. ✓ T-01: completed')
+    assert m is not None
+    assert m.group(1) == 'T-01'
+
+
+def test_v05_def_re_matches_cross_glyph():
+    """✗ glyph between list-marker and T-NN must be a valid def."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location('validate_artifact', VALIDATOR)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    m = mod.V05_DEF_RE.match('2. ✗ T-02: failed')
+    assert m is not None
+    assert m.group(1) == 'T-02'
+
+
+def test_v05_def_re_matches_hourglass_glyph():
+    """⏳ glyph between list-marker and T-NN must be a valid def."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location('validate_artifact', VALIDATOR)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    m = mod.V05_DEF_RE.match('3. ⏳ T-03: pending')
+    assert m is not None
+    assert m.group(1) == 'T-03'
+
+
+def test_v05_def_re_matches_blocked_glyph():
+    """🚫 glyph between list-marker and T-NN must be a valid def."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location('validate_artifact', VALIDATOR)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    m = mod.V05_DEF_RE.match('4. 🚫 T-04: blocked')
+    assert m is not None
+    assert m.group(1) == 'T-04'
+
+
+def test_v05_def_re_does_not_match_ascii_glyph_substitute():
+    """☑ (out-of-scope ASCII variant) must NOT match as a glyph def."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location('validate_artifact', VALIDATOR)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    m = mod.V05_DEF_RE.match('5. ☑ T-05: substituted')
+    assert m is None
+
+
+def test_v05_round_trip_with_canonical_glyphs():
+    """current-plan with '1. ⏳ T-01:' form must pass V-05 end-to-end."""
+    rc, stderr = run_validator(
+        artifact=fixture('v05-pass-glyph-roundtrip.md'), artifact_type='current-plan'
+    )
+    assert rc == 0, f'Expected V-05 pass; stderr: {stderr}'
+    assert 'FAIL V-05' not in stderr
+
+
 # ── V-06: ## For human section ────────────────────────────────────────────────
 
 def test_v06_pass_class_b_with_summary():
@@ -418,4 +483,179 @@ def test_review_allowed_section_set_matches_sidecar():
         f"review allowed_sections drifted from expected:\n"
         f"  expected: {expected_allowed}\n"
         f"  actual:   {review['allowed_sections']}"
+    )
+
+
+# ── T-03: ## Convergence Summary in current-plan allowed_sections ─────────────
+
+def test_convergence_summary_in_current_plan_allowed_sections():
+    """'## Convergence Summary' must appear in current-plan allowed_sections in deployed sidecar."""
+    import json
+    deployed = os.path.join(os.path.expanduser('~'), '.claude', 'memory', 'format-kit.sections.json')
+    with open(deployed) as f:
+        d = json.load(f)
+    allowed = d['artifact_types']['current-plan']['allowed_sections']
+    assert '## Convergence Summary' in allowed, (
+        f"'## Convergence Summary' not in current-plan allowed_sections: {allowed}"
+    )
+
+
+def test_convergence_summary_heading_passes_validator():
+    """current-plan fixture with ## Convergence Summary section must pass V-02."""
+    rc, stderr = run_validator(
+        artifact=fixture('v03-convergence-summary-pass.md'), artifact_type='current-plan'
+    )
+    assert rc == 0, f'Expected validator pass; stderr: {stderr}'
+    assert 'FAIL V-02' not in stderr
+
+
+# ── T-08: detect_type ordering — architecture-critic- before architecture- ─────
+
+def test_detect_type_architecture_critic_returns_critic_response():
+    """architecture-critic-1.md must resolve to critic-response, not architecture."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location('validate_artifact', VALIDATOR)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    assert mod.detect_type('architecture-critic-1.md', None) == 'critic-response'
+    assert mod.detect_type('architecture.md', None) == 'architecture'
+
+
+# ── T-17: Class A round-trip fixture tests ─────────────────────────────────────
+
+def test_v3_critic_response_fixture_passes():
+    """critic-response-v3.md with all required sections must pass validator."""
+    rc, stderr = run_validator(artifact=fixture('critic-response-v3.md'))
+    assert rc == 0, f'Expected validator pass; stderr: {stderr}'
+    assert 'FAIL' not in stderr
+
+
+def test_v2_critic_response_fixture_fails():
+    """critic-response-v2.md missing required sections must fail V-07."""
+    rc, stderr = run_validator(artifact=fixture('critic-response-v2.md'))
+    assert rc == 1, f'Expected validator failure; stderr: {stderr}'
+    assert 'FAIL V-07' in stderr
+    assert '## Verdict' in stderr
+
+
+def test_v3_session_fixture_passes():
+    """v3 session fixture with all required sections including ## Cost must pass."""
+    rc, stderr = run_validator(artifact=fixture('session/2026-04-25-stage4-fixture.md'))
+    assert rc == 0, f'Expected validator pass; stderr: {stderr}'
+    assert 'FAIL' not in stderr
+
+
+def test_v2_session_fixture_fails():
+    """v2 session fixture missing ## Cost must fail V-07."""
+    rc, stderr = run_validator(artifact=fixture('session/2026-04-25-stage4-fixture-v2.md'))
+    assert rc == 1, f'Expected validator failure; stderr: {stderr}'
+    assert 'FAIL V-07' in stderr
+    assert '## Cost' in stderr
+
+
+def test_v3_gate_fixture_passes():
+    """gate-implement fixture with ## Automated checks + ## Verdict must pass."""
+    rc, stderr = run_validator(artifact=fixture('gate-implement-2026-04-25.md'))
+    assert rc == 0, f'Expected validator pass; stderr: {stderr}'
+    assert 'FAIL' not in stderr
+
+
+def test_v2_gate_fixture_fails():
+    """gate-implement v2 fixture missing required sections must fail V-07."""
+    rc, stderr = run_validator(artifact=fixture('gate-implement-2026-04-25-v2.md'))
+    assert rc == 1, f'Expected validator failure; stderr: {stderr}'
+    assert 'FAIL V-07' in stderr
+
+
+def test_architecture_overview_fixture_passes():
+    """architecture-overview-fixture.md with known heading set must pass — CRIT-1 guard."""
+    rc, stderr = run_validator(artifact=fixture('architecture-overview-fixture.md'))
+    assert rc == 0, f'Expected validator pass (CRIT-1 regression guard); stderr: {stderr}'
+    assert 'FAIL V-02' not in stderr
+
+
+def test_dependencies_map_fixture_passes():
+    """dependencies-map-fixture.md with known heading set must pass — CRIT-1 guard."""
+    rc, stderr = run_validator(artifact=fixture('dependencies-map-fixture.md'))
+    assert rc == 0, f'Expected validator pass (CRIT-1 regression guard); stderr: {stderr}'
+    assert 'FAIL V-02' not in stderr
+
+
+# ── V-07 prefix-match (heading-line-form) ─────────────────────────────────────
+# Dedicated coverage for the heading-line-form prefix-match logic added during
+# the fixture-test task (see review-1.md MAJ-2). The check_v07 function accepts
+# `## Verdict: PASS` as satisfying required `## Verdict` because critic-response
+# format-kit specifies the heading-line-form `## Verdict: PASS | REVISE`.
+
+def _load_validator_module():
+    """Helper: import validate_artifact.py as a module for direct function tests."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location('validate_artifact', VALIDATOR)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def test_v07_prefix_match_heading_line_form_satisfies_required():
+    """`## Verdict: PASS` heading must satisfy required `## Verdict` (heading-line-form)."""
+    mod = _load_validator_module()
+    failures = []
+    text = (
+        '---\nfoo: bar\n---\n\n'
+        '## Verdict: PASS\n\n'
+        'body content\n'
+    )
+    mod.check_v07(text, ['## Verdict'], failures)
+    assert failures == [], (
+        f'## Verdict: PASS should satisfy required ## Verdict via prefix-match; '
+        f'got: {failures}'
+    )
+
+
+def test_v07_prefix_match_exact_heading_satisfies_required():
+    """`## Verdict` (exact) heading must satisfy required `## Verdict`."""
+    mod = _load_validator_module()
+    failures = []
+    text = (
+        '---\nfoo: bar\n---\n\n'
+        '## Verdict\n\n'
+        'PASS\n'
+    )
+    mod.check_v07(text, ['## Verdict'], failures)
+    assert failures == [], (
+        f'## Verdict (exact) should satisfy required ## Verdict; got: {failures}'
+    )
+
+
+def test_v07_prefix_match_rejects_heading_without_separator():
+    """`## Verdictian` must NOT satisfy required `## Verdict` (no `:` or ` ` separator)."""
+    mod = _load_validator_module()
+    failures = []
+    text = (
+        '---\nfoo: bar\n---\n\n'
+        '## Verdictian\n\n'
+        'body\n'
+    )
+    mod.check_v07(text, ['## Verdict'], failures)
+    assert len(failures) == 1, (
+        f'## Verdictian should NOT satisfy ## Verdict (no separator); '
+        f'expected 1 V-07 failure, got: {failures}'
+    )
+    assert 'FAIL V-07' in failures[0]
+    assert '## Verdict' in failures[0]
+
+
+def test_v07_prefix_match_with_space_separator():
+    """`## Verdict REVISE` (space-separator heading) must satisfy required `## Verdict`."""
+    mod = _load_validator_module()
+    failures = []
+    text = (
+        '---\nfoo: bar\n---\n\n'
+        '## Verdict REVISE\n\n'
+        'body\n'
+    )
+    mod.check_v07(text, ['## Verdict'], failures)
+    assert failures == [], (
+        f'## Verdict REVISE should satisfy required ## Verdict via space-separator '
+        f'prefix-match; got: {failures}'
     )
