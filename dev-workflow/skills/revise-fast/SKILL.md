@@ -5,10 +5,10 @@ model: sonnet
 ---
 
 <!-- SYNC WARNING: This file must stay in sync with revise/SKILL.md.
-     The ONLY intentional differences are: frontmatter (name, description, model) and the "Model requirement" section.
+     The ONLY intentional differences are: frontmatter (name, description, model), the "Model requirement" section, and the §0 self-dispatch preamble (revise-fast is sonnet-declared and ships w/ the Quoin Stage 1 preamble; revise is opus-declared and does not need it).
      When editing revise/SKILL.md, apply the same changes here. When editing this file's body, apply changes to revise/SKILL.md too.
      To check: diff <(sed -n '/^# Revise/,$p' dev-workflow/skills/revise/SKILL.md) <(sed -n '/^# Revise/,$p' dev-workflow/skills/revise-fast/SKILL.md)
-     Expected diff: only the "Model requirement" section. -->
+     Expected diff: the "Model requirement" section AND the §0 self-dispatch preamble block. -->
 
 # Revise
 
