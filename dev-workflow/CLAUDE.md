@@ -381,3 +381,13 @@ If you are adding a new file class and unsure which tier applies: hand-edited or
 | /capture_insight | Haiku | Quick insight logging to daily scratchpad during task work |
 | /cost_snapshot | Haiku | Read-only cost reporting from ledger files and ccusage (lightweight) |
 | /triage | Haiku | Lightweight routing: reads prompt, inspects state, proposes a skill. |
+
+### §0 Model dispatch preamble (Quoin foundation Stage 1)
+
+The 12 cheap-tier skills (gate, end_of_day, start_of_day, triage, capture_insight, cost_snapshot, weekly_review, end_of_task, implement, rollback, expand, revise-fast) carry a `## §0 Model dispatch (FIRST STEP — execute before anything else)` block as the first body H2 after the H1. When invoked from a session running on a model strictly more expensive than the declared tier, the skill self-dispatches via the Agent tool to its declared model and prefixes the child prompt with the bare `[no-redispatch]` sentinel to prevent infinite recursion. The counter form `[no-redispatch:N]` is reserved for an abort signal: if a child sees N≥2, it aborts instead of proceeding (the bare form is the normal parent-emit; counter forms catch buggy parents or mistaken manual overrides). The 9 Opus-tier skills do NOT carry the preamble — they should run on Opus regardless of session model.
+
+If the harness's subagent-spawn tool is unavailable or returns an error, dispatch falls back to a fail-OPEN path (proceed at current tier, emit a one-line `[quoin-stage-1: subagent dispatch unavailable; ...]` warning). This is intentional per architecture I-01: cost guardrail is best-effort, not load-bearing for correctness.
+
+Manual override: prefix any user-typed slash invocation with bare `[no-redispatch]` to skip dispatch entirely. Use this only when intentionally overriding the cost guardrail (e.g., for one-off debugging on a different tier).
+
+Mechanical drift detection lives in `dev-workflow/scripts/tests/test_quoin_stage1_preamble.py` and `dev-workflow/scripts/tests/test_quoin_stage1_recursion_abort.py`; manual production-dispatch verification lives in T-00 (pilot, before T-02) and T-09 (full four-phase smoke after T-02 + install) of the stage-1 plan and is captured in `dev-workflow/scripts/verify_subagent_dispatch.md`. (Note for the future Quoin-rebrand stage: this subsection's "Quoin foundation Stage 1" reference becomes stale post-rebrand — update the wording to a stage-tracker-stable reference at that time.)
