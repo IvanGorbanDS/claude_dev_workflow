@@ -29,6 +29,40 @@ Task names are descriptive, kebab-case, derived from the task description (e.g.,
 
 When running parallel tasks, each gets its own subfolder. Never mix artifacts from different tasks in the same folder.
 
+### Multi-stage tasks
+
+When a task has multiple stages, create per-stage subfolders inside the task folder:
+
+```
+PROJECT-FOLDER/.workflow_artifacts/TASK-NAME/
+├── architecture.md           ← parent-level (single source of truth)
+├── cost-ledger.md            ← parent-level (single ledger across all stages)
+├── stage-1/
+│   ├── current-plan.md
+│   ├── critic-response-1.md
+│   ├── review-1.md
+│   └── gate-*.md
+├── stage-2/
+│   └── ...
+└── ...
+```
+
+A task is "multi-stage" when its `architecture.md` contains a `## Stage decomposition` section. Single-stage tasks (no architecture.md, or architecture.md without the decomposition heading) keep the legacy root-level layout — `current-plan.md` lives directly under the task name folder.
+
+Skills resolve the artifact path via `dev-workflow/scripts/path_resolve.py` (deployed to `~/.claude/scripts/path_resolve.py`). Resolution order:
+
+1. **Explicit:** the user invocation includes `stage N of <task>` (where N is an integer) — path is `<task-name>/stage-N/`.
+2. **By name:** the user invocation references a stage by descriptive name (e.g., `model-dispatch`) AND `architecture.md` exists at the task root AND it has a `## Stage decomposition` section — resolver looks up the stage number from the decomposition table — path is `<task-name>/stage-N/`.
+3. **Default:** path is `<task-name>/` (legacy / single-stage / mixed-layout grandfathering).
+
+**Grandfathering:** existing task folders predating this convention (those with a root-level `current-plan.md` and no `## Stage decomposition` in their architecture.md) continue to use the root-level layout indefinitely. The resolver does NOT auto-migrate them — even if a `stage-N/` subfolder happens to exist alongside a root-level plan (the I-05 mixed-layout case), the default rule routes to the root unless the user explicitly passes `stage N of <task>`. Migration is opt-in: a future `/thorough_plan stage N of <task>` invocation creates the stage subfolder.
+
+Two artifacts always stay at the task root regardless of stage layout:
+- `architecture.md` — single source of truth for the whole task.
+- `cost-ledger.md` — append-only ledger spans all stages.
+
+`/end_of_task` already detects `stage-*` sub-task folders and archives them into the parent feature's `finalized/stage-N/` subdirectory — see "Archiving completed work" below.
+
 ### Archiving completed work
 
 When a task is finalized via `/end_of_task`, its folder is moved into `.workflow_artifacts/finalized/`:
@@ -352,6 +386,9 @@ The caveman-token-optimization v2 architecture (see `.workflow_artifacts/caveman
 **Source files:**
 - `MEMORY.md` (tiny — below any compression threshold).
 - `dev-workflow/skills/**/SKILL.md` (skill source, not artifact).
+- `dev-workflow/scripts/tests/fixtures/quoin-stage-1-preamble.md` (Quoin Stage 1 §0 preamble template; hand-edited Tier 1; source of truth for the 12 cheap-tier SKILL.md preambles).
+- `dev-workflow/scripts/verify_subagent_dispatch.md` (Quoin Stage 1 subagent-dispatch verification template; hand-filled by user during T-00 pilot and T-09 smoke; lives at `dev-workflow/scripts/` only — NOT deployed to `~/.claude/scripts/` per round-3 MIN-1 fix; one-shot diagnostic, not a runtime tool).
+- `dev-workflow/scripts/tests/fixtures/path_resolve/**` (Stage 3 path-resolver test fixture corpus; hand-edited Tier 1; consumed by `test_path_resolve.py`; covers all 7 fixture subdirectories AND the `_inflight-snapshot.txt` file).
 
 Any other workflow artifact may be subject to terse-style writing (Tier 2 contract files use English + side-file; Tier 3 ephemeral files are terse-only with `/expand` for human reading).
 
