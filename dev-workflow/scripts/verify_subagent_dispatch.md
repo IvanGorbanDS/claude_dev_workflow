@@ -39,6 +39,16 @@ Pre-merge HITL pilot (T-00) and post-install re-confirmation (T-09 Phase A).
 - Tool-error message: none
 - Notes: the §0 block's `Spawn an Agent subagent` instruction with `model: "haiku"` was honored by the harness; the fail-graceful warning did NOT fire. Pilot confirms the Agent tool accepts the `model:` parameter.
 
+### T-09 Phase A re-confirmation (2026-04-26)
+
+- Date / time of run: 2026-04-26
+- Parent tier: Opus 4.7 (1M context)
+- Invocation: `/gate` (no args) on the full deployed set (all 12 cheap-tier skills carry §0)
+- Signal seen: **(i)** — Agent subagent dispatch banner appeared, `model: "sonnet"`, `description: "gate dispatched at sonnet tier"`; child returned a rendered gate summary that became the parent's final response
+- Cost-ledger / model attribution: child ran at the declared `sonnet` tier
+- Tool-error message: none
+- Notes: confirms the §0 dispatch mechanism works for sonnet-tier as well as haiku-tier (T-00 covered haiku via /triage). Full T-09 four-phase smoke captured at `.workflow_artifacts/quoin-foundation/stage-1/manual-smoke-2026-04-26.md`. Verdict: **PASS** — all four phases behaved as designed.
+
 ## Result
 
 <!--
