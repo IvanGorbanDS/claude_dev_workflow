@@ -156,6 +156,7 @@ Create the memory structure under `.workflow_artifacts/` at the project root:
 ```
 <project-root>/
 ├── .workflow_artifacts/
+│   ├── QUICKSTART.md              ← command reference (copied from <your-quoin-clone>/QUICKSTART.md)
 │   ├── memory/
 │   │   ├── sessions/                  ← per-session state files
 │   │   ├── daily/                     ← daily rollup from /end_of_day
@@ -167,12 +168,11 @@ Create the memory structure under `.workflow_artifacts/` at the project root:
 │   │   ├── lessons-learned.md         ← accumulates over time
 │   │   ├── workflow-rules.md          ← workflow memory for Claude
 │   │   └── workflow-suggestions.md   ← Tier 3 insight suggestions
-└── quoin/
-    ├── QUICKSTART.md              ← command reference (generated here)
-    ├── SETUP.md
-    ├── Workflow-User-Guide.html
-    └── install.sh
 ```
+
+Note: The Quoin source clone (e.g., `~/code/quoin/`) is a **sibling clone**, NOT a subdirectory
+of your project. Skills live at `~/.claude/skills/` (installed by `install.sh`).
+The interactive guide lives at `<your-quoin-clone>/Workflow-User-Guide.html`.
 
 Skills are already at `~/.claude/skills/` (installed by `install.sh`). Do not create a `skills/` directory in the project.
 
@@ -249,65 +249,45 @@ Tell the user:
 
 If /discover finds no repos (no git repositories in the project folder), that's fine — the memory files stay empty and will be populated when repos are added.
 
-### Step 7: Generate quickstart guide
+### Step 7: Copy quickstart guide + legacy detection
 
-The `Workflow-User-Guide.html` should already be part of the copied files. Confirm it's in place.
+**Legacy QUICKSTART detection (run before copying):**
 
-Additionally, generate a concise `QUICKSTART.md` in the `quoin/` folder:
+Check if `(project)/dev-workflow/QUICKSTART.md` exists:
 
-```markdown
-# Development Workflow — Quickstart
+```
+Legacy QUICKSTART location detected: (project)/dev-workflow/QUICKSTART.md
+The new location is .workflow_artifacts/QUICKSTART.md.
+Options:
+  [m] Move dev-workflow/QUICKSTART.md → .workflow_artifacts/QUICKSTART.md
+  [d] Delete the legacy file (a fresh QUICKSTART will be copied below)
+  [k] Keep it (you may have cloned the workflow source there — check first)
+```
 
-## Your commands
+Safety check: if `(project)/dev-workflow/install.sh` OR `(project)/dev-workflow/SETUP.md` is also present, the directory is likely the cloned source repo — print a warning and default to `[k]`. Do NOT auto-delete.
 
-| Command | What it does |
-|---------|-------------|
-| `/init_workflow` | One-time project bootstrap — creates .workflow_artifacts/, configures permissions, runs /discover |
-| `/discover` | Scans all repos, maps architecture and dependencies |
-| `/architect` | Designs solution architecture for a feature/change |
-| `/thorough_plan` | Creates detailed implementation plan (with critic review) |
-| `/implement` | Writes code from the plan (explicit command only) |
-| `/review` | Verifies implementation against the plan |
-| `/end_of_task` | Pushes branch, captures lessons (explicit command only) |
-| `/rollback` | Safely undoes implementation work |
-| `/gate` | Quality checkpoint (runs automatically between phases) |
-| `/start_of_day` | Morning briefing — restores context |
-| `/end_of_day` | Saves session state, promotes captured insights |
-| `/weekly_review` | Aggregates the week's progress into a structured review |
-| `/capture_insight` | Logs a pattern or gotcha to the daily scratchpad |
+**Copy QUICKSTART from the Quoin source clone:**
 
-## Typical flows
+The new Step 7 copies QUICKSTART.md from the Quoin source directory to `.workflow_artifacts/QUICKSTART.md` (the new location). Locate `<quoin-source-dir>` by:
 
-**Large feature:**
-`/discover` → `/architect` → `/thorough_plan` → `/implement` → `/review` → `/end_of_task`
+(a) **Auto-detect:** check if `$HOME/.claude/skills/init_workflow/SKILL.md` exists. If so, the source clone was likely installed from a directory resolvable via `realpath` of a nearby sibling — suggest the most recently modified clone that contains `quoin/install.sh` as the auto-suggestion.
 
-**Bug fix:**
-`/plan` → `/implement` → `/review` → `/end_of_task`
+(b) **Ask the user** (preferred fallback):
+```
+Where is your Quoin source clone? (default: ~/code/quoin)
+I'll copy QUICKSTART.md from there to .workflow_artifacts/QUICKSTART.md.
+```
 
-**Starting your day:**
-`/start_of_day`
+(c) **Last resort:** if the user can't locate the clone, embed the QUICKSTART body inline (generates a static snapshot — may drift from the source over time).
 
-**Ending your day:**
-`/end_of_day`
+Once `<quoin-source-dir>` is confirmed:
+```bash
+cp <quoin-source-dir>/QUICKSTART.md .workflow_artifacts/QUICKSTART.md
+```
 
-## Key rules
-
-1. **`/implement` and `/end_of_task` never run automatically.** You must type them.
-2. **Quality gates run between every phase.** Claude stops and asks for your approval.
-3. **Each heavy command works best in its own chat session.** Context windows fill up — the file artifacts are the shared memory.
-4. **`/end_of_task` pushes the branch only.** Create your PR separately when ready.
-5. **Lessons accumulate.** The more you use the workflow, the smarter it gets about your codebase.
-
-## Files
-
-- `~/.claude/CLAUDE.md` — shared rules all skills follow (user-level)
-- `.workflow_artifacts/memory/` — accumulated knowledge (repos, architecture, lessons, sessions)
-- `~/.claude/skills/` — all workflow skill definitions (user-level)
-- `Workflow-User-Guide.html` — detailed interactive guide with scenarios
-
-## First time?
-
-Open `Workflow-User-Guide.html` in your browser for a full walkthrough with example conversations.
+The interactive guide lives in the source clone:
+```
+<your-quoin-clone>/Workflow-User-Guide.html — open in your browser for full walkthrough scenarios.
 ```
 
 ### Step 8: Report
@@ -315,12 +295,12 @@ Open `Workflow-User-Guide.html` in your browser for a full walkthrough with exam
 Tell the user:
 
 ```
-Workflow initialized in <project-root>/quoin/
+Workflow initialized in <project-root>/.workflow_artifacts/
 
 📁 Structure created:
   - .workflow_artifacts/memory/ (repos, architecture, dependencies, lessons, sessions)
-  - Workflow-User-Guide.html (interactive guide)
-  - QUICKSTART.md (command reference)
+  - .workflow_artifacts/QUICKSTART.md (command reference)
+  - <your-quoin-clone>/Workflow-User-Guide.html (interactive guide — in your cloned source)
 
 🔍 /discover completed:
   - Found <N> repositories
@@ -330,7 +310,7 @@ Ready to go. Start with:
   - /start_of_day — if resuming existing work
   - /architect — if starting a new feature
   - /plan or /thorough_plan — if you know what to build
-  - Open Workflow-User-Guide.html for full scenarios
+  - Open <your-quoin-clone>/Workflow-User-Guide.html for full scenarios
 ```
 
 ## Important behaviors

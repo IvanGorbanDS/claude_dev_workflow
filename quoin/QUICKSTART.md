@@ -7,7 +7,11 @@
 | `/init_workflow` | One-time project bootstrap — creates .workflow_artifacts/, configures permissions, runs /discover |
 | `/discover` | Scans all repos, maps architecture and dependencies |
 | `/architect` | Designs solution architecture for a feature/change |
-| `/thorough_plan` | Creates detailed implementation plan (with critic review) |
+| `/plan` | Creates a detailed implementation plan (single-pass, Opus) |
+| `/thorough_plan` | Triages task size and runs plan→critic→revise convergence loop |
+| `/critic` | Reviews a plan for gaps, risks, and integration issues |
+| `/revise` | Revises a plan based on critic feedback (Opus, used in strict mode) |
+| `/revise-fast` | Revises a plan based on critic feedback (Sonnet, cost-efficient) |
 | `/implement` | Writes code from the plan (explicit command only) |
 | `/review` | Verifies implementation against the plan |
 | `/end_of_task` | Pushes branch, captures lessons (explicit command only) |
@@ -75,8 +79,8 @@ Common use cases: reviewing a terse critic response; reading a compressed cache 
 - `.workflow_artifacts/` — all workflow artifacts: memory, task plans, session state (gitignored)
 - `.workflow_artifacts/cache/` — auto-maintained code summary cache (knowledge cache)
 - `~/.claude/skills/` — all workflow skill definitions (user-level)
-- `Workflow-User-Guide.html` — detailed interactive guide with scenarios
+- `<your-quoin-clone>/Workflow-User-Guide.html` — detailed interactive guide with scenarios (in your cloned source)
 
 ## First time?
 
-Open `Workflow-User-Guide.html` in your browser for a full walkthrough with example conversations.
+Open `<your-quoin-clone>/Workflow-User-Guide.html` in your browser for a full walkthrough with example conversations.
