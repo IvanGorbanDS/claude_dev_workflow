@@ -122,7 +122,7 @@ done
 
 # v3 scripts (NEW — separate destination directory ~/.claude/scripts/)
 mkdir -p "$USER_SCRIPTS_DIR"
-for script_file in summarize_for_human.py validate_artifact.py; do
+for script_file in summarize_for_human.py validate_artifact.py path_resolve.py; do
   SCRIPT_SRC="$SCRIPT_DIR/scripts/$script_file"
   SCRIPT_DST="$USER_SCRIPTS_DIR/$script_file"
   if [ ! -f "$SCRIPT_SRC" ]; then
@@ -198,7 +198,7 @@ echo -e "  ${GREEN}$SKILL_COUNT skills${NC} installed in ~/.claude/skills/"
 echo -e "  ${GREEN}Workflow rules${NC} written to ~/.claude/CLAUDE.md"
 echo -e "  ${GREEN}Terse rubric${NC} copied to ~/.claude/memory/terse-rubric.md"
 echo -e "  ${GREEN}v3 reference files${NC} copied to ~/.claude/memory/ (format-kit.md, glossary.md, format-kit.sections.json)"
-echo -e "  ${GREEN}v3 scripts${NC} copied to ~/.claude/scripts/ (validate_artifact.py, summarize_for_human.py, with_env.sh)"
+echo -e "  ${GREEN}v3 scripts${NC} copied to ~/.claude/scripts/ (validate_artifact.py, summarize_for_human.py, path_resolve.py, with_env.sh)"
 echo ""
 echo -e "  ${BLUE}Tip:${NC} re-run bash install.sh to refresh skills, CLAUDE.md, and the rubric together."
 echo ""
