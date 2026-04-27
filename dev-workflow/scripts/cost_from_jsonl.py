@@ -262,11 +262,9 @@ def main():
                           file=sys.stderr)
                     continue
 
-        # Chronological order (earliest first) — already sorted by filename (UUID v4
-        # filenames aren't time-ordered; we re-sort by the parsed timestamp).
-        # Since we dropped files without parseable timestamps, sort by sessionId
-        # as a stable fallback; for sessions with real timestamps we'd need to
-        # store them. Simple stable sort by sessionId string is sufficient.
+        # Results are in filesystem iteration order (glob). For ccusage-emitted
+        # files the filename embeds an ISO timestamp prefix, so filename order
+        # approximates chronological order. No explicit re-sort is applied here.
         print(json.dumps(results))
         sys.exit(0)
 

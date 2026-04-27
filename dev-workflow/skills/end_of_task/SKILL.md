@@ -196,7 +196,7 @@ Parse the JSON output identically to ccusage output — the shape is identical.
 Before recording the cost breakdown in Step 8, prepend ONE line:
   [fallback: cost_from_jsonl.py — prices as of <LAST_UPDATED>]
 Read LAST_UPDATED via:
-  python3 -c "import sys; sys.path.insert(0, os.path.expanduser('~/.claude/scripts')); import cost_from_jsonl; print(cost_from_jsonl.LAST_UPDATED)"
+  python3 -c "from pathlib import Path; import sys; sys.path.insert(0, str(Path.home() / '.claude' / 'scripts')); import cost_from_jsonl; print(cost_from_jsonl.LAST_UPDATED)"
 
 Exit code 2 from cost_from_jsonl.py ("UUID not found") is a per-UUID recoverable failure.
 Treat it the same as ccusage's per-UUID timeout: record cost-unknown for that UUID,

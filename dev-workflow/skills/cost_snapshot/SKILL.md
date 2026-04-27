@@ -118,7 +118,7 @@ Before printing the cost summary in Step 3, prepend ONE line of context:
   [fallback: cost_from_jsonl.py — prices as of LAST_UPDATED]
 
 Read LAST_UPDATED from the script via:
-  python3 -c "import sys; sys.path.insert(0, os.path.expanduser('~/.claude/scripts')); \
+  python3 -c "from pathlib import Path; import sys; sys.path.insert(0, str(Path.home() / '.claude' / 'scripts')); \
     import cost_from_jsonl; print(cost_from_jsonl.LAST_UPDATED)"
 
 If even the fallback fails (script missing OR exit code 1 on all UUIDs),

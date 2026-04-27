@@ -1,4 +1,5 @@
 # Cost Ledger — quoin-foundation
+487990e1-cb7a-4646-b34a-bad0a7cf9d47 | 2026-04-27 | gate | claude-sonnet-4-6 | task | gate implement→review stage-2; 322/323 pass; 1 pre-existing failure on main (test_revise_revise_fast_sync_contract)
 
 07d7193e-32a8-4aca-993b-0d522d94ce9f | 2026-04-25 | architect | claude-opus-4-7 | task | architect Phase 2-3 synthesis; produced architecture.md w/ 6-stage decomposition
 07d7193e-32a8-4aca-993b-0d522d94ce9f | 2026-04-25 | gate | claude-opus-4-7 | task | gate Checkpoint A architect to thorough_plan; verdict PASS; open questions resolved
@@ -53,3 +54,5 @@ $(uuidgen) | 2026-04-27 | plan | claude-opus-4-7 | task | plan round-1 stage-2 o
 5b369f87-92fb-4046-b7a5-08750a880a59 | 2026-04-27 | critic | claude-opus-4-7 | task | critic round-3 stage-2 quoin-foundation; verdict PASS — 0 CRIT/MAJOR/MIN, 1 NIT (metadata staleness, fixed inline)
 5b369f87-92fb-4046-b7a5-08750a880a59 | 2026-04-27 | gate | claude-sonnet-4-6 | task | gate Checkpoint B thorough_plan to implement stage-2; smoke/Medium; verdict PASS
 487990e1-cb7a-4646-b34a-bad0a7cf9d47 | 2026-04-27 | implement | claude-sonnet-4-6 | task | implement stage-2 quoin-foundation; cost_from_jsonl.py + SKILL.md fallback wiring + tests (T-01..T-08)
+487990e1-cb7a-4646-b34a-bad0a7cf9d47 | 2026-04-27 | review | claude-opus-4-7 | task | stage-2 review
+487990e1-cb7a-4646-b34a-bad0a7cf9d47 | 2026-04-27 | implement | claude-sonnet-4-6 | task | fix-up: line 48 above contains literal '$(uuidgen)' from a stale session — that UUID is invalid and should be excluded from cost rollups
