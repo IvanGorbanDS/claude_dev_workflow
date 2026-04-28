@@ -1,4 +1,4 @@
-# Development Workflow — Quickstart
+# Quoin — Quickstart
 
 ## Your commands
 
