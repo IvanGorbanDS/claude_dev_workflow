@@ -228,7 +228,7 @@ def main() -> None:
 
     # Locate project root: walk up from this script's directory
     script_dir = pathlib.Path(__file__).resolve().parent
-    project_root = script_dir.parent.parent  # quoin/scripts/ → project root
+    project_root = script_dir.parent.parent  # quoin/dev/ → project root
     out_path = pathlib.Path(args.out).resolve()
 
     run(project_root, out_path)

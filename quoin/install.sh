@@ -149,7 +149,7 @@ done
 for obsolete in summarize_for_human.py with_env.sh audit_corpus_coverage.py; do
   if [ -f "$USER_SCRIPTS_DIR/$obsolete" ]; then
     rm -f "$USER_SCRIPTS_DIR/$obsolete"
-    success "Removed obsolete $obsolete from $USER_SCRIPTS_DIR/ (cleanup)"
+    success "Removed obsolete $obsolete from $USER_SCRIPTS_DIR/ (Stage 5 cleanup)"
   fi
 done
 # Optional: remove the corresponding deployed test harness if it exists.

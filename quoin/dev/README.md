@@ -1,8 +1,8 @@
 # quoin/dev/
 
 This folder holds dev-only artifacts for quoin maintainers: the test suite (`tests/`),
-test fixtures (`tests/fixtures/`), audit and measurement utilities (`audit_corpus_coverage.py`,
-`measure_v3_savings.py`), and manual verification documents (`verify_subagent_dispatch.md`,
+test fixtures (`tests/fixtures/`), the measurement utility (`measure_v3_savings.py`),
+and manual verification documents (`verify_subagent_dispatch.md`,
 `verify_path_resolve_smoke.md`).
 
 **These files are NOT deployed by `install.sh` and are not part of the end-user install.**
