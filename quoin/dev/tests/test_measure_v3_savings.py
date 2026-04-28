@@ -8,7 +8,7 @@ import sys
 import tempfile
 
 PROJECT_ROOT = pathlib.Path(__file__).resolve().parent.parent.parent.parent
-SCRIPT = PROJECT_ROOT / "quoin" / "scripts" / "measure_v3_savings.py"
+SCRIPT = PROJECT_ROOT / "quoin" / "dev" / "measure_v3_savings.py"
 
 
 def run_script(*extra_args: str, out: str = "") -> subprocess.CompletedProcess:
