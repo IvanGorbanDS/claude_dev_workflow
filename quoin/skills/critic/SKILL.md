@@ -137,12 +137,14 @@ Body content example (Step 1 output):
   - Why it matters: <what breaks or goes wrong>
   - Where: <specific location in the plan or codebase>
   - Suggestion: <direction for fixing>
+  - Class: <one of: enumeration|regex-breadth|audit-method|integration|risk-coverage|testability|implementability|structural-fallback|other|unknown>
 
 ### Major (significant gap, should address)
 - **[MAJ-1] <title>**
   - What: <description>
   - Why it matters: <impact>
   - Suggestion: <how to address>
+  - Class: <one of: enumeration|regex-breadth|audit-method|integration|risk-coverage|testability|implementability|structural-fallback|other|unknown>
 
 ### Minor (improvement, use judgment)
 - **[MIN-1] <title>**
@@ -162,6 +164,8 @@ Body content example (Step 1 output):
 | Implementability | good/fair/poor | <brief> |
 | De-risking | good/fair/poor | <brief> |
 ```
+
+**Per-issue `Class:` line is REQUIRED** for CRIT and MAJ issues. Omitting it causes downstream classifier errors. Use `structural` for design, architecture, or correctness gaps; use `mechanical` for format, naming, missing-section, or prose problems. The valid values are: `enumeration`, `regex-breadth`, `audit-method`, `integration`, `risk-coverage`, `testability`, `implementability`, `structural-fallback`, `other`, `unknown`.
 
 **Step 2 [Class A]: SKIP** — no `## For human` block on Class A. Move directly to Step 3.
 
@@ -185,6 +189,7 @@ Write to `{path}.tmp` using the Write tool. (No `## For human` heading; no Haiku
 
 - **PASS** — no CRITICAL or MAJOR issues. Minor issues may remain.
 - **REVISE** — has CRITICAL or MAJOR issues that must be addressed.
+- **BAIL-TO-IMPLEMENT** — this verdict is NOT emitted by the critic. The critic only emits PASS or REVISE. BAIL-TO-IMPLEMENT is synthesized by the orchestrator (the `/thorough_plan` or `/architect` session running the critic loop) when it determines that all remaining CRITICAL and MAJOR issues are mechanical — using `classify_critic_issues.py` to make that determination. If you as the critic observe only mechanical issues remaining, emit REVISE with those mechanical issues listed; the orchestrator decides whether to bail based on classifier output and canary precondition.
 
 ## Save session state
 

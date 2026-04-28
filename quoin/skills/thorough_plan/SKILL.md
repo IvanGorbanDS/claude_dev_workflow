@@ -192,14 +192,31 @@ The loop stops when ANY of these is true:
 
 1. **Critic gives PASS** — no CRITICAL or MAJOR issues. Plan is ready.
 2. **Max rounds reached (default: 4)** — inform the user of remaining issues. The plan may have inherent constraints.
-3. **Stuck in a loop** — if round N's critic flags the same top-level issue category as round N-1 (same CRITICAL or MAJOR issue title reappearing despite revision), escalate to the user with the specific repeated issues and ask whether to continue or accept the plan as-is. This usually means a requirement is ambiguous or there's a genuine tradeoff to decide.
+3. **Stuck in a loop** — if round N's critic has the same dominant `surface_family` class among structural CRIT/MAJ issues as round N-1 (same-class recurrence), escalate to the user with the repeated class, the specific issues, and three options: (a) continue revising, (b) add a structural canary task to the plan, (c) accept the plan as-is and proceed to implement. Do NOT auto-continue.
+
+### After each critic round — classify and decide
+
+After reading each critic response, run:
+
+```
+python3 ~/.claude/scripts/classify_critic_issues.py \
+  --critic-response <task_dir>/critic-response-<N>.md
+```
+
+This emits a verdict (`CONTINUE-LOOP` or `BAIL-TO-IMPLEMENT`) on line 1, then a JSON summary with fields `structural_count`, `mechanical_count`, and `issues[]` (each with `id`, `severity`, `title`, `surface_family`).
+
+Note: `--enable-bailout` is currently disabled (default=False) and should NOT be passed until the training corpus achieves ≥95% classifier agreement on the held-out regression corpus. Enable it post-merge once `test_training_corpus_accuracy` passes at ≥95%. See `pipeline-efficiency-improvements/architecture.md` Stage 1 acceptance criteria.
+
+**BAIL-TO-IMPLEMENT verdict handling:** If the classifier returns `BAIL-TO-IMPLEMENT` (only possible when `--enable-bailout` is explicitly passed), stop the critic loop immediately and route directly to `/implement` without further revision rounds. BAIL-TO-IMPLEMENT is NOT emitted by the critic itself — it is synthesized by this orchestrator when all remaining CRITICAL and MAJOR issues are classified as mechanical and the canary precondition holds. When this verdict fires, inform the user that only mechanical issues remain and that implementation will address them directly, then proceed to the gate.
+
+**Same-class detection:** If round N's `structural_count` > 0 AND round N-1's `structural_count` > 0 AND the dominant surface families match (both rounds share the same top-1 `surface_family` among structural CRIT/MAJ issues), escalate to the user as described in rule 3 above. Do NOT auto-continue. When `Class:` lines are absent in a critic response (legacy format without per-issue class labels), same-class detection falls back to same-title comparison — comparing the titles of structural CRIT/MAJ issues across rounds instead of their class labels to detect recurrence.
 
 ### Between rounds
 
 After each critic round, before continuing:
 
 - Read the critic response yourself (as orchestrator)
-- Check if the same issues keep appearing (loop detection: compare round N's CRITICAL/MAJOR issue titles against round N-1's — if any title reappears, flag it)
+- Run the classifier (see `### After each critic round — classify and decide` above) to detect same-class recurrence
 - Briefly inform the user: "Round N complete — critic found X critical, Y major issues. Proceeding to revise." or "Round N complete — critic passed. Plan is ready."
 
 ## Final output
@@ -244,5 +261,5 @@ After the gate, inform the user:
 - **You are the orchestrator, not the planner.** Don't produce plan content yourself — invoke `/plan`, `/critic`, `/revise` (or `/revise-fast`).
 - **Critic MUST be a fresh session.** This is non-negotiable. Same-agent critique is biased and weak.
 - **Keep the user informed.** Brief status updates between rounds. Don't go silent for 10 minutes.
-- **Detect loops early.** After each critic round, compare CRITICAL/MAJOR issue titles against the previous round. If any title reappears, stop and present the repeated issues to the user — ask whether to continue revising or accept the plan as-is.
+- **Detect loops early.** After each critic round, run `classify_critic_issues.py` (without `--enable-bailout`) and compare the dominant `surface_family` of structural issues against the previous round. If the same class recurs, escalate to the user — ask whether to continue revising, add a canary task, or accept the plan as-is.
 - **Pass context explicitly.** Each agent starts with limited knowledge. Give them the file paths and repo locations they need.
