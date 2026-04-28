@@ -472,6 +472,97 @@ def test_corpus_coverage_zero_unrecognized():
     )
 
 
+# ── Training corpus accuracy gate ────────────────────────────────────────────
+
+def test_training_corpus_accuracy():
+    """
+    Classifier must agree with hand-labels on ≥95% of training-corpus issues.
+
+    Loads training/labels.json, runs parse_critic_response on each fixture, and
+    compares each parsed issue's is_mechanical classification against the ground-truth
+    label.  Prints per-issue disagreements when the assertion fails.
+
+    Label key format in labels.json is "{SEV_ABBR}-{parsed_id}" (e.g. "CRIT-1", "MAJ-2",
+    "M3", "C1") or a bare parsed id for fixtures using Issue/C-A/MAJ-A shapes.
+    The lookup builds a compound key from severity abbreviation + parsed issue.id to match
+    labels.json entries, falling back to the bare issue.id for legacy label formats.
+    """
+    import sys as _sys
+    SCRIPT_DIR = os.path.normpath(
+        os.path.join(os.path.dirname(__file__), '..', '..', 'scripts')
+    )
+    if SCRIPT_DIR not in _sys.path:
+        _sys.path.insert(0, SCRIPT_DIR)
+    import classify_critic_issues as _cls  # noqa: E402
+
+    labels_path = os.path.join(TRAINING_DIR, 'labels.json')
+    if not os.path.isfile(labels_path):
+        pytest.skip(f'Training labels.json not found: {labels_path}')
+
+    with open(labels_path, encoding='utf-8') as fh:
+        all_labels = json.load(fh)
+
+    # Abbreviation map for building compound label keys
+    _SEV_ABBR = {'CRITICAL': 'CRIT', 'MAJOR': 'MAJ', 'MINOR': 'MIN'}
+
+    total = 0
+    matching = 0
+    disagreements = []
+
+    for filename, issue_labels in all_labels.items():
+        if not issue_labels:
+            continue  # empty dict → no labelled issues in this fixture
+
+        fixture_path = os.path.join(TRAINING_DIR, filename)
+        if not os.path.isfile(fixture_path):
+            pytest.fail(f'labels.json references missing fixture: {filename}')
+
+        issues = _cls.parse_critic_response(fixture_path)
+
+        for issue in issues:
+            if issue.severity not in ('CRITICAL', 'MAJOR'):
+                continue  # labels only cover CRIT/MAJ
+
+            sev_abbr = _SEV_ABBR[issue.severity]
+            # Try compound key first (e.g. "CRIT-1"), then bare id (e.g. "1" or "C1")
+            compound_key = f'{sev_abbr}-{issue.id}'
+            label_key = compound_key if compound_key in issue_labels else (
+                issue.id if issue.id in issue_labels else None
+            )
+            if label_key is None:
+                continue  # issue not in hand-labels for this fixture — skip
+
+            expected_label = issue_labels[label_key]
+            is_mech = _cls._is_mechanical(issue)
+            predicted_label = 'mechanical' if is_mech else 'structural'
+
+            total += 1
+            if predicted_label == expected_label:
+                matching += 1
+            else:
+                disagreements.append(
+                    f'{filename} key={label_key!r}: '
+                    f'predicted={predicted_label!r} expected={expected_label!r} '
+                    f'(title={issue.title!r}, source={issue.source!r})'
+                )
+
+    if total == 0:
+        pytest.skip('labels.json contains no CRIT/MAJ labelled issues.')
+
+    agreement_rate = matching / total
+    if disagreements:
+        print('\nTraining corpus disagreements:')
+        for d in disagreements:
+            print(f'  {d}')
+
+    assert agreement_rate >= 0.95, (
+        f'Classifier agreement rate {agreement_rate:.1%} on training corpus is below '
+        f'95% threshold ({matching}/{total} matching). '
+        f'Disagreements ({len(disagreements)}): see stdout above. '
+        f'Do not flip --enable-bailout to true until ≥95% agreement on held-out corpus.'
+    )
+
+
 # ── Regression baseline skeleton ──────────────────────────────────────────────
 
 def test_held_out_regression_corpus():

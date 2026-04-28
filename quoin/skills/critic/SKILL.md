@@ -189,7 +189,7 @@ Write to `{path}.tmp` using the Write tool. (No `## For human` heading; no Haiku
 
 - **PASS** — no CRITICAL or MAJOR issues. Minor issues may remain.
 - **REVISE** — has CRITICAL or MAJOR issues that must be addressed.
-- **BAIL-TO-IMPLEMENT** — all remaining issues are `mechanical` and the plan's core structure is sound. Signal that revision would add no value; the implementer can fix these mechanically. Use this when: ≥2 rounds have run, no structural issues remain, only mechanical/format issues remain.
+- **BAIL-TO-IMPLEMENT** — this verdict is NOT emitted by the critic. The critic only emits PASS or REVISE. BAIL-TO-IMPLEMENT is synthesized by the orchestrator (the `/thorough_plan` or `/architect` session running the critic loop) when it determines that all remaining CRITICAL and MAJOR issues are mechanical — using `classify_critic_issues.py` to make that determination. If you as the critic observe only mechanical issues remaining, emit REVISE with those mechanical issues listed; the orchestrator decides whether to bail based on classifier output and canary precondition.
 
 ## Save session state
 

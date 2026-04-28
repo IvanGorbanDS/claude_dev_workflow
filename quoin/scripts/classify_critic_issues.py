@@ -88,6 +88,13 @@ _CLASS_LINE = re.compile(r'^\s+-\s+Class:\s+(\S+)\s*$')
 # mechanical [tag] in title
 _MECHANICAL_TAG = re.compile(r'\[mechanical\]', re.IGNORECASE)
 
+# Mechanical indicators in issue title (complement to body keyword check)
+# Patterns here are specific enough not to fire on structural issue titles.
+_MECHANICAL_TITLE_KEYWORD = re.compile(
+    r'\b(files?\s+do\s+not\s+have|does?\s+NOT\s+include|not\s+actually\s+provided|has\s+no\s+acceptance\s+grep|too\s+narrow|has\s+gaps?|Tier\s+1\s+carve-out\s+documentation|missing\s+rows?|missing\s+entr(?:y|ies)|missing\s+reference)\b',
+    re.IGNORECASE,
+)
+
 # Severity abbreviation → canonical name
 _SEV_MAP = {
     'crit': 'CRITICAL', 'critical': 'CRITICAL',
@@ -122,7 +129,7 @@ _SURFACE_FAMILIES = [
 
 # Mechanical keyword regex (applied to issue body when no [mechanical] tag)
 _MECHANICAL_KEYWORD = re.compile(
-    r'\b(broaden|broadened|broadening|enumerate|enumeration|missing\s+row|alternation|widen|widened|widening|extending?\s+the\s+regex|miss(?:ed|ing)\s+(?:row|skill|case|file|anchor|enumeration))\b',
+    r'\b(broaden|broadened|broadening|enumerate|enumeration|missing\s+row|alternation|widen|widened|widening|extending?\s+the\s+regex|miss(?:ed|ing)\s+(?:row|skill|case|file|anchor|enumeration|cross-reference)|missing\s+rows?|missing\s+entr(?:y|ies)|missing\s+reference|not\s+actually\s+provided|has\s+no\s+\w+\s+(?:grep|assertion|acceptance))\b',
     re.IGNORECASE,
 )
 
@@ -177,12 +184,16 @@ def _is_mechanical(issue: Issue) -> bool:
     Classification priority:
     1. [mechanical] tag in title → mechanical
     2. Mechanical keyword in body → mechanical
-    3. Default → structural (ambiguity-defaults-structural per R-1 mitigation)
+    3. Mechanical title keyword → mechanical
+    4. Default → structural (ambiguity-defaults-structural per R-1 mitigation)
     """
     if _MECHANICAL_TAG.search(issue.title):
         issue.source = 'tag'
         return True
     if _MECHANICAL_KEYWORD.search(issue.body):
+        issue.source = 'keyword'
+        return True
+    if _MECHANICAL_TITLE_KEYWORD.search(issue.title):
         issue.source = 'keyword'
         return True
     issue.source = 'default'

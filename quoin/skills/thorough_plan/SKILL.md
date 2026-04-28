@@ -203,9 +203,13 @@ python3 ~/.claude/scripts/classify_critic_issues.py \
   --critic-response <task_dir>/critic-response-<N>.md
 ```
 
-This emits a verdict (`CONTINUE-LOOP`) on line 1, then a JSON summary with fields `structural_count`, `mechanical_count`, and `issues[]` (each with `id`, `severity`, `title`, `surface_family`).
+This emits a verdict (`CONTINUE-LOOP` or `BAIL-TO-IMPLEMENT`) on line 1, then a JSON summary with fields `structural_count`, `mechanical_count`, and `issues[]` (each with `id`, `severity`, `title`, `surface_family`).
 
-**Same-class detection:** If round N's `structural_count` > 0 AND round N-1's `structural_count` > 0 AND the dominant surface families match (both rounds share the same top-1 `surface_family` among structural CRIT/MAJ issues), escalate to the user as described in rule 3 above. Do NOT auto-continue.
+Note: `--enable-bailout` is currently disabled (default=False) and should NOT be passed until the training corpus achieves ≥95% classifier agreement on the held-out regression corpus. Enable it post-merge once `test_training_corpus_accuracy` passes at ≥95%. See `pipeline-efficiency-improvements/architecture.md` Stage 1 acceptance criteria.
+
+**BAIL-TO-IMPLEMENT verdict handling:** If the classifier returns `BAIL-TO-IMPLEMENT` (only possible when `--enable-bailout` is explicitly passed), stop the critic loop immediately and route directly to `/implement` without further revision rounds. BAIL-TO-IMPLEMENT is NOT emitted by the critic itself — it is synthesized by this orchestrator when all remaining CRITICAL and MAJOR issues are classified as mechanical and the canary precondition holds. When this verdict fires, inform the user that only mechanical issues remain and that implementation will address them directly, then proceed to the gate.
+
+**Same-class detection:** If round N's `structural_count` > 0 AND round N-1's `structural_count` > 0 AND the dominant surface families match (both rounds share the same top-1 `surface_family` among structural CRIT/MAJ issues), escalate to the user as described in rule 3 above. Do NOT auto-continue. When `Class:` lines are absent in a critic response (legacy format without per-issue class labels), same-class detection falls back to same-title comparison — comparing the titles of structural CRIT/MAJ issues across rounds instead of their class labels to detect recurrence.
 
 ### Between rounds
 

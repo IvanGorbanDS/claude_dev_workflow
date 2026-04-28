@@ -343,6 +343,16 @@ while round <= max_rounds:
     run: python3 ~/.claude/scripts/classify_critic_issues.py \
          --critic-response .workflow_artifacts/<task-name>/architecture-critic-{round}.md
     # Capture: structural_count, dominant_surface_family for this round.
+    #
+    # BAIL-TO-IMPLEMENT verdict handling: if the classifier returns BAIL-TO-IMPLEMENT
+    # (only possible when --enable-bailout is explicitly passed), stop the critic loop
+    # immediately and proceed to architecture.md as final without further revision rounds.
+    # BAIL-TO-IMPLEMENT is NOT emitted by the critic itself — it is synthesized here
+    # (by this /architect session acting as orchestrator of its internal Phase 4 loop)
+    # when all remaining CRIT/MAJ issues are mechanical and the canary precondition holds.
+    # Note: --enable-bailout is currently disabled; do not pass it until the training
+    # corpus achieves ≥95% classifier agreement on the held-out regression corpus.
+    if verdict == BAIL-TO-IMPLEMENT: break
 
     # Loop detection — STRICT MODE ONLY (D-09):
     # Normal mode (max_rounds=2) relies on the hard cap; no meaningful loop detection needed.

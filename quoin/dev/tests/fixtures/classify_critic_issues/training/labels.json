@@ -12,7 +12,7 @@
     "M7": "structural"
   },
   "stage-1-critic-response-2.md": {
-    "MAJ-1": "structural",
+    "1 (NEW)": "structural",
     "MAJ-2": "structural"
   },
   "stage-1-critic-response-3.md": {},
@@ -24,7 +24,7 @@
     "MAJ-3": "structural"
   },
   "stage-2-critic-response-2.md": {
-    "MAJ-1-r2": "structural"
+    "1-r2 (NEW)": "structural"
   },
   "stage-2-critic-response-3.md": {},
   "stage-3-critic-response-1.md": {
@@ -46,9 +46,7 @@
   "stage-3-critic-response-3.md": {
     "MAJ-1": "mechanical"
   },
-  "stage-3-critic-response-4.md": {
-    "CRIT-1": "structural"
-  },
+  "stage-3-critic-response-4.md": {},
   "stage-3-critic-response-5.md": {},
   "stage-4-critic-response-1.md": {
     "CRIT-1": "structural",

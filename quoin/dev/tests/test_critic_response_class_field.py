@@ -105,6 +105,21 @@ def test_class_field_absent_falls_through_to_title_keyword(tmp_path):
     assert crit2.surface_family == 'structural-fallback'
 
 
+def test_fixture_passes_v01_v07():
+    """The class-field fixture must pass all validate_artifact.py checks (V-01 through V-07)."""
+    import subprocess
+    result = subprocess.run(
+        ['python3', os.path.expanduser('~/.claude/scripts/validate_artifact.py'), FIXTURE_WITH_CLASS],
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, (
+        f'validate_artifact.py reported failures for fixture:\n'
+        f'stdout: {result.stdout}\n'
+        f'stderr: {result.stderr}'
+    )
+
+
 def test_invalid_class_value_normalized_to_other(tmp_path):
     """A `Class:` value not in the whitelist is normalized to 'other'."""
     body = textwrap.dedent("""\
