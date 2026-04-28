@@ -11,7 +11,7 @@ This file defines the common rules and behaviors shared across all development w
 ### Communication
 - **Keep multi-step workflow progress verbose.** When working through plans, implementations, or multi-round processes, provide status updates at each step. Don't go silent during long operations.
 
-### Dev Workflow
+### Workflow conventions
 - **Never place stage plans into `.workflow_artifacts/finalized/` until `/end_of_task` is explicitly run.** Plans stay in their working location until the user triggers finalization.
 
 ## Project structure

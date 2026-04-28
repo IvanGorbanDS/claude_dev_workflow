@@ -3,7 +3,7 @@ updated: 2026-04-25
 ---
 
 ## System purpose
-Single-repo dev workflow toolchain. Provides planning, implementation, review, and daily-cache skills for software engineering tasks.
+Single-repo Quoin workflow toolchain. Provides planning, implementation, review, and daily-cache skills for software engineering tasks.
 
 ## Service map
 
