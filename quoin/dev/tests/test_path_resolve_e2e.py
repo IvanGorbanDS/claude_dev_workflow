@@ -253,7 +253,7 @@ def test_resolver_routes_explicit_stage_canonical():
 INFLIGHT_SNAPSHOT = (
     PROJECT_ROOT
     / "quoin"
-    / "scripts"
+    / "dev"
     / "tests"
     / "fixtures"
     / "path_resolve"
