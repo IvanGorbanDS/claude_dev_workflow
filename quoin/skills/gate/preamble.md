@@ -1,5 +1,4 @@
 ---
-generated_at: '2026-04-29T10:06:53Z'
 generated_by: build_preambles.py
 kind: stub
 path: ~/.claude/skills/gate/preamble.md

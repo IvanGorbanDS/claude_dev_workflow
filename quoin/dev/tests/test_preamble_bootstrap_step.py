@@ -27,7 +27,10 @@ FORMAT_KIT_REF = "~/.claude/memory/format-kit.md"
 GLOSSARY_REF = "~/.claude/memory/glossary.md"
 WRITE_SITE_PATTERN = "Reference files (apply HERE at the body-generation"
 
-# Skills that have write-site references (gate has none per plan)
+# Skills with a write-site reference inside ## Session bootstrap. Gate is excluded
+# by convention even though its Step 5 audit-log writer block also contains the
+# WRITE_SITE_PATTERN — gate's bootstrap section itself has no boilerplate reads,
+# so the additive-only invariant is checked at the bootstrap-section scope only.
 SKILLS_WITH_WRITE_SITE = {"critic", "revise", "revise-fast", "plan", "review", "architect"}
 
 

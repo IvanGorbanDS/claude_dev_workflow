@@ -24,9 +24,10 @@ import os
 import pathlib
 import subprocess
 import sys
-from datetime import datetime, timezone
 
-import yaml
+# Note: pyyaml is lazy-imported inside run_check() only. The default build path
+# (no flags) emits frontmatter via stdlib string templating, so a fresh
+# `bash install.sh` works on systems without pyyaml installed.
 
 # Single source of truth for spawn-target membership.
 # "full" = format-kit §3 slice + glossary; "stub" = frontmatter-only note.
@@ -43,10 +44,8 @@ SPAWN_TARGETS = {
 PREAMBLE_SIZE_BUDGET = 6144  # bytes
 
 SCRIPT_DIR = pathlib.Path(__file__).resolve().parent
-REPO_ROOT = SCRIPT_DIR.parent.parent  # quoin/ -> project root -> (but we want quoin/)
-# Actually: scripts/ is under quoin/scripts/, so parent = quoin/, parent.parent = project root
-# But sources are in quoin/memory/, so:
-QUOIN_DIR = SCRIPT_DIR.parent  # = quoin/
+REPO_ROOT = SCRIPT_DIR.parent.parent  # project root (parent of quoin/)
+QUOIN_DIR = SCRIPT_DIR.parent          # quoin/
 SOURCE_FORMAT_KIT = QUOIN_DIR / "memory" / "format-kit.md"
 SOURCE_GLOSSARY = QUOIN_DIR / "memory" / "glossary.md"
 
@@ -91,23 +90,41 @@ def read_glossary() -> str:
     return SOURCE_GLOSSARY.read_text(encoding="utf-8")
 
 
-def compose_frontmatter(skill: str, kind: str, source_hashes: dict, now_utc: str, total_bytes: int) -> str:
-    """Compose YAML frontmatter as a string."""
+def compose_frontmatter(skill: str, kind: str, source_hashes: dict, total_bytes: int) -> str:
+    """
+    Compose YAML frontmatter as a string via stdlib templating (no pyyaml required).
+
+    Output is deterministic: keys are emitted in alphabetical order; lists and maps
+    use canonical YAML block style. Field set: generated_by, kind, path,
+    source_files (list), source_hashes (map), total_bytes.
+
+    `generated_at` is intentionally omitted (Stage 2-alt /review MIN-5/MIN-6 fix:
+    drift signal lives in source_hashes, not in a wall-clock timestamp).
+    """
     if kind == "full":
         source_files = [SOURCE_REL_FORMAT_KIT, SOURCE_REL_GLOSSARY]
     else:
         source_files = []
 
-    data = {
-        "path": f"~/.claude/skills/{skill}/preamble.md",
-        "kind": kind,
-        "source_files": source_files,
-        "source_hashes": source_hashes,
-        "generated_at": now_utc,
-        "generated_by": "build_preambles.py",
-        "total_bytes": total_bytes,
-    }
-    return "---\n" + yaml.safe_dump(data, sort_keys=True, allow_unicode=True) + "---\n"
+    lines = ["---"]
+    lines.append("generated_by: build_preambles.py")
+    lines.append(f"kind: {kind}")
+    lines.append(f"path: ~/.claude/skills/{skill}/preamble.md")
+    if source_files:
+        lines.append("source_files:")
+        for path in source_files:
+            lines.append(f"- {path}")
+    else:
+        lines.append("source_files: []")
+    if source_hashes:
+        lines.append("source_hashes:")
+        for path in sorted(source_hashes):
+            lines.append(f"  {path}: {source_hashes[path]}")
+    else:
+        lines.append("source_hashes: {}")
+    lines.append(f"total_bytes: {total_bytes}")
+    lines.append("---")
+    return "\n".join(lines) + "\n"
 
 
 def build_preamble_body(kind: str, fmt_slice: str, glossary: str) -> str:
@@ -138,7 +155,21 @@ def run_check() -> int:
     """
     --check mode: verify each preamble's source_hashes against current git hash-object.
     Returns exit code 0 (fresh) or 7 (stale).
+
+    pyyaml is lazy-imported here because --check is the only path that needs to
+    PARSE existing frontmatter. The default build path emits frontmatter via
+    stdlib templating (compose_frontmatter), so `bash install.sh` works on
+    systems without pyyaml.
     """
+    try:
+        import yaml  # lazy: only --check needs a YAML parser
+    except ImportError:
+        print(
+            "build_preambles.py --check requires pyyaml. Install with: pip install pyyaml",
+            file=sys.stderr,
+        )
+        return 7
+
     stale = []
     for skill, kind in SPAWN_TARGETS.items():
         preamble_path = QUOIN_DIR / "skills" / skill / "preamble.md"
@@ -226,8 +257,6 @@ Spawn targets: """ + ", ".join(SPAWN_TARGETS.keys()),
     # Compute hashes once (same for all full targets)
     full_hashes = compute_source_hashes("full")
 
-    now_utc = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-
     for skill, kind in SPAWN_TARGETS.items():
         body = build_preamble_body(kind, fmt_slice, glossary)
         source_hashes = full_hashes if kind == "full" else {}
@@ -242,7 +271,7 @@ Spawn targets: """ + ", ".join(SPAWN_TARGETS.keys()),
             return 3
 
         # Compose frontmatter (needs total_bytes)
-        frontmatter = compose_frontmatter(skill, kind, source_hashes, now_utc, total_bytes)
+        frontmatter = compose_frontmatter(skill, kind, source_hashes, total_bytes)
         full_content = frontmatter + "\n" + body
 
         if args.dry_run:

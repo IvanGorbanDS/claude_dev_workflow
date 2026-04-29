@@ -6,14 +6,10 @@ Tests use a tmpdir-rooted virtual project layout to avoid touching the real quoi
 
 import os
 import pathlib
-import subprocess
 import sys
-import tempfile
-import textwrap
 import time
 
 import pytest
-import yaml
 
 # Make the scripts/ dir importable
 SCRIPT_DIR = pathlib.Path(__file__).resolve().parent.parent
@@ -64,23 +60,6 @@ def _make_virtual_project(tmp: pathlib.Path, fk_content: str = None, gl_content:
     return quoin_dir
 
 
-def _run_builder(quoin_dir: pathlib.Path, extra_args: list = None) -> subprocess.CompletedProcess:
-    """Run build_preambles.py as a subprocess with QUOIN_DIR patched via env."""
-    env = os.environ.copy()
-    # We patch by running the script directly from the real scripts/ dir
-    # but override QUOIN_DIR implicitly via __file__ resolution — not straightforward.
-    # Instead, patch by setting a simple environment var and importing with monkeypatching,
-    # or run the script and pass quoin_dir in via a helper. The cleanest approach:
-    # write a tiny wrapper that overrides the QUOIN_DIR before importing.
-    script = SCRIPT_DIR / "build_preambles.py"
-    cmd = [sys.executable, str(script)] + (extra_args or [])
-    # We need QUOIN_DIR to point at the tmp quoin_dir — use the QUOIN_DIR_OVERRIDE env var
-    # (which the script doesn't know about, so we monkeypatch via a helper module at test time).
-    # Simpler: run via subprocess calling a helper that injects the override.
-    result = subprocess.run(cmd, capture_output=True, text=True, env=env, cwd=str(quoin_dir.parent))
-    return result
-
-
 def _invoke_build(quoin_dir: pathlib.Path, dry_run: bool = False, check: bool = False):
     """
     Direct Python call to build_preambles.main() with QUOIN_DIR monkeypatched.
@@ -128,9 +107,9 @@ def _invoke_build(quoin_dir: pathlib.Path, dry_run: bool = False, check: bool = 
 # ── tests ─────────────────────────────────────────────────────────────────────
 
 class TestDeterminism:
-    """Two consecutive runs produce byte-identical output (except generated_at)."""
+    """Two consecutive runs produce byte-identical output."""
 
-    def test_two_runs_byte_identical_except_generated_at(self, tmp_path):
+    def test_two_runs_byte_identical(self, tmp_path):
         quoin_dir = _make_virtual_project(tmp_path)
 
         def build_and_read():
@@ -139,21 +118,17 @@ class TestDeterminism:
             result = {}
             for skill in build_preambles.SPAWN_TARGETS:
                 p = quoin_dir / "skills" / skill / "preamble.md"
-                content = p.read_text(encoding="utf-8")
-                # Strip generated_at line for comparison
-                lines = [ln for ln in content.splitlines(keepends=True)
-                         if not ln.startswith("generated_at:")]
-                result[skill] = "".join(lines)
+                result[skill] = p.read_text(encoding="utf-8")
             return result
 
         run1 = build_and_read()
-        # Advance time slightly so generated_at would differ if timestamps are different
+        # Advance wall-clock so any timestamp-derived field would differ across runs
         time.sleep(0.01)
         run2 = build_and_read()
 
         for skill in build_preambles.SPAWN_TARGETS:
             assert run1[skill] == run2[skill], (
-                f"Preamble for {skill} differs between runs (excluding generated_at)"
+                f"Preamble for {skill} differs between runs"
             )
 
 
