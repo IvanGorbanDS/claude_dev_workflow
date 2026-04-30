@@ -289,11 +289,27 @@ Every skill that does meaningful work should record its session to the task's co
 
 **Ledger path:** `.workflow_artifacts/<task-name>/cost-ledger.md`. Create with header `# Cost Ledger — <task-name>` if new.
 
-**Row format:** `SESSION_UUID | YYYY_MM_DD | PHASE | PRIMARY_MODEL | task | BRIEF_NOTE | FALLBACK_FIRES`
+**Row format — executable one-liner (7-column form):**
+
+```bash
+uuid=$(uuidgen) && printf '%s | %s | %s | %s | task | %s | %s\n' \
+  "$uuid" "$(date -u +%Y-%m-%d)" "PHASE" "MODEL" "NOTE" "FALLBACK_FIRES" \
+  >> "$LEDGER"
+```
+
+Substitute the bareword placeholders `PHASE`, `MODEL`, `NOTE`, `FALLBACK_FIRES` with session-specific values before running. `LEDGER` must be set to the ledger path (e.g., `.workflow_artifacts/<task-name>/cost-ledger.md`) before invocation. `NOTE` MUST be quoted — unquoted values containing spaces or pipes will produce malformed rows. Columns: `UUID | DATE | PHASE | MODEL | task | NOTE | FALLBACK_FIRES`.
+
+**6-column form** (for Conditional skills `/discover`, `/triage` that omit `fallback_fires`):
+
+```bash
+uuid=$(uuidgen) && printf '%s | %s | %s | %s | task | %s\n' \
+  "$uuid" "$(date -u +%Y-%m-%d)" "PHASE" "MODEL" "NOTE" \
+  >> "$LEDGER"
+```
 
 The 7th column (`fallback_fires`) is OPTIONAL. Existing 6-column rows are valid forever; readers MUST tolerate both shapes. When present, the value is a non-negative integer (`0` if no fires occurred during the session). When absent, parsers treat it as `0`. Writers SHOULD emit the 7th column on new rows; readers MUST NOT fail on a missing 7th column. Append-only ledger semantics are unchanged.
 
-**Writer guidance:** Skills emitting a new ledger row SHOULD include the 7th column when they have a session-state `fallback_fires` value available (typically at session-end emits, not session-open). Skills MAY emit a 6-column row when no session-state exists (e.g., `/discover`, `/triage`) or when `fallback_fires` is 0; readers tolerate both shapes per the row-format spec. The emitter migration is incremental — Stage 4 documents the schema; per-skill row-emit edits ship in Stage 5 alongside the `$(uuidgen)` replacement.
+**Writer guidance:** Skills emitting a new ledger row SHOULD include the 7th column when they have a session-state `fallback_fires` value available (typically at session-end emits, not session-open). Skills MAY emit a 6-column row when no session-state exists (e.g., `/discover`, `/triage`) or when `fallback_fires` is 0; readers tolerate both shapes per the row-format spec.
 
 **UUID acquisition:** Most recently modified `<uuid>.jsonl` under `~/.claude/projects/<project-hash>/` (project-hash = project path with `/` replaced by `-`). Fall back to `unknown-<ISO-timestamp>` if none found.
 

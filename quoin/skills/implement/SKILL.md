@@ -96,6 +96,30 @@ This skill uses Sonnet for fast, high-quality implementation. The architectural 
 
 ## Implementation rules
 
+### Large tool-result gating (cache-preservation)
+
+Threshold constant: `LARGE_TOOL_RESULT_THRESHOLD_BYTES = 5120` (5 KB). To change, edit this SKILL.md and re-deploy via `bash install.sh` from the `quoin/` source root.
+
+**Pre-Read decision rule:**
+
+- Before invoking the Read tool on a file you have reason to believe exceeds 5 KB, read it directly — the Read tool paginates. If the result exceeds 5 KB AND the task does NOT explicitly require raw text (acceptance criterion language like "verify line N matches X" or "preserve verbatim formatting"), apply the summarizer dispatch below.
+- For Bash tool outputs >5 KB, apply the same rule post-hoc after seeing the output size.
+
+**Summarizer dispatch (when threshold exceeded and raw text not required):**
+
+Spawn an Agent subagent with:
+- model: `"sonnet"` (same tier as `/implement`; chosen for fidelity over Haiku — preserves function signatures and error messages verbatim, per D-02)
+- description: `"Summarize large tool result for /implement"`
+- prompt: `"Summarize the following tool result for an implementer who needs to act on it. Preserve: function/method signatures, error messages verbatim, file paths, line numbers. Compress: prose explanations, repeated boilerplate, license headers. Do not invent facts. Output 10-20 lines max.\n\nTOOL_RESULT_GOES_HERE"` (replace `TOOL_RESULT_GOES_HERE` with the actual tool result at runtime)
+
+On dispatch success: inject the summary inline and proceed; cache stays hot.
+
+On dispatch failure (harness rejects subagent or times out): fall back to keeping the raw result inline. Emit the one-line warning: `[implement-stage-5: large-result summarizer unavailable; proceeding with raw inline]`
+
+This matches the §0 dispatch fail-OPEN pattern (architecture I-01): cost guardrail is best-effort, not load-bearing for correctness.
+
+**Tunability:** threshold (5120) and model (`"sonnet"`) are explicit named constants in this prose — change both here and re-install. Soak data from T-13 AC-3 (Stage 5 testing) will determine if threshold should be raised.
+
 ### Code quality
 - Follow existing code style and conventions in the repository
 - Write meaningful variable and function names
