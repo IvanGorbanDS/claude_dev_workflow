@@ -253,6 +253,33 @@ Check `.workflow_artifacts/memory/lessons-learned.md`. Count the number of lesso
 
 **If the count is 30 or fewer**, skip this step silently.
 
+### Step 3d: Write resume cookie + flip end_of_day_due
+
+**After** the daily-cache write (Step 3) succeeds, do two things:
+
+**1. Flip `end_of_day_due: no`** in each session-state file that was rolled into the daily cache:
+- For each session file processed in Step 3 (those read from `.workflow_artifacts/memory/sessions/<today>-*.md`), edit the file in place to set `end_of_day_due: no`.
+- Use an atomic write: open the file, replace the `end_of_day_due: yes` line with `end_of_day_due: no`, write to `<path>.tmp`, then `os.rename(tmp, path)`.
+- Flip ONLY after the daily-cache write succeeded — a crashed `/end_of_day` must NOT mark sessions as processed.
+- This is one of two signals `/start_of_day` reads to detect a missing-EOD condition (the other is the existing insights-file check).
+
+**2. Write resume cookie** to `<project-root>/.workflow_artifacts/memory/resume-cookie.md`:
+- Cookie size cap: 2 KB. If the body would exceed 2 KB, truncate the "what's next" hint to ≤2 lines.
+- Cookie content (Tier 3, terse-only):
+  ```yaml
+  ---
+  task: <active-task-name or empty>
+  last_skill: end_of_day
+  branch: <current git branch>
+  dirty_count: <N uncommitted changes>
+  expires: <today ISO date + 24h, e.g. 2026-04-30T23:59:00>
+  ---
+  <1-2 line "what's next" hint, free text>
+  ```
+- **Field allowlist** (hardcoded): `task`, `last_skill`, `branch`, `dirty_count`, `expires`. The writer MUST refuse to include any field not in this list. This prevents sensitive data from leaking into the cookie.
+- **Atomic-rename pattern**: write to `resume-cookie.md.tmp` via Python `open(path, 'w')`, then `os.rename(tmp_path, final_path)`. Do NOT use shell `mv` in Python contexts — use `os.rename`.
+- Cookie path: `<project-root>/.workflow_artifacts/memory/resume-cookie.md` (under `.workflow_artifacts/` which is gitignored — cookie is never committed).
+
 ### Step 4: Prompt for lessons learned
 
 Ask the user:

@@ -273,7 +273,10 @@ The session state file template includes a `## Cost` section:
 - Session UUID: <UUID — see Cost tracking rules for acquisition>
 - Phase: <phase>
 - Recorded in cost ledger: yes/no
+- end_of_day_due: yes
 ```
+
+The `end_of_day_due` field defaults to `yes` at every session-state write. `/end_of_day` Step 3d flips it to `no` for each session it processes after the daily-cache write succeeds. `/start_of_day` reads this field (in addition to the existing insights-file check) as a second signal for the missing-EOD banner — if any session file written within the last 36 hours has `end_of_day_due: yes`, the banner fires.
 
 This is informational — the cost ledger (`.workflow_artifacts/<task-name>/cost-ledger.md`) is the source of truth for per-session costs.
 

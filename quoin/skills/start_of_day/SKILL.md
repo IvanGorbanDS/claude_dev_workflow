@@ -47,6 +47,16 @@ Fail-graceful path (per architecture I-01):
 
 Otherwise (already at or below declared tier, OR prompt has [no-redispatch] sentinel, OR dispatch unavailable): proceed to §1 (skill body).
 
+### Step 1a: Resume from cookie
+
+Read `<project-root>/.workflow_artifacts/memory/resume-cookie.md` if present.
+
+- **If absent:** continue to Step 1 (existing behavior — graceful fallback; no error).
+- **If present, check `expires` field:** if `expires` < now (ISO comparison), the cookie is stale — ignore it and continue to Step 1.
+- **If present and fresh:** use the cookie's `task`, `last_skill`, `branch`, `dirty_count`, and body ("what's next" hint) to seed the Step 5 briefing. Note the task and branch at the start of the briefing so the user knows what was active yesterday.
+
+**Banner check (compose with Step 1 — signal B):** while reading session files for the briefing, also check `.workflow_artifacts/memory/sessions/` for any session-state files written within the last 36 hours that have `end_of_day_due: yes`. Count them as M. If M > 0, signal B is positive. Signal B is combined with signal A (the insights-file check in Step 1) in a unified banner — see Step 1 for the combined rule.
+
 ## Session bootstrap
 
 Cost tracking note: `/start_of_day` is a lightweight daily-orientation skill. Append to the cost ledger only if a specific task context is clearly active (the user mentioned a task name or there's a clear active task from session state). If in doubt, skip cost recording — don't guess a task name.
@@ -55,16 +65,19 @@ If a task context is active: append your session to `.workflow_artifacts/<task-n
 
 ## Process
 
-### Step 1: Check for un-promoted insights
+### Step 1: Check for missing-EOD signals
 
-Look for `.workflow_artifacts/memory/daily/insights-<yesterday>.md` (yesterday's date). If it exists:
-- Count entries tagged `Promote?: yes` or `Promote?: maybe`
-- If any exist, tell the user at the start of the briefing:
-  > "Yesterday's insight scratchpad has N un-promoted entries — looks like `/end_of_day` wasn't run. Want to review them now or skip?"
-  - If they want to review: run the promotion flow from `/end_of_day` Step 3b inline before continuing
-  - If they skip: proceed normally (entries stay in the file for next time)
+**Signal A:** look for `.workflow_artifacts/memory/daily/insights-<yesterday>.md` (yesterday's date). If it exists, count entries tagged `Promote?: yes` or `Promote?: maybe`. Let N = that count (0 if none or file absent).
 
-If the file doesn't exist or has no promotable entries, skip this step silently.
+**Signal B:** (set in Step 1a) — count of session-state files written in the last 36 hours with `end_of_day_due: yes`. Let M = that count.
+
+**Unified banner (fire if A OR B is positive, i.e. N > 0 OR M > 0):**
+> "⚠ Yesterday's `/end_of_day` did not fire — [N insight(s) pending and/or M session(s) unflushed]. Recommend running `/end_of_day` before continuing."
+> "Want to run `/end_of_day` now or skip?"
+- If they want to run it: invoke `/end_of_day` inline before continuing (promotion flow from `/end_of_day` Step 3b)
+- If they skip: proceed normally
+
+If neither signal is positive (N = 0 AND M = 0), skip this step silently.
 
 ### Step 2: Find the latest daily cache
 
