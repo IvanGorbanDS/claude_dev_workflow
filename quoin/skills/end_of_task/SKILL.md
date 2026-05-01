@@ -51,6 +51,33 @@ Fail-graceful path (per architecture I-01):
 
 Otherwise (already at or below declared tier, OR prompt has [no-redispatch] sentinel, OR dispatch unavailable): proceed to §1 (skill body).
 
+## §0b Session-age guard (FIRST STEP after §0 dispatch)
+
+This skill has 8 sequential steps; running it in a heavy / long-lived
+session is a known cause of stream-idle timeouts (Apr 28 18:13 incident).
+Before doing any work, check session activity age:
+
+```
+python3 ~/.claude/scripts/session_age_guard.py --threshold-hours 6.0 --project-root "$(pwd)"
+```
+
+If exit 1 (`OVER|...`): STOP. Tell the user verbatim:
+  "Current session has been active for Xh — over the 6h soft cap.
+   /end_of_task is failure-prone in long sessions. Please:
+     1. Run /end_of_day to save state
+     2. Open a fresh chat and re-run /end_of_task
+   Override at your own risk by re-invoking with prefix
+   [no-session-age-guard] /end_of_task"
+
+If exit 0 (`OK|...`): continue to ## When to use.
+
+If the helper is missing OR exits with a non-0/1 code: emit the warning
+`[session-age-guard: helper unavailable; proceeding]` and continue
+(fail-OPEN, mirrors §0 dispatch fail-OPEN per architecture I-01).
+
+Manual override: prefix the user invocation with `[no-session-age-guard]`
+to skip the check entirely. Strip the sentinel before processing.
+
 ## When to use
 
 Only after:
