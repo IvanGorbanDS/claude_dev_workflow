@@ -91,17 +91,22 @@ This skill is never auto-invoked. The user must consciously accept the work.
 
 ## Process
 
-### Step 1: Pre-flight checks
+This skill uses a 3-sub-phase Agent dispatch architecture to limit blast radius per
+call. Interactive prompts are handled inline (parent session) BEFORE any sub-phase
+is dispatched. Sub-phases receive deterministic file-based inputs only.
+
+### Orchestrator pre-flight (inline — parent session handles all interactive prompts)
+
+Execute these steps inline (never dispatch for interactive steps):
+
+**Step 1: Pre-flight checks**
 
 Before touching git, verify everything is clean:
 
-1. **Review status** — resolve the artifact path via `python3 ~/.claude/scripts/path_resolve.py --task <task-name> [--stage <N-or-name>]` (or stage=None for legacy tasks), then look for `<task_dir>/review-*.md`. If exit code 2: display stderr verbatim, fall back to task root, ask user to disambiguate. If no review file exists at the resolved path, STOP and tell the user: "No review found — please run `/review` first." If a review exists, read the latest one and confirm verdict is APPROVED. If not approved, stop and tell the user. (architecture.md and cost-ledger.md ALWAYS at task root per D-03 — see lines below.)
+1. **Review status** — resolve the artifact path via `python3 ~/.claude/scripts/path_resolve.py --task <task-name> [--stage <N-or-name>]` (or stage=None for legacy tasks), then look for `<task_dir>/review-*.md`. If exit code 2: display stderr verbatim, fall back to task root, ask user to disambiguate. If no review file exists at the resolved path, STOP and tell the user: "No review found — please run `/review` first." If a review exists, read the latest one and confirm verdict is APPROVED. If not approved, stop and tell the user. (architecture.md and cost-ledger.md ALWAYS at task root per D-03.)
 2. **Tests pass** — run the test suite one final time. If anything fails, stop.
-3. **No uncommitted changes** — run `git status`. If there are unstaged/uncommitted changes:
-   - Show them to the user
-   - Ask: commit these too, or stash them?
-4. **Branch state** — check if the branch is up to date with the base branch. If behind, rebase/merge and re-run tests.
-5. **No secrets** — quick scan of the diff for passwords, API keys, tokens.
+3. **Branch state** — check if the branch is up to date with the base branch. If behind, rebase/merge and re-run tests.
+4. **No secrets** — quick scan of the diff for passwords, API keys, tokens.
 
 Present a pre-flight summary:
 
@@ -109,207 +114,189 @@ Present a pre-flight summary:
 Pre-flight: end_of_task
 ✅ Review: APPROVED (review-2.md)
 ✅ Tests: 47 passed, 0 failed
-✅ Working tree: clean
 ✅ Branch: feat/refund-flow, up to date with main
 ✅ No secrets detected
 Ready to finalize.
 ```
 
-### Step 2: Commit any remaining changes
+**Step 2: Commit decision (interactive — must resolve before dispatching sub-phases)**
 
-If there are uncommitted changes the user wants to include:
+Run `git status`. If there are uncommitted changes:
+- Show them to the user
+- Ask: **commit or abort?** (no stash option — stash manually then re-invoke if needed)
+- If **commit**: collect a conventional commit message inline.
+- If **abort**: STOP. Tell the user: "Stash manually then re-invoke /end_of_task."
+Capture the answer as `commit_or_abort` (`"commit"` or `"abort"`).
+If no uncommitted changes: set `commit_or_abort = "commit"` (nothing to do) and skip.
 
-- Stage the relevant files (not blanket `git add .`)
-- Write a conventional commit message:
-  ```
-  <type>(<scope>): <description>
-
-  <why this change was made>
-  ```
-- Commit
-
-If everything is already committed, skip this step.
-
-### Step 3: Push
-
-Push the branch to the remote:
-
-```bash
-git push -u origin <branch-name>
-```
-
-If the push fails (e.g., remote rejected, auth issue), report the error and let the user resolve it.
-
-### Step 4: Prompt for lessons learned
+**Step 3: Lessons learned (interactive — capture inline)**
 
 Ask the user:
-
 > "Task complete. Anything that surprised you, or that the workflow should handle differently next time?"
 
-If they share something, append to `.workflow_artifacts/memory/lessons-learned.md`:
+Capture their response as `lessons_text` (may be empty string if nothing to share).
 
-```markdown
-## <date> — <task-name>
-**What happened:** <what the user described>
-**Lesson:** <the reusable takeaway>
-**Applies to:** <relevant skills>
-```
-
-Also auto-capture lessons if:
+Auto-capture lessons if:
 - The critic-revise loop ran more than 3 rounds (what made convergence hard?)
 - The review requested changes (what did /implement miss?)
 - A rollback happened during this task (what went wrong?)
 
-### Step 5: Update session state
+**Step 4: Archive type (interactive — capture inline)**
 
-Update `.workflow_artifacts/memory/sessions/<date>-<task-name>.md`:
-- Set status to `completed`
-- Record the final branch name and commit hash
-- Note any lessons captured
+If the task folder lives directly under `.workflow_artifacts/` (not inside a parent feature folder), ask:
+> "Is the feature `<task-name>` fully complete, or is there more work planned under this folder?"
 
-### Step 6: Cost aggregation
+Capture as `archive_type`: `"feature"` (fully complete) or `"subtask"` or `"none"` (more work planned — do not archive).
 
-Read `.workflow_artifacts/<task-name>/cost-ledger.md`.
+If the task folder is inside a parent feature folder (detected by presence of planning artifacts or stage-* sibling folders in the parent), set `archive_type = "subtask"` without asking.
 
-**If the file doesn't exist:** note "no cost ledger found — cost tracking was not active for this task" and proceed to Step 7.
+**Step 5: Write `eot-preflights.json` — MUST happen BEFORE dispatching any sub-phase**
 
-For each data line in the ledger (skip lines starting with `#` and blank lines), parse the pipe-delimited fields: `<uuid> | <date> | <phase> | <model> | <category> | <notes>`
+Write `.workflow_artifacts/<task-name>/eot-preflights.json` (fixed name — no date stamp):
 
-**Binary check:** Before running ccusage, verify `npx` is available. If it is NOT
-(`command -v npx` returns non-zero, or `npx --version` fails), skip ccusage entirely
-and fall back to cost_from_jsonl.py for ALL ledger UUIDs (see fallback block below).
-
-Run `npx ccusage session -i <UUID> --json` for each UUID, sequentially. Apply a 15-second timeout per call:
-
-```bash
-timeout 15 npx ccusage session -i <UUID> --json
-```
-
-**For tasks with 5 or more sessions**, prefer a single call to reduce overhead:
-
-```bash
-npx ccusage session --json --since <earliest-date-from-ledger>
-```
-
-Then filter the returned sessions against the UUIDs in the ledger.
-
-**Parse the JSON output.** The structure is:
 ```json
-{"sessionId": "...", "totalCost": 1.23, "totalTokens": 123456, "entries": [...]}
+{
+  "task_name": "<task-name>",
+  "task_dir": "<absolute-path-to-task-dir>",
+  "commit_list": ["<file1>", "<file2>"],
+  "commit_message": "<conventional commit message or empty string>",
+  "commit_or_abort": "commit",
+  "lessons_text": "<what the user said, or empty string>",
+  "archive_type": "feature"
+}
 ```
 
-From `entries`, aggregate per-model cost: group entries by the `model` field and sum `costUSD` per model. If all entry-level `costUSD` values are 0 (cached calls), use `totalCost` as the session total and mark model breakdown as "unavailable".
+The orchestrator OVERWRITES any stale file from a prior run. Each `/end_of_task`
+invocation produces exactly one `eot-preflights.json`. Sub-phases MUST NOT
+re-derive or re-timestamp the filename — they read the path given inline.
 
-**If a lookup times out or returns an error**, note "cost unknown" for that phase and continue.
+If `commit_or_abort` is `"abort"`: STOP here. Do not dispatch any sub-phase.
 
-**Fallback gate (path-agnostic):** After ccusage execution completes — whichever of the
-per-UUID loop or the bulk `--since` call was taken — if NO ledger UUID was successfully
-resolved (every per-UUID call returned non-zero, OR the bulk call returned non-zero or an
-empty/unmatched result set), fall back to cost_from_jsonl.py for all ledger UUIDs.
-This catches the "ccusage binary present but completely broken" case (e.g., npm install failure).
-# (Path-agnostic gate: covers per-UUID loop failure AND bulk-call failure — per D-02b rationale.)
-# (Binary-check + all-failed-gate are structurally separate per D-02b — same fallback semantics as cost_snapshot Step 2's single conflated branch.)
+**Step 6: Dispatch Sub-phase A (commit + push)**
 
-**Fallback (fires from either the binary-check branch above or the path-agnostic all-failed gate above):**
-For per-UUID mode (< 5 sessions in ledger):
-  python3 ~/.claude/scripts/cost_from_jsonl.py session -i UUID --json
-For bulk mode (≥ 5 sessions in ledger, mirroring ccusage's bulk path):
-  python3 ~/.claude/scripts/cost_from_jsonl.py session --json --since <earliest-date-from-ledger>
-  Compute earliest-date-from-ledger as the min of column-2 dates across all data lines in
-  cost-ledger.md (the same expression Step 6 already uses for the bulk ccusage call —
-  preserve the existing SKILL.md derivation). Then filter returned results to only the
-  UUIDs present in the ledger.
-Parse the JSON output identically to ccusage output — the shape is identical.
-Before recording the cost breakdown in Step 8, prepend ONE line:
-  [fallback: cost_from_jsonl.py — prices as of <LAST_UPDATED>]
-Read LAST_UPDATED via:
-  python3 -c "from pathlib import Path; import sys; sys.path.insert(0, str(Path.home() / '.claude' / 'scripts')); import cost_from_jsonl; print(cost_from_jsonl.LAST_UPDATED)"
+Spawn an Agent subagent:
+- model: `"sonnet"`
+- description: `"end_of_task Sub-phase A: commit and push"`
+- prompt: |
+    You are Sub-phase A of /end_of_task. Your job: commit remaining changes (if any)
+    and push the branch to remote. Read the hand-off file, execute, report results.
 
-Exit code 2 from cost_from_jsonl.py ("UUID not found") is a per-UUID recoverable failure.
-Treat it the same as ccusage's per-UUID timeout: record cost-unknown for that UUID,
-continue with the rest. Do NOT treat exit 2 as a fallback-level failure.
+    Hand-off file: `<absolute-path-to-task-dir>/eot-preflights.json`
 
-**Aggregate results (hold in memory for Step 8):**
-- Per-phase breakdown: sum `totalCost` by phase field from ledger
-- Per-model breakdown: sum across all sessions grouped by model
-- Task vs off-topic: separate totals for `task` and `off-topic` category entries
-- Grand total
+    Steps:
+    1. Read `eot-preflights.json`. Defensive check: if `commit_or_abort` is `"abort"`,
+       exit immediately with "Orchestrator sent abort — Sub-phase A exiting."
+    2. If `commit_list` is non-empty and `commit_message` is non-empty:
+       - Stage the listed files (`git add <file>` for each, not `git add .`)
+       - Commit with the provided `commit_message`
+    3. Push: `git push -u origin <current-branch-name>`
+       If push fails: report the error clearly; do NOT retry. The user will resolve.
+    4. Run `git rev-parse HEAD` and append `"commit_hash": "<sha>"` to `eot-preflights.json`.
+    5. Report: branch pushed, commit hash, any errors.
 
-### Step 7: Archive the task folder
+    Scope cap: at most ~15 tool uses. If blocked, write what you have to disk and return.
 
-Move the completed task folder into `.workflow_artifacts/finalized/` to keep the project root clean.
+Wait for Sub-phase A result. If it reports a fatal error (push failed, etc.): report to
+the user and stop. Do NOT proceed to Sub-phase B if the push failed.
 
-**Determine the scope:**
+**Step 7: Dispatch Sub-phase B (lessons + session state + cost aggregation)**
 
-1. **Sub-task within a global task/feature** — if the task folder lives inside a parent feature folder (e.g., `.workflow_artifacts/payment-v2-migration/auth-retry/`), move it into `.workflow_artifacts/<parent-feature>/finalized/`:
-   ```
-   .workflow_artifacts/payment-v2-migration/auth-retry/  →  .workflow_artifacts/payment-v2-migration/finalized/auth-retry/
-   ```
+Spawn an Agent subagent:
+- model: `"sonnet"`
+- description: `"end_of_task Sub-phase B: lessons, session state, cost"`
+- prompt: |
+    You are Sub-phase B of /end_of_task. Your jobs: append lessons to lessons-learned.md,
+    update session state to completed, and aggregate task cost. Write cost summary to disk.
 
-2. **Global task/feature completed entirely** — if this is the top-level task folder and all work is done, move the entire folder into `.workflow_artifacts/finalized/`:
-   ```
-   .workflow_artifacts/payment-v2-migration/  →  .workflow_artifacts/finalized/payment-v2-migration/
-   ```
+    Hand-off file: `<absolute-path-to-task-dir>/eot-preflights.json`
+    Cost ledger: `<absolute-path-to-task-dir>/cost-ledger.md`
+    Lessons-learned: `.workflow_artifacts/memory/lessons-learned.md`
+    Session state dir: `.workflow_artifacts/memory/sessions/`
 
-**How to detect automatically:**
+    Steps:
+    1. Read `eot-preflights.json` for `lessons_text` and `task_name`.
+    2. If `lessons_text` is non-empty: append to lessons-learned.md:
+       ```
+       ## <date> — <task_name>
+       **What happened:** <lessons_text>
+       **Lesson:** <reusable takeaway>
+       **Applies to:** <relevant skills>
+       ```
+    3. Update `.workflow_artifacts/memory/sessions/<date>-<task_name>.md`:
+       set status to `completed`, record branch name and commit hash from eot-preflights.json.
+    4. Cost aggregation — read cost-ledger.md and compute:
+       a. Binary check: `command -v npx` — if unavailable, use cost_from_jsonl.py fallback.
+       b. For each UUID in ledger: `timeout 15 npx ccusage session -i <UUID> --json`
+          (or bulk `--since` if ≥ 5 sessions). On all-failed: fallback to cost_from_jsonl.py.
+       c. Aggregate: per-phase totals, per-model totals, grand total.
+    5. Write `.workflow_artifacts/<task_name>/cost-summary.json` (fixed name, overwritten):
+       ```json
+       {
+         "per_phase": {"plan": 1.23, "implement": 0.45, ...},
+         "per_model": {"opus": 1.23, "sonnet": 0.45, "haiku": 0.00},
+         "task_total": 1.68,
+         "off_topic_total": 0.00,
+         "grand_total": 1.68,
+         "fallback_used": false,
+         "fallback_note": ""
+       }
+       ```
+    6. Report: lessons appended (yes/no), session state updated, cost summary written.
 
-1. **Resolve the task folder path** relative to `.workflow_artifacts/`. For example, if the task folder is `.workflow_artifacts/cost-reduction/stage-1a-caching/`, the parent is `.workflow_artifacts/cost-reduction/`.
-2. **Check if the parent directory is a task folder** — look for planning artifacts (`current-plan.md`, `architecture.md`, `review-*.md`, `critic-response-*.md`) or other task subfolders in the parent. If the parent contains these, this is a sub-task within that parent feature.
-3. **Check for stage/phase naming patterns** — if the task folder name matches patterns like `stage-*`, `phase-*`, `part-*`, `step-*`, or `sprint-*`, AND the parent contains at least one other sibling matching a similar pattern, it is a sub-task. Both conditions are required to avoid false positives on unrelated folders.
-4. **If either check (2) or (3) matches**, archive as a sub-task: move to `.workflow_artifacts/<parent>/finalized/<subtask>/`. Do not ask.
-5. **If the task folder is directly under `.workflow_artifacts/`** (no parent task folder detected), ask the user:
-   > "Is the feature `<task-name>` fully complete, or is there more work planned under this folder?"
+    Scope cap: at most ~15 tool uses. If blocked on cost aggregation, write partial
+    data to cost-summary.json and return — partial cost data is better than none.
 
-   If fully complete, move to `.workflow_artifacts/finalized/<task-name>/`. If more work remains, do not archive yet.
+**Step 8: Dispatch Sub-phase C (archive + final report)**
 
-**Steps:**
-```bash
-# Create .workflow_artifacts/finalized/ if it doesn't exist
-mkdir -p <target-finalized-dir>
+Spawn an Agent subagent:
+- model: `"sonnet"`
+- description: `"end_of_task Sub-phase C: archive and report"`
+- prompt: |
+    You are Sub-phase C of /end_of_task. Your jobs: archive the task folder and
+    print the final completion report.
 
-# Move the task folder
-mv <task-folder> <target-finalized-dir>/
-```
+    Hand-off files:
+    - `<absolute-path-to-task-dir>/eot-preflights.json` (for archive_type, task_name)
+    - `<absolute-path-to-task-dir>/cost-summary.json` (read BEFORE the mv — it lives
+      inside the task folder which you are about to move)
+    Task dir: `<absolute-path-to-task-dir>`
 
-**Note:** Only move planning/review artifacts (the task subfolder with `current-plan.md`, `architecture.md`, `review-*.md`, etc.). Never move source code repos — those stay where they are.
+    Steps:
+    1. Read `cost-summary.json` from the task dir (BEFORE any mv).
+    2. Read `eot-preflights.json` for `archive_type` and `task_name`.
+    3. Archive based on `archive_type`:
+       - `"subtask"`: mv task folder into `.workflow_artifacts/<parent>/finalized/<subtask>/`
+       - `"feature"`: mv task folder into `.workflow_artifacts/finalized/<task_name>/`
+       - `"none"`: skip the mv entirely.
+       Create target dir with `mkdir -p` before the mv.
+    4. Print the final report:
+       ```
+       Task finalized: <task_name>
 
-### Step 8: Report
+       Branch: <branch> → pushed to origin
+       Review: APPROVED
+       Archived: <task-folder> → <finalized-path>   (or "not archived — more work planned")
 
-Tell the user:
+       Cost breakdown:
+         Phase          | Cost
+         ---------------|--------
+         plan           | $X.XX
+         implement      | $X.XX
+         ...
+         ---------------|--------
+         Task total     | $X.XX
+         Grand total    | $X.XX
 
-```
-Task finalized: <task-name>
+       Model breakdown: opus: $X.XX | sonnet: $X.XX | haiku: $X.XX
+       <fallback note if applicable>
 
-Branch: feat/refund-flow → pushed to origin
-Commits: <N> commits
-Tests: all passing
-Review: APPROVED
-Archived: <task-folder> → <finalized-path>
+       Lessons captured: <yes/no>
+       Session marked as completed.
 
-Cost breakdown:
-  Phase          | Cost
-  ---------------|--------
-  plan           | $X.XX
-  critic (xN)    | $X.XX
-  implement      | $X.XX
-  review         | $X.XX
-  other          | $X.XX
-  ---------------|--------
-  Task total     | $X.XX
-  Off-topic      | $X.XX
-  Grand total    | $X.XX
+       Next: when you're ready, create a PR from the branch.
+       ```
 
-Model breakdown: opus: $X.XX | sonnet: $X.XX | haiku: $X.XX
-
-Lessons captured: <yes/no>
-Session marked as completed.
-
-Next: when you're ready, create a PR from the branch.
-```
-
-If no cost ledger was found or all lookups failed, show: `Cost tracking: not available (ledger missing or all lookups failed)`
-
-Clean and done.
+    Scope cap: at most ~15 tool uses. If blocked, write what you have to disk and return.
 
 ## Important behaviors
 
