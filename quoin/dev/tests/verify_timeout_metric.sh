@@ -26,7 +26,7 @@ fi
 
 # Count files (not occurrences) with at least one 'Stream idle timeout' in the window.
 # find -mtime -N includes files modified in the last N days.
-COUNT=$(find "$PROJ_DIR" -name "*.jsonl" -mtime "-${SINCE_DAYS}" -exec grep -l 'Stream idle timeout' {} \; 2>/dev/null | wc -l | tr -d ' ')
+COUNT=$(find "$PROJ_DIR" -maxdepth 1 -name "*.jsonl" -mtime "-${SINCE_DAYS}" -exec grep -l 'Stream idle timeout' {} \; 2>/dev/null | wc -l | tr -d ' ')
 
 echo "Stream-idle timeouts in last ${SINCE_DAYS}d: ${COUNT} file(s)"
 echo "Target: ≤ 1 per ${SINCE_DAYS}-day window"
@@ -42,7 +42,7 @@ if [ "$COUNT" -gt 1 ]; then
   echo "FAIL: target is ≤ 1 per ${SINCE_DAYS}-day window (found ${COUNT})"
   echo ""
   echo "Incident details (files containing timeouts, most recent first):"
-  find "$PROJ_DIR" -name "*.jsonl" -mtime "-${SINCE_DAYS}" -exec grep -l 'Stream idle timeout' {} \; 2>/dev/null \
+  find "$PROJ_DIR" -maxdepth 1 -name "*.jsonl" -mtime "-${SINCE_DAYS}" -exec grep -l 'Stream idle timeout' {} \; 2>/dev/null \
     | xargs ls -lt 2>/dev/null \
     | head -10
   echo ""

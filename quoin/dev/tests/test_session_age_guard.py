@@ -176,9 +176,36 @@ class TestSessionAgeGuard:
             f"Expected st_ctime (2000.0) on Linux-like stat, got {result}"
         )
 
+    def test_project_hash_special_chars(self):
+        """_project_hash replaces ALL non-[A-Za-z0-9-] chars with -.
+
+        Covers the realistic GoogleDrive-style path that contains dots, @, spaces,
+        and underscores — all of which the old '/' → '-' logic silently ignored.
+        """
+        import importlib.util
+
+        spec = importlib.util.spec_from_file_location("session_age_guard", SCRIPT)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+
+        path = Path("/Users/x/GoogleDrive-ivan.gorban@gmail.com/My Drive/Project_one")
+        result = module._project_hash(path)
+
+        # All non-[A-Za-z0-9-] chars should become '-'
+        # Specifically: '.', '@', ' ', '_' must all be replaced
+        assert "." not in result, f"Dot not replaced in: {result}"
+        assert "@" not in result, f"@ not replaced in: {result}"
+        assert " " not in result, f"Space not replaced in: {result}"
+        assert "_" not in result, f"Underscore not replaced in: {result}"
+        # Sanity: result should only contain [A-Za-z0-9-]
+        import re
+        assert re.match(r'^[A-Za-z0-9-]+$', result), (
+            f"Result contains unexpected chars: {result}"
+        )
+
     def test_stdlib_only(self):
         """AST scan: script must not import anything outside the allowed stdlib set."""
-        allowed = {"pathlib", "sys", "argparse", "os", "time", "json"}
+        allowed = {"pathlib", "sys", "argparse", "os", "time", "json", "re"}
 
         source = SCRIPT.read_text()
         tree = ast.parse(source)

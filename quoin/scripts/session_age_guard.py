@@ -16,16 +16,17 @@ Stdout: single line: <status>|<age_hours>|<jsonl_path>
 Stderr: human-readable diagnostic
 
 Design decisions:
-  - Stdlib-only: pathlib, sys, argparse, os, time (no external deps)
+  - Stdlib-only: pathlib, sys, argparse, os, time, re (no external deps)
   - Prefer st_birthtime (macOS APFS true creation time) over st_ctime
     (inode-change time on macOS — bumped by chmod/rename, not birth)
   - Fail-OPEN: missing project dir → exit 0, not 1
-  - Project hash mirrors CLAUDE.md "UUID acquisition" rule:
-    replace / with - and prepend - to the absolute path
+  - Project hash mirrors Claude harness behavior:
+    replace ALL non-[A-Za-z0-9-] chars with - (not just /)
 """
 
 import argparse
 import os
+import re
 import sys
 import time
 from pathlib import Path
@@ -34,19 +35,12 @@ from pathlib import Path
 def _project_hash(project_root: Path) -> str:
     """Convert an absolute path to a Claude project hash.
 
-    Mirrors the CLAUDE.md "UUID acquisition" rule:
-    project path with every / replaced by -, then prepend -.
-    E.g. /Users/foo/bar -> -Users-foo-bar
+    Mirrors the Claude harness behavior: every character outside [A-Za-z0-9-]
+    is replaced with -.  This correctly handles paths containing spaces, dots,
+    @-signs, underscores, etc. — which a simple "/" → "-" replacement misses.
+    E.g. /Users/x/My Drive/Proj_one → -Users-x-My-Drive-Proj-one
     """
-    # Normalize to string without trailing slash
-    path_str = str(project_root).rstrip("/")
-    # Replace every / with -
-    hashed = path_str.replace("/", "-")
-    # The result already starts with - because absolute paths start with /
-    # but if somehow it doesn't, prepend -
-    if not hashed.startswith("-"):
-        hashed = "-" + hashed
-    return hashed
+    return re.sub(r'[^A-Za-z0-9-]', '-', str(project_root).rstrip("/"))
 
 
 def _file_birth_time(stat_result) -> float:
