@@ -225,10 +225,20 @@ Spawn an Agent subagent:
     3. Update `.workflow_artifacts/memory/sessions/<date>-<task_name>.md`:
        set status to `completed`, record branch name and commit hash from eot-preflights.json.
     4. Cost aggregation — read cost-ledger.md and compute:
-       a. Binary check: `command -v npx` — if unavailable, use cost_from_jsonl.py fallback.
-       b. For each UUID in ledger: `timeout 15 npx ccusage session -i <UUID> --json`
-          (or bulk `--since` if ≥ 5 sessions). On all-failed: fallback to cost_from_jsonl.py.
-       c. Aggregate: per-phase totals, per-model totals, grand total.
+       a. Binary check: `command -v npx` — if unavailable, skip ccusage and use
+          cost_from_jsonl.py fallback for ALL UUIDs (see below).
+       b. For each UUID in ledger (<5 sessions): `timeout 15 npx ccusage session -i <UUID> --json`
+          For ≥5 sessions (bulk): `npx ccusage session --json --since <earliest-date-from-ledger>`
+          then filter returned sessions against the UUIDs in the ledger.
+          Path-agnostic all-failed gate: whichever of the per-UUID loop or bulk call was taken,
+          if NO ledger UUID was successfully resolved, fall back to cost_from_jsonl.py for all UUIDs.
+       c. Fallback (from binary-check branch OR all-failed gate):
+          Per-UUID mode: `python3 ~/.claude/scripts/cost_from_jsonl.py session -i UUID --json`
+          Bulk mode: `python3 ~/.claude/scripts/cost_from_jsonl.py session --json --since <date>`
+          Filter results to only UUIDs in the ledger. Parse output identically to ccusage.
+          Prepend: `[fallback: cost_from_jsonl.py — prices as of <LAST_UPDATED>]`
+          Read LAST_UPDATED via: `python3 -c "from pathlib import Path; import sys; sys.path.insert(0, str(Path.home() / '.claude' / 'scripts')); import cost_from_jsonl; print(cost_from_jsonl.LAST_UPDATED)"`
+       d. Aggregate: per-phase totals, per-model totals, grand total.
     5. Write `.workflow_artifacts/<task_name>/cost-summary.json` (fixed name, overwritten):
        ```json
        {
