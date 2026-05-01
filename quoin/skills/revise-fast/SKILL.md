@@ -67,6 +67,27 @@ This skill may run in a fresh session. On start:
 
 This skill runs on Sonnet for cost efficiency. It is a fast variant of `/revise` (Opus). The instructions and output format are identical — only the model differs.
 
+## Scope cap (read this before doing any work)
+
+Previous /revise subagent runs timed out mid-stream (Apr 29 09:31 incident —
+`Stream idle timeout`). The Anthropic API kills streaming children when a
+single inference step stalls long enough; large revision bodies raise that risk.
+
+Hard cap: complete at most ~30-40 tool uses of revision work in this dispatch.
+If the critic issues you've been given require more:
+  1. Address issues I-01 through I-NN only (the first ~half by complexity).
+  2. Mark deferred critic issues clearly in `## Revision history` with a note
+     `[deferred to next /revise round]`.
+  3. The orchestrator will spawn another /revise round for the remaining issues.
+  4. Commit what you have so nothing is lost before returning.
+
+NOTE: If you are running standalone (not via /thorough_plan), there is NO
+automatic retry on stream-idle timeout. Commit what you have; the user
+re-invokes.
+
+Do NOT silently keep going past 40 tool uses. Stream-idle timeouts produce
+partial responses that the parent cannot reliably recover.
+
 ## Process
 
 ### 1. Read the inputs

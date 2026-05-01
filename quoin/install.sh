@@ -151,7 +151,7 @@ success "QUICKSTART deployed to ~/.claude/QUICKSTART.md"
 
 # v3 scripts (NEW — separate destination directory ~/.claude/scripts/)
 mkdir -p "$USER_SCRIPTS_DIR"
-for script_file in validate_artifact.py path_resolve.py cost_from_jsonl.py classify_critic_issues.py build_preambles.py; do
+for script_file in validate_artifact.py path_resolve.py cost_from_jsonl.py classify_critic_issues.py build_preambles.py session_age_guard.py; do
   SCRIPT_SRC="$SCRIPT_DIR/scripts/$script_file"
   SCRIPT_DST="$USER_SCRIPTS_DIR/$script_file"
   if [ ! -f "$SCRIPT_SRC" ]; then

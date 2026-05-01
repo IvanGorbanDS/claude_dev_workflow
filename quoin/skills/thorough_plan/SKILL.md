@@ -262,4 +262,22 @@ After the gate, inform the user:
 - **Critic MUST be a fresh session.** This is non-negotiable. Same-agent critique is biased and weak.
 - **Keep the user informed.** Brief status updates between rounds. Don't go silent for 10 minutes.
 - **Detect loops early.** After each critic round, run `classify_critic_issues.py` (without `--enable-bailout`) and compare the dominant `surface_family` of structural issues against the previous round. If the same class recurs, escalate to the user — ask whether to continue revising, add a canary task, or accept the plan as-is.
+- **Stream-idle timeout recovery (orchestrator-only).** If a spawned subagent
+  (`/plan`, `/critic`, `/revise`, `/revise-fast`) returns a tool_result whose
+  content contains `Stream idle timeout - partial response received`:
+  do NOT use SendMessage to resume the dead child (this also
+  times out — Apr 28 10:19 incident). Instead, re-dispatch a
+  FRESH narrower child:
+    a. Halve the scope: if the round was processing N critic
+       issues, dispatch a new /revise(-fast) targeting the first
+       ⌈N/2⌉ issues only; queue the rest for a follow-up dispatch
+       in the same round counter.
+    b. Pass the partial output (if any artifact was written to
+       disk) to the new child as additional context.
+    c. Cap retries at 2 per round; on a third stream-idle
+       timeout, escalate to the user with the partial artifact
+       and ask whether to proceed to /implement with a flagged
+       plan, or stop.
+  NOTE: This retry only fires for subagents dispatched BY /thorough_plan.
+  Standalone /revise and /plan invocations have no automatic retry.
 - **Pass context explicitly.** Each agent starts with limited knowledge. Give them the file paths and repo locations they need.

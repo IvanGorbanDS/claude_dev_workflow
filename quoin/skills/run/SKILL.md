@@ -52,6 +52,30 @@ After creating the task folder, initialize the cost ledger:
    <session-uuid> | <YYYY-MM-DD> | run-orchestrator | opus | task | /run pipeline start
    ```
 
+### Pre-flight: session-age guard
+
+/run pipelines span every phase and are even more failure-prone than /end_of_task
+when run from a long-lived session. Before starting the pipeline, check session age:
+
+```
+python3 ~/.claude/scripts/session_age_guard.py --threshold-hours 6.0 --project-root "$(pwd)"
+```
+
+If exit 1 (`OVER|...`): STOP. Tell the user verbatim:
+  "Current session has been active for Xh — over the 6h soft cap.
+   /run pipelines are even more failure-prone than /end_of_task because they
+   span every phase. Please open a fresh chat to start a long pipeline.
+   Override at your own risk by re-invoking with prefix [no-session-age-guard] /run"
+
+If exit 0 (`OK|...`): continue to ### Check git state.
+
+If the helper is missing OR exits with a non-0/1 code: emit the warning
+`[session-age-guard: helper unavailable; proceeding]` and continue
+(fail-OPEN, mirrors §0 dispatch fail-OPEN per architecture I-01).
+
+Manual override: prefix the user invocation with `[no-session-age-guard]`
+to skip the check entirely. Strip the sentinel before processing.
+
 ### Check git state
 
 Before any work begins:
@@ -279,6 +303,23 @@ These are rough estimates based on typical usage. Actual costs are computed by `
 - **Gate failure:** present failures, offer to fix (re-run the phase) or stop
 - **Git errors:** report and let the user resolve
 - **Context exhaustion:** save state, instruct user to resume with `/run --resume <task-name>`
+- **Stream-idle timeout recovery (orchestrator-only).** If a spawned subagent
+  returns a tool_result whose content contains `Stream idle timeout - partial response received`:
+  do NOT use SendMessage to resume the dead child (this also
+  times out — Apr 28 10:19 incident). Instead, re-dispatch a
+  FRESH narrower child:
+    a. Halve the scope: if the round was processing N critic
+       issues, dispatch a new /revise(-fast) targeting the first
+       ⌈N/2⌉ issues only; queue the rest for a follow-up dispatch
+       in the same round counter.
+    b. Pass the partial output (if any artifact was written to
+       disk) to the new child as additional context.
+    c. Cap retries at 2 per round; on a third stream-idle
+       timeout, escalate to the user with the partial artifact
+       and ask whether to proceed to the next phase with a flagged
+       artifact, or stop.
+  NOTE: This retry only fires for subagents dispatched BY /run.
+  Standalone invocations of sub-skills have no automatic retry.
 
 ## Gate boundaries reference
 
