@@ -47,6 +47,31 @@ Fail-graceful path (per architecture I-01):
 
 Otherwise (already at or below declared tier, OR prompt has [no-redispatch] sentinel, OR dispatch unavailable): proceed to §1 (skill body).
 
+## §0a Scope cap (read this before doing any work)
+
+Previous /implement subagent runs timed out after 64 tool uses
+(Apr 28 10:14 incident — `Stream idle timeout`). The Anthropic API
+kills streaming children when a single inference step stalls long
+enough; long single-shot dispatches of /implement raise that risk.
+
+Hard cap: complete at most ~30-40 tool uses (Read/Edit/Write/Bash) of
+work in this dispatch. If the plan you've been given requires more:
+  1. Implement T-NN through T-MM only.
+  2. Mark remaining tasks as `⏳` in current-plan.md with a note
+     `[continue in fresh /implement dispatch]`.
+  3. Tell the orchestrator (or the user, if standalone) that you've
+     hit the soft cap and that /thorough_plan or /run should
+     re-dispatch a fresh narrow child for the remaining work.
+  4. Commit any in-progress files first so nothing is lost.
+
+NOTE: If you are running standalone (not via /run or /thorough_plan),
+there is NO automatic retry on stream-idle timeout. Make sure to commit
+all in-progress work before reaching the cap — the user will need to
+re-invoke manually.
+
+Do NOT silently keep going past 40 tool uses. Stream-idle timeouts
+produce partial responses that the parent cannot reliably recover.
+
 ## Explicit invocation only
 
 This skill MUST be explicitly invoked by the user typing `/implement`. No other skill may auto-invoke it. If you are an orchestrator or another skill and you think implementation should start — STOP and tell the user to run `/implement` themselves. This is a hard rule.
