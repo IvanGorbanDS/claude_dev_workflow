@@ -7,7 +7,7 @@
 #   97% — in block range (>= BLOCK_BPS)
 #
 # Reads constants from env (same defaults as hooks/_lib.sh):
-#   QUOIN_BYTES_PER_TOKEN  (default 3.5)
+#   QUOIN_BYTES_PER_TOKEN  (default 8.0)
 #   QUOIN_EFFECTIVE_CONTEXT_LIMIT  (default 150000)
 #
 # Output: quoin/dev/tests/fixtures/hooks/transcript_{70,88,97}pct.jsonl
@@ -17,7 +17,7 @@
 #
 # Usage: sh quoin/dev/tests/build_hook_fixtures.sh
 
-BPT=${QUOIN_BYTES_PER_TOKEN:-3.5}
+BPT=${QUOIN_BYTES_PER_TOKEN:-8.0}
 LIMIT=${QUOIN_EFFECTIVE_CONTEXT_LIMIT:-150000}
 
 FIXTURES_DIR="$(cd "$(dirname "$0")/fixtures/hooks" 2>/dev/null && pwd)"
@@ -29,7 +29,7 @@ fi
 
 # Compute target byte size for a given percent (integer, e.g., 70 for 70%)
 # target_bytes = (pct / 100) * BPT * LIMIT
-# We use awk for arithmetic (BPT may be a decimal like "3.5")
+# We use awk for arithmetic (BPT may be a decimal like "8.0")
 compute_target_bytes() {
   local pct="$1"
   awk -v p="$pct" -v bpt="$BPT" -v lim="$LIMIT" \

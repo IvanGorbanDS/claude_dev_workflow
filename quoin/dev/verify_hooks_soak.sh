@@ -234,23 +234,23 @@ if [ ! -f "$LIB" ]; then
 else
   TMP_TRANSCRIPT=$(mktemp /tmp/quoin-soak-lib.XXXXXX)
 
-  # Write exactly 525000 bytes → at BPT=3.5, LIMIT=150000 → 525000/3.5/150000 = 1.0 = 10000 bps
-  python3 -c "import sys; sys.stdout.buffer.write(b'x' * 525000)" > "$TMP_TRANSCRIPT" 2>/dev/null || \
-    dd if=/dev/zero bs=1 count=525000 > "$TMP_TRANSCRIPT" 2>/dev/null || true
+  # Write exactly 1200000 bytes → at BPT=8.0, LIMIT=150000 → 1200000/8.0/150000 = 1.0 = 10000 bps
+  python3 -c "import sys; sys.stdout.buffer.write(b'x' * 1200000)" > "$TMP_TRANSCRIPT" 2>/dev/null || \
+    dd if=/dev/zero bs=1 count=1200000 > "$TMP_TRANSCRIPT" 2>/dev/null || true
 
   actual_bytes=$(wc -c < "$TMP_TRANSCRIPT" | awk '{print $1}')
-  if [ "$actual_bytes" -ge 524000 ]; then
+  if [ "$actual_bytes" -ge 1199000 ]; then
     # Source lib and call compute_utilization
     util=$(sh -c ". $LIB && read_constants && compute_utilization $TMP_TRANSCRIPT" 2>/dev/null) || util=""
     if [ -n "$util" ] && [ "$util" -ge 9900 ] && [ "$util" -le 10000 ]; then
-      pass "compute_utilization 525000-byte transcript → $util bps (expected ~10000)"
+      pass "compute_utilization 1200000-byte transcript → $util bps (expected ~10000)"
     elif [ -n "$util" ]; then
-      warn "compute_utilization 525000-byte transcript → $util bps (expected ~10000; may differ if QUOIN_* env overrides active)"
+      warn "compute_utilization 1200000-byte transcript → $util bps (expected ~10000; may differ if QUOIN_* env overrides active)"
     else
-      fail "compute_utilization returned empty for 525000-byte transcript"
+      fail "compute_utilization returned empty for 1200000-byte transcript"
     fi
   else
-    warn "Could not create 525000-byte fixture (got ${actual_bytes} bytes) — skipping arithmetic check"
+    warn "Could not create 1200000-byte fixture (got ${actual_bytes} bytes) — skipping arithmetic check"
   fi
 
   rm -f "$TMP_TRANSCRIPT"

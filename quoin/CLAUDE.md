@@ -501,7 +501,7 @@ Hook scripts read these values at runtime via `${QUOIN_*:-default}` parameter ex
 
 | Constant | Default | Env var override | Notes |
 |----------|---------|-----------------|-------|
-| `BYTES_PER_TOKEN_CONSTANT` | `3.5` | `QUOIN_BYTES_PER_TOKEN` | Bytes per token for byte-count utilization estimate (V-03 calibrated) |
+| `BYTES_PER_TOKEN_CONSTANT` | `8.0` | `QUOIN_BYTES_PER_TOKEN` | Bytes per token for byte-count utilization estimate (V-03 calibrated) |
 | `EFFECTIVE_CONTEXT_LIMIT` | `150000` | `QUOIN_EFFECTIVE_CONTEXT_LIMIT` | Effective token limit used as 100% denominator |
 | `STOP_THRESHOLD_BPS` | `8500` | `QUOIN_STOP_BPS` | Advisory threshold in basis-points (8500 = 85.00%) |
 | `BLOCK_THRESHOLD_BPS` | `9500` | `QUOIN_BLOCK_BPS` | Block threshold in basis-points (9500 = 95.00%) |
