@@ -8,6 +8,22 @@ model: opus
 
 This skill orchestrates the planning convergence loop by invoking sub-skills — `/plan`, `/critic`, and `/revise` (or `/revise-fast`) — based on mode and round. See "Model selection per round" for details. It does not do the planning, critiquing, or revising itself — it coordinates the agents that do.
 
+## §0c Pidfile lifecycle
+
+This skill is Opus-tier (no §0 dispatch block). §0c is the only §0-class block in this file — it is both first and last. **Per-round variant:** the actual pidfile acquire/release calls wrap each plan/critic/revise subagent dispatch, not the overall skill entry. This block is a pointer comment.
+
+For each round dispatch (plan, critic, revise), wrap with:
+```
+. ~/.claude/scripts/pidfile_helpers.sh && pidfile_acquire thorough-plan-round-N
+# ... subagent dispatch ...
+pidfile_release thorough-plan-round-N
+```
+(N is the current round number, interpolated at runtime.)
+
+If the helper is missing or fails: emit one-line warning `[quoin-S-2: pidfile helpers unavailable; proceeding without lifecycle protection]` and continue (fail-OPEN).
+
+Purpose: lets `precompact.sh` hook know a `/thorough_plan` round is in progress.
+
 ## Session bootstrap
 
 On start:

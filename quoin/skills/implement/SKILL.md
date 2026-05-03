@@ -72,6 +72,28 @@ re-invoke manually.
 Do NOT silently keep going past 40 tool uses. Stream-idle timeouts
 produce partial responses that the parent cannot reliably recover.
 
+## §0c Pidfile lifecycle (FIRST STEP after §0 dispatch)
+
+At entry — immediately after §0a scope cap is read:
+
+```
+. ~/.claude/scripts/pidfile_helpers.sh && pidfile_acquire implement
+```
+
+If the script is missing or fails: emit one-line warning `[quoin-S-2: pidfile helpers unavailable; proceeding without lifecycle protection]` and continue without abort (fail-OPEN).
+
+At exit — call from every completion path AND every error/abort path:
+```
+pidfile_release implement
+```
+
+Use a trap when the skill body involves bash-driven subagents:
+```
+trap 'pidfile_release implement' EXIT
+```
+
+Purpose: lets `precompact.sh` hook know an `/implement` session is active (for escalation from "block with warning" to "block with confidence").
+
 ## Explicit invocation only
 
 This skill MUST be explicitly invoked by the user typing `/implement`. No other skill may auto-invoke it. If you are an orchestrator or another skill and you think implementation should start — STOP and tell the user to run `/implement` themselves. This is a hard rule.
