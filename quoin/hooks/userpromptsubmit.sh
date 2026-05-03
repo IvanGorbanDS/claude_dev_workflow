@@ -20,11 +20,14 @@ STDIN=$(cat)
 prompt=$(printf '%s' "$STDIN" | jq -r '.prompt // empty' 2>/dev/null) || exit 0
 
 # Strip ALL leading whitespace (including newlines, carriage returns, tabs)
-# then extract first whitespace-delimited token (the command token)
-cmd=$(printf '%s' "$prompt" | sed -E 's/^[[:space:]]+//' | awk '{print $1}')
+# then extract first whitespace-delimited token (the command token).
+# NOTE: sed '^' matches line-by-line; a leading newline creates an empty first
+# line that `^[[:space:]]+` cannot strip. tr converts newlines/CRs to spaces
+# first so the whole prompt is a single-line string before sed+awk processing.
+cmd=$(printf '%s' "$prompt" | tr '\n\r' '  ' | sed -E 's/^[[:space:]]+//' | awk '{print $1}')
 
 # Extract second token for /checkpoint --purge discrimination
-arg2=$(printf '%s' "$prompt" | sed -E 's/^[[:space:]]+//' | awk '{print $2}')
+arg2=$(printf '%s' "$prompt" | tr '\n\r' '  ' | sed -E 's/^[[:space:]]+//' | awk '{print $2}')
 
 # Exact-token match — exempt-list per quoin/CLAUDE.md ### Hooks deployed by quoin
 case "$cmd" in

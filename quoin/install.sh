@@ -313,40 +313,32 @@ TODOEOF
   local HOOKS_DST_REAL="$HOME/.claude/hooks"
 
   # Step 5: Merge hook stanzas via pinned jq queries
-  # Uniqueness key: (command, matcher) PAIR — preserves user-defined hooks under different paths
+  # Uniqueness key: (matcher, script-filename) — removes stale quoin entries at old paths,
+  # preserves user-defined hooks whose command path ends with a different script filename.
+  # Strategy: for each quoin script, filter out entries for the same matcher whose hook
+  # command endswith the quoin script filename (handles path changes across installs),
+  # then append the canonical entry. User hooks with different filenames are preserved.
   local NEW_FILE="${WORK_FILE}.new"
 
   # UserPromptSubmit / *
-  jq --arg cmd "$HOOKS_DST_REAL/userpromptsubmit.sh" \
-    'if .hooks.UserPromptSubmit then
-       .hooks.UserPromptSubmit = ([.hooks.UserPromptSubmit[] | select(.matcher != "*" or (.hooks[]?.command != $cmd and (.hooks | map(.command) | any(. == $cmd) | not)))] + [{"matcher": "*", "hooks": [{"type": "command", "command": $cmd, "timeout": 5}]}])
-     else
-       .hooks = (.hooks // {}) | .hooks.UserPromptSubmit = [{"matcher": "*", "hooks": [{"type": "command", "command": $cmd, "timeout": 5}]}]
-     end' "$WORK_FILE" > "$NEW_FILE" && mv "$NEW_FILE" "$WORK_FILE"
+  jq --arg cmd "$HOOKS_DST_REAL/userpromptsubmit.sh" --arg matcher "*" --arg scriptname "userpromptsubmit.sh" \
+    '.hooks.UserPromptSubmit = ([(.hooks.UserPromptSubmit // [])[] | select(.matcher != $matcher or ([ .hooks[]?.command | select(endswith($scriptname)) ] | length == 0))] + [{"matcher": $matcher, "hooks": [{"type": "command", "command": $cmd, "timeout": 5}]}])' \
+    "$WORK_FILE" > "$NEW_FILE" && mv "$NEW_FILE" "$WORK_FILE"
 
   # PreCompact / auto
-  jq --arg cmd "$HOOKS_DST_REAL/precompact.sh" \
-    'if .hooks.PreCompact then
-       .hooks.PreCompact = ([.hooks.PreCompact[] | select(.matcher != "auto" or (.hooks[]?.command != $cmd and (.hooks | map(.command) | any(. == $cmd) | not)))] + [{"matcher": "auto", "hooks": [{"type": "command", "command": $cmd, "timeout": 10}]}])
-     else
-       .hooks = (.hooks // {}) | .hooks.PreCompact = [{"matcher": "auto", "hooks": [{"type": "command", "command": $cmd, "timeout": 10}]}]
-     end' "$WORK_FILE" > "$NEW_FILE" && mv "$NEW_FILE" "$WORK_FILE"
+  jq --arg cmd "$HOOKS_DST_REAL/precompact.sh" --arg matcher "auto" --arg scriptname "precompact.sh" \
+    '.hooks.PreCompact = ([(.hooks.PreCompact // [])[] | select(.matcher != $matcher or ([ .hooks[]?.command | select(endswith($scriptname)) ] | length == 0))] + [{"matcher": $matcher, "hooks": [{"type": "command", "command": $cmd, "timeout": 10}]}])' \
+    "$WORK_FILE" > "$NEW_FILE" && mv "$NEW_FILE" "$WORK_FILE"
 
   # SessionStart / startup
-  jq --arg cmd "$HOOKS_DST_REAL/sessionstart.sh" \
-    'if .hooks.SessionStart then
-       .hooks.SessionStart = ([.hooks.SessionStart[] | select(.matcher != "startup" or (.hooks[]?.command != $cmd and (.hooks | map(.command) | any(. == $cmd) | not)))] + [{"matcher": "startup", "hooks": [{"type": "command", "command": $cmd, "timeout": 5}]}])
-     else
-       .hooks = (.hooks // {}) | .hooks.SessionStart = [{"matcher": "startup", "hooks": [{"type": "command", "command": $cmd, "timeout": 5}]}]
-     end' "$WORK_FILE" > "$NEW_FILE" && mv "$NEW_FILE" "$WORK_FILE"
+  jq --arg cmd "$HOOKS_DST_REAL/sessionstart.sh" --arg matcher "startup" --arg scriptname "sessionstart.sh" \
+    '.hooks.SessionStart = ([(.hooks.SessionStart // [])[] | select(.matcher != $matcher or ([ .hooks[]?.command | select(endswith($scriptname)) ] | length == 0))] + [{"matcher": $matcher, "hooks": [{"type": "command", "command": $cmd, "timeout": 5}]}])' \
+    "$WORK_FILE" > "$NEW_FILE" && mv "$NEW_FILE" "$WORK_FILE"
 
   # SessionStart / resume
-  jq --arg cmd "$HOOKS_DST_REAL/sessionstart.sh" \
-    'if .hooks.SessionStart then
-       .hooks.SessionStart = ([.hooks.SessionStart[] | select(.matcher != "resume" or (.hooks[]?.command != $cmd and (.hooks | map(.command) | any(. == $cmd) | not)))] + [{"matcher": "resume", "hooks": [{"type": "command", "command": $cmd, "timeout": 5}]}])
-     else
-       .hooks = (.hooks // {}) | .hooks.SessionStart = [{"matcher": "resume", "hooks": [{"type": "command", "command": $cmd, "timeout": 5}]}]
-     end' "$WORK_FILE" > "$NEW_FILE" && mv "$NEW_FILE" "$WORK_FILE"
+  jq --arg cmd "$HOOKS_DST_REAL/sessionstart.sh" --arg matcher "resume" --arg scriptname "sessionstart.sh" \
+    '.hooks.SessionStart = ([(.hooks.SessionStart // [])[] | select(.matcher != $matcher or ([ .hooks[]?.command | select(endswith($scriptname)) ] | length == 0))] + [{"matcher": $matcher, "hooks": [{"type": "command", "command": $cmd, "timeout": 5}]}])' \
+    "$WORK_FILE" > "$NEW_FILE" && mv "$NEW_FILE" "$WORK_FILE"
 
   # Step 6: Validate result
   if ! jq empty < "$WORK_FILE" 2>/dev/null; then
