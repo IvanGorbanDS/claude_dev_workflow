@@ -32,10 +32,12 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # ── Argument parsing ──
 DEV_MODE=0
+DRY_RUN=0
 for arg in "$@"; do
   case "$arg" in
     --dev) DEV_MODE=1 ;;
-    -h|--help) echo "Usage: bash install.sh [--dev]"; exit 0 ;;
+    --dry-run) DRY_RUN=1 ;;
+    -h|--help) echo "Usage: bash install.sh [--dev] [--dry-run]"; exit 0 ;;
     *) warn "Unknown arg: $arg (ignored)" ;;
   esac
 done
@@ -151,7 +153,7 @@ success "QUICKSTART deployed to ~/.claude/QUICKSTART.md"
 
 # v3 scripts (NEW — separate destination directory ~/.claude/scripts/)
 mkdir -p "$USER_SCRIPTS_DIR"
-for script_file in validate_artifact.py path_resolve.py cost_from_jsonl.py classify_critic_issues.py build_preambles.py session_age_guard.py; do
+for script_file in validate_artifact.py path_resolve.py cost_from_jsonl.py classify_critic_issues.py build_preambles.py session_age_guard.py pidfile_helpers.sh; do
   SCRIPT_SRC="$SCRIPT_DIR/scripts/$script_file"
   SCRIPT_DST="$USER_SCRIPTS_DIR/$script_file"
   if [ ! -f "$SCRIPT_SRC" ]; then
@@ -195,6 +197,183 @@ if [ "$DEV_MODE" -eq 1 ]; then
     warn "pip3 not found — install pyyaml + pytest manually for dev tests"
   fi
 fi
+
+# ── Step 2d: Deploy hooks to ~/.claude/hooks/ and merge settings.json ──
+header "Step 2d: Deploying hooks..."
+
+install_hooks() {
+  local SETTINGS_FILE="$HOME/.claude/settings.json"
+  local HOOKS_SRC_DIR="$SCRIPT_DIR/hooks"
+  local HOOKS_DST_DIR="$HOME/.claude/hooks"
+
+  # Dry-run mode: use a temp copy for all operations; never touch live files
+  local DRY_RUN_TMP=""
+  if [ "$DRY_RUN" -eq 1 ]; then
+    DRY_RUN_TMP=$(mktemp -d)
+    local WORK_SETTINGS="$DRY_RUN_TMP/settings.json"
+    if [ -f "$SETTINGS_FILE" ]; then
+      cp "$SETTINGS_FILE" "$WORK_SETTINGS"
+    else
+      printf '{}' > "$WORK_SETTINGS"
+    fi
+  fi
+
+  # Step 0: jq check
+  if ! command -v jq > /dev/null 2>&1; then
+    local TODO_FILE
+    if [ "$DRY_RUN" -eq 1 ]; then
+      TODO_FILE="$DRY_RUN_TMP/HOOK_MERGE_TODO.md"
+    else
+      TODO_FILE="$HOME/.claude/HOOK_MERGE_TODO.md"
+    fi
+    cat > "$TODO_FILE" << 'TODOEOF'
+# Hook Merge TODO — quoin install.sh
+
+jq was not found on PATH at install time. The following four stanzas must be
+merged manually into ~/.claude/settings.json under the "hooks" key:
+
+## UserPromptSubmit (matcher: *)
+```json
+{
+  "matcher": "*",
+  "hooks": [{"type": "command", "command": "~/.claude/hooks/userpromptsubmit.sh", "timeout": 5}]
+}
+```
+
+## PreCompact (matcher: auto)
+```json
+{
+  "matcher": "auto",
+  "hooks": [{"type": "command", "command": "~/.claude/hooks/precompact.sh", "timeout": 10}]
+}
+```
+
+## SessionStart (matcher: startup)
+```json
+{
+  "matcher": "startup",
+  "hooks": [{"type": "command", "command": "~/.claude/hooks/sessionstart.sh", "timeout": 5}]
+}
+```
+
+## SessionStart (matcher: resume)
+```json
+{
+  "matcher": "resume",
+  "hooks": [{"type": "command", "command": "~/.claude/hooks/sessionstart.sh", "timeout": 5}]
+}
+```
+
+After merging, verify with: jq '.hooks' ~/.claude/settings.json
+TODOEOF
+    warn "jq not found on PATH; settings.json merge skipped (see $(basename "$TODO_FILE")) AND runtime hooks (userpromptsubmit / precompact / sessionstart) will fail-OPEN silently — install jq for full protection."
+    if [ "$DRY_RUN" -eq 1 ]; then
+      info "Dry-run: HOOK_MERGE_TODO.md would be written to: $TODO_FILE"
+    fi
+    return 0
+  fi
+
+  # Step 1: Project-local settings.json detection
+  local PROJ_LOCAL_SETTINGS="$(pwd)/.claude/settings.json"
+  if [ -f "$PROJ_LOCAL_SETTINGS" ]; then
+    warn "[quoin install] WARNING: project-local .claude/settings.json detected — quoin hooks deploy to user-level ~/.claude/settings.json and may be overridden if project-local settings register hooks at the same event level. See quoin/CLAUDE.md ### Hooks deployed by quoin for details."
+  fi
+
+  # Step 2 (skip in dry-run): Backup live settings.json
+  if [ "$DRY_RUN" -ne 1 ] && [ -f "$SETTINGS_FILE" ]; then
+    local BAK_FILE="${SETTINGS_FILE}.bak-$(date -u +%Y%m%dT%H%M%SZ)"
+    cp "$SETTINGS_FILE" "$BAK_FILE"
+    info "Backed up settings.json to $(basename "$BAK_FILE")"
+  fi
+
+  # Step 3 (skip in dry-run): Copy hook scripts
+  if [ "$DRY_RUN" -ne 1 ]; then
+    mkdir -p "$HOOKS_DST_DIR"
+    for hook_file in "$HOOKS_SRC_DIR"/*.sh "$HOOKS_SRC_DIR/_lib.sh"; do
+      [ -f "$hook_file" ] || continue
+      local hook_name
+      hook_name=$(basename "$hook_file")
+      cp "$hook_file" "$HOOKS_DST_DIR/$hook_name"
+      chmod +x "$HOOKS_DST_DIR/$hook_name"
+      success "Deployed hook: $hook_name"
+    done
+  fi
+
+  # Step 4: Determine settings.json to operate on
+  local WORK_FILE
+  if [ "$DRY_RUN" -eq 1 ]; then
+    WORK_FILE="$DRY_RUN_TMP/settings.json"
+  else
+    WORK_FILE="$SETTINGS_FILE"
+    # Create minimal settings.json if it doesn't exist
+    if [ ! -f "$WORK_FILE" ]; then
+      printf '{}' > "$WORK_FILE"
+    fi
+  fi
+  local HOOKS_DST_REAL="$HOME/.claude/hooks"
+
+  # Step 5: Merge hook stanzas via pinned jq queries
+  # Uniqueness key: (command, matcher) PAIR — preserves user-defined hooks under different paths
+  local NEW_FILE="${WORK_FILE}.new"
+
+  # UserPromptSubmit / *
+  jq --arg cmd "$HOOKS_DST_REAL/userpromptsubmit.sh" \
+    'if .hooks.UserPromptSubmit then
+       .hooks.UserPromptSubmit = ([.hooks.UserPromptSubmit[] | select(.matcher != "*" or (.hooks[]?.command != $cmd and (.hooks | map(.command) | any(. == $cmd) | not)))] + [{"matcher": "*", "hooks": [{"type": "command", "command": $cmd, "timeout": 5}]}])
+     else
+       .hooks = (.hooks // {}) | .hooks.UserPromptSubmit = [{"matcher": "*", "hooks": [{"type": "command", "command": $cmd, "timeout": 5}]}]
+     end' "$WORK_FILE" > "$NEW_FILE" && mv "$NEW_FILE" "$WORK_FILE"
+
+  # PreCompact / auto
+  jq --arg cmd "$HOOKS_DST_REAL/precompact.sh" \
+    'if .hooks.PreCompact then
+       .hooks.PreCompact = ([.hooks.PreCompact[] | select(.matcher != "auto" or (.hooks[]?.command != $cmd and (.hooks | map(.command) | any(. == $cmd) | not)))] + [{"matcher": "auto", "hooks": [{"type": "command", "command": $cmd, "timeout": 10}]}])
+     else
+       .hooks = (.hooks // {}) | .hooks.PreCompact = [{"matcher": "auto", "hooks": [{"type": "command", "command": $cmd, "timeout": 10}]}]
+     end' "$WORK_FILE" > "$NEW_FILE" && mv "$NEW_FILE" "$WORK_FILE"
+
+  # SessionStart / startup
+  jq --arg cmd "$HOOKS_DST_REAL/sessionstart.sh" \
+    'if .hooks.SessionStart then
+       .hooks.SessionStart = ([.hooks.SessionStart[] | select(.matcher != "startup" or (.hooks[]?.command != $cmd and (.hooks | map(.command) | any(. == $cmd) | not)))] + [{"matcher": "startup", "hooks": [{"type": "command", "command": $cmd, "timeout": 5}]}])
+     else
+       .hooks = (.hooks // {}) | .hooks.SessionStart = [{"matcher": "startup", "hooks": [{"type": "command", "command": $cmd, "timeout": 5}]}]
+     end' "$WORK_FILE" > "$NEW_FILE" && mv "$NEW_FILE" "$WORK_FILE"
+
+  # SessionStart / resume
+  jq --arg cmd "$HOOKS_DST_REAL/sessionstart.sh" \
+    'if .hooks.SessionStart then
+       .hooks.SessionStart = ([.hooks.SessionStart[] | select(.matcher != "resume" or (.hooks[]?.command != $cmd and (.hooks | map(.command) | any(. == $cmd) | not)))] + [{"matcher": "resume", "hooks": [{"type": "command", "command": $cmd, "timeout": 5}]}])
+     else
+       .hooks = (.hooks // {}) | .hooks.SessionStart = [{"matcher": "resume", "hooks": [{"type": "command", "command": $cmd, "timeout": 5}]}]
+     end' "$WORK_FILE" > "$NEW_FILE" && mv "$NEW_FILE" "$WORK_FILE"
+
+  # Step 6: Validate result
+  if ! jq empty < "$WORK_FILE" 2>/dev/null; then
+    if [ "$DRY_RUN" -ne 1 ] && [ -f "${SETTINGS_FILE}.bak-"* ] 2>/dev/null; then
+      local BAK
+      BAK=$(ls -t "${SETTINGS_FILE}.bak-"* 2>/dev/null | head -1)
+      if [ -n "$BAK" ]; then
+        cp "$BAK" "$SETTINGS_FILE"
+        error "settings.json parse failed after merge — restored from backup. Check $BAK."
+      fi
+    fi
+    error "settings.json merge produced invalid JSON."
+    return 1
+  fi
+
+  # Step 7: Dry-run output vs live write
+  if [ "$DRY_RUN" -eq 1 ]; then
+    info "Dry-run: merged settings.json (not written to disk):"
+    cat "$WORK_FILE"
+    rm -rf "$DRY_RUN_TMP"
+  else
+    success "Hook stanzas merged into ~/.claude/settings.json (4 tuples)"
+  fi
+}
+
+install_hooks
+success "Step 2d complete"
 
 # ── Step 3: Write workflow rules to ~/.claude/CLAUDE.md ──
 header "Step 3: Writing workflow rules to ~/.claude/CLAUDE.md..."

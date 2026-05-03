@@ -313,7 +313,7 @@ The 7th column (`fallback_fires`) is OPTIONAL. Existing 6-column rows are valid 
 
 **UUID acquisition:** Most recently modified `<uuid>.jsonl` under `~/.claude/projects/<project-hash>/` (project-hash = project path with `/` replaced by `-`). Fall back to `unknown-<ISO-timestamp>` if none found.
 
-**Phase values:** `discover`, `architect`, `plan`, `critic`, `revise`, `implement`, `review`, `gate`, `end-of-task`, `run-orchestrator`, `thorough-plan`, `rollback`, `init-workflow`, `start-of-day`, `end-of-day`, `weekly-review`, `capture-insight`, `triage`, `expand`, `ad-hoc`
+**Phase values:** `discover`, `architect`, `plan`, `critic`, `revise`, `implement`, `review`, `gate`, `end-of-task`, `run-orchestrator`, `thorough-plan`, `rollback`, `init-workflow`, `start-of-day`, `end-of-day`, `weekly-review`, `capture-insight`, `triage`, `expand`, `checkpoint`, `ad-hoc`
 
 **Category:** Always write `task`. The ledger is append-only — never delete or rewrite rows.
 
@@ -471,3 +471,57 @@ If the harness's subagent-spawn tool is unavailable or returns an error, dispatc
 Manual override: prefix any user-typed slash invocation with bare `[no-redispatch]` to skip dispatch entirely. Use this only when intentionally overriding the cost guardrail (e.g., for one-off debugging on a different tier).
 
 Mechanical drift detection lives in `quoin/dev/tests/test_quoin_stage1_preamble.py` and `quoin/dev/tests/test_quoin_stage1_recursion_abort.py`; manual production-dispatch verification is captured in `quoin/dev/verify_subagent_dispatch.md`.
+
+### Hooks deployed by quoin
+
+`bash install.sh` deploys three hook scripts to `~/.claude/hooks/` and registers four (event, matcher) stanzas in `~/.claude/settings.json`:
+
+| Event | Matcher | Script | Timeout | Contract |
+|-------|---------|--------|---------|----------|
+| UserPromptSubmit | `*` | `userpromptsubmit.sh` | 5s | Checks context utilization; advisory or block at threshold |
+| PreCompact | `auto` | `precompact.sh` | 10s | Last-resort save + block on auto-compaction |
+| SessionStart | `startup` | `sessionstart.sh` | 5s | Surfaces pending-restore banner on new session |
+| SessionStart | `resume` | `sessionstart.sh` | 5s | Surfaces pending-restore banner on resumed session |
+
+**Fail-OPEN / non-aborting deploy contract:** Every hook exits 0 on any error (no abort). If jq is absent, hooks fail-OPEN silently (zero protection — see jq soft-required dependency below). The `userpromptsubmit.sh` block JSON is only emitted AFTER the pending-prompt file is successfully written; if the write fails, the hook exits 0 (passthrough).
+
+**Exact-token exempt-list for `userpromptsubmit.sh`:** The hook splits the prompt on whitespace (after stripping ALL leading whitespace including newlines and carriage returns) and matches the FIRST token verbatim. Exempt commands (the hook exits 0 immediately without threshold check): `/checkpoint`, `/compact`, `/clear`, `/help`. These are exact string matches — not regex. `/checkpointfoo` and `/checkpoint--restore` are NOT exempt (different tokens). **Destructive-subcommand exception:** `/checkpoint --purge` is the ONE documented carve-out from the exempt-list — it is treated as NON-exempt despite the `/checkpoint` first-token match, and the hook falls through to threshold logic. The rationale: `/checkpoint --purge` should NOT be runnable under ≥95% context pressure (likely-mistaken at high utilization). All other `/checkpoint` subcommands (`--restore`, no-arg) remain exempt.
+
+**STDIN capture pattern:** All three event hooks open with `STDIN=$(cat)` to capture the JSON payload into a variable, then parse with `printf '%s' "$STDIN" | jq -r '<filter> // empty'`. The `// empty` jq filter handles missing fields by returning the empty string instead of `null`, supporting the fail-OPEN discipline.
+
+**`bash install.sh --dry-run`:** Runs the settings.json merge against a temp copy and prints the would-be merged JSON to stdout WITHOUT writing the live file or creating a `.bak` backup. Use this to preview the hook stanzas before committing to a live deploy: `bash install.sh --dry-run | jq '.hooks'`.
+
+**jq is a soft-required dependency:** Runtime hooks parse stdin JSON via `jq`. If `jq` is absent, hooks fail-OPEN silently (zero protection). Install via `brew install jq` (macOS), `apt-get install jq` (Debian), `apk add jq` (Alpine). `bash install.sh` emits a warning if jq is absent at deploy time AND writes `~/.claude/HOOK_MERGE_TODO.md` with manual-merge instructions; install proceeds but hooks will not function until jq is installed.
+
+**R-09 mitigation (settings.json corruption):** install.sh backs up `~/.claude/settings.json` to `settings.json.bak-<timestamp>` before any merge, validates the result with `jq empty`, and restores from `.bak` if validation fails.
+
+#### Tunable constants
+
+Hook scripts read these values at runtime via `${QUOIN_*:-default}` parameter expansion. Defaults are baked into the scripts:
+
+| Constant | Default | Env var override | Notes |
+|----------|---------|-----------------|-------|
+| `BYTES_PER_TOKEN_CONSTANT` | `3.5` | `QUOIN_BYTES_PER_TOKEN` | Bytes per token for byte-count utilization estimate (V-03 calibrated) |
+| `EFFECTIVE_CONTEXT_LIMIT` | `150000` | `QUOIN_EFFECTIVE_CONTEXT_LIMIT` | Effective token limit used as 100% denominator |
+| `STOP_THRESHOLD_BPS` | `8500` | `QUOIN_STOP_BPS` | Advisory threshold in basis-points (8500 = 85.00%) |
+| `BLOCK_THRESHOLD_BPS` | `9500` | `QUOIN_BLOCK_BPS` | Block threshold in basis-points (9500 = 95.00%) |
+| `STALE_SENTINEL_DAYS` | `7` | `QUOIN_STALE_SENTINEL_DAYS` | Days after which pending-prompt-*.txt / pending-restore-*.txt are swept; long-lived sessions may extend to 14+ |
+
+**Basis-points convention:** Utilization values and threshold comparisons use INTEGER basis-points (0..10000) throughout. POSIX `[ ]` does integer comparison only; basis-points eliminate all floating-point comparison hazards. `compute_utilization()` in `_lib.sh` returns a basis-point integer (e.g., `8540` = 85.40% utilization).
+
+### Lifecycle skills (checkpoint / end_of_day / sleep)
+
+Three skills handle session lifecycle at different granularities (v3 lifecycle separation per architecture):
+
+**`/checkpoint`** — context-threshold primitive. Writes session-restore state to `.workflow_artifacts/memory/checkpoints/<YYYY-MM-DD>-<task>.md` and a `pending-restore-${session_id}.txt` sentinel. Does NOT roll up dailies, does NOT touch `lessons-learned.md`, does NOT touch `forgotten/`. Use when the context utilization advisory fires or proactively before starting a heavy task. **Paths-not-content rule (D-04):** checkpoint files record only PATHS to in-flight artifacts — never file contents. Restore re-fires Read tool on disk artifacts in the new session.
+
+**`--restore` subcommand:** Run `/checkpoint --restore` in a fresh session to re-hydrate state. Locates the most recent checkpoint (or follows the `pending-restore-${session_id}.txt` sentinel from the compaction-block flow), surfaces task state, and optionally re-fires the saved pending prompt. Sentinel cleanup happens on restore.
+
+**`/end_of_day`** — rolls up daily session state into `.workflow_artifacts/memory/daily/<date>.md`. Touches `lessons-learned.md` if insights are promoted. Run at end of each work session.
+
+**`/sleep`** — memory promote/forget (architecture stage 3; not yet shipped). Will handle moving insights from daily scratchpad to long-term memory and soft-forgetting stale artifacts. Forward-compatible section; `/sleep` skill stub ships in S-2 carrying only the §0c pidfile lifecycle block.
+
+**Boundary summary:**
+- `/checkpoint` → session-restore primitives only (`checkpoints/`, `sessions/`, `pending-*` sentinels)
+- `/end_of_day` → daily rollup (`daily/`, `lessons-learned.md`)
+- `/sleep` → long-term memory promote/forget (S-3 scope)
