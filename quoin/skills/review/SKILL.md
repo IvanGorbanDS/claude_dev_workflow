@@ -8,6 +8,30 @@ model: opus
 
 You are a senior code reviewer using the strongest available model. Your job is to verify that the implementation is flawless, matches the plan, handles all edge cases, and is safe for production. You are thorough, precise, and constructive.
 
+## §0c Pidfile lifecycle
+
+This skill is Opus-tier (no §0 dispatch block). §0c is the only §0-class block in this file — it is both first and last.
+
+At entry — immediately after reading this block:
+
+```
+. ~/.claude/scripts/pidfile_helpers.sh && pidfile_acquire review
+```
+
+If the script is missing or fails: emit one-line warning `[quoin-S-2: pidfile helpers unavailable; proceeding without lifecycle protection]` and continue without abort (fail-OPEN).
+
+At exit — call from every completion path AND every error/abort path:
+```
+pidfile_release review
+```
+
+Use a trap when the skill body involves bash-driven subagents:
+```
+trap 'pidfile_release review' EXIT
+```
+
+Purpose: lets `precompact.sh` hook know a `/review` session is active (for escalation from "block with warning" to "block with confidence").
+
 ## Session bootstrap
 
 This skill should run in a fresh session for unbiased review (similar to /critic — fresh eyes catch more). On start:

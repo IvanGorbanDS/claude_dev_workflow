@@ -45,7 +45,31 @@ Fail-graceful path (per architecture I-01):
   - Emit the one-line warning: `[quoin-stage-1: subagent dispatch unavailable; proceeding at current tier]`
   - Then proceed to §1 at the current tier. This is fail-OPEN on the cost guardrail (better to overspend than to abort the user's invocation).
 
-Otherwise (already at or below declared tier, OR prompt has [no-redispatch] sentinel, OR dispatch unavailable): proceed to §1 (skill body).
+Otherwise (already at or below declared tier, OR prompt has [no-redispatch] sentinel, OR dispatch unavailable): proceed to §0c.
+
+## §0c Pidfile lifecycle (FIRST STEP after §0 dispatch)
+
+At entry — immediately after §0 dispatch resolves:
+
+```
+. ~/.claude/scripts/pidfile_helpers.sh && pidfile_acquire end-of-day
+```
+
+If the script is missing or fails: emit one-line warning `[quoin-S-2: pidfile helpers unavailable; proceeding without lifecycle protection]` and continue without abort (fail-OPEN).
+
+At exit — call from every completion path AND every error/abort path:
+```
+pidfile_release end-of-day
+```
+
+Use a trap when the skill body involves bash-driven subagents:
+```
+trap 'pidfile_release end-of-day' EXIT
+```
+
+Purpose: lets `precompact.sh` hook know an `/end_of_day` session is active (for escalation from "block with warning" to "block with confidence").
+
+Otherwise: proceed to §1 (skill body).
 
 ## How sessions and daily caches work
 

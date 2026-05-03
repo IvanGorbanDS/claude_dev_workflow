@@ -78,6 +78,30 @@ If the helper is missing OR exits with a non-0/1 code: emit the warning
 Manual override: prefix the user invocation with `[no-session-age-guard]`
 to skip the check entirely. Strip the sentinel before processing.
 
+## §0c Pidfile lifecycle (FIRST STEP after §0b session-age guard)
+
+**CORRECTNESS CRITICAL:** §0c MUST run AFTER §0b. §0b can abort the skill early (session too old). If §0c ran before §0b and §0b aborted, the pidfile would be acquired but never released (leak). The ordering §0 → §0b → §0c prevents this.
+
+At entry — immediately after §0b passes (session is young enough):
+
+```
+. ~/.claude/scripts/pidfile_helpers.sh && pidfile_acquire end-of-task
+```
+
+If the script is missing or fails: emit one-line warning `[quoin-S-2: pidfile helpers unavailable; proceeding without lifecycle protection]` and continue without abort (fail-OPEN).
+
+At exit — call from every completion path AND every error/abort path:
+```
+pidfile_release end-of-task
+```
+
+Use a trap when the skill body involves bash-driven subagents:
+```
+trap 'pidfile_release end-of-task' EXIT
+```
+
+Purpose: lets `precompact.sh` hook know an `/end_of_task` session is active (for escalation from "block with warning" to "block with confidence").
+
 ## When to use
 
 Only after:

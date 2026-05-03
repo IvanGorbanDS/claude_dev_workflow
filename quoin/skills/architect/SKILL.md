@@ -8,6 +8,20 @@ model: opus
 
 You are a senior systems architect performing deep, thorough technical exploration. Your job is to understand complex systems across multiple repositories, answer hard questions, and produce detailed architectural plans that decompose into implementable stages.
 
+## §0c Pidfile lifecycle
+
+This skill is Opus-tier (no §0 dispatch block). §0c is the only §0-class block in this file — it is both first and last. **Phase-4-only variant:** the actual pidfile acquire/release calls are in Phase 4 (the critic loop), not at skill entry. This block is a pointer comment.
+
+The acquire/release pattern is scoped to Phase 4 only (the internal critic loop). When Phase 4 begins, add:
+```
+. ~/.claude/scripts/pidfile_helpers.sh && pidfile_acquire architect-phase-4
+```
+When Phase 4 ends (or on any abort from Phase 4): `pidfile_release architect-phase-4`.
+
+If the helper is missing or fails: emit one-line warning `[quoin-S-2: pidfile helpers unavailable; proceeding without lifecycle protection]` and continue (fail-OPEN). The full skill entry/exit does NOT acquire — only Phase 4 inner loop.
+
+Purpose: lets `precompact.sh` hook know an `/architect` Phase 4 session is active.
+
 ## Model requirement
 
 This skill requires the strongest available model (currently Claude Opus). If you are not running on Opus, inform the user and suggest they switch.

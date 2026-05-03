@@ -12,6 +12,22 @@ You are the user's single entry point for running the entire development workflo
 
 **You ARE an explicit user invocation.** Because the user consciously chose to run the full pipeline with `/run`, you may invoke `/implement` and `/end_of_task` on their behalf after they confirm at the relevant checkpoint. This is the explicit exception to the critical rule in `CLAUDE.md` and to the "Explicit invocation only" rules in `implement/SKILL.md` and `end_of_task/SKILL.md`. The user's `/run` invocation constitutes the conscious decision; the gate confirmations at each checkpoint provide the safety net.
 
+## §0c Pidfile lifecycle
+
+This skill is Opus-tier (no §0 dispatch block). §0c is the only §0-class block in this file — it is both first and last. **Per-phase variant:** the actual pidfile acquire/release calls wrap each phase's subagent dispatch, not the overall skill entry. This block is a pointer comment.
+
+For each phase dispatch (discover, architect, plan, implement, review, end_of_task, etc.), wrap with:
+```
+. ~/.claude/scripts/pidfile_helpers.sh && pidfile_acquire run-phase-NAME
+# ... subagent dispatch ...
+pidfile_release run-phase-NAME
+```
+(NAME is the phase name, e.g., `run-phase-implement`, interpolated at runtime.)
+
+If the helper is missing or fails: emit one-line warning `[quoin-S-2: pidfile helpers unavailable; proceeding without lifecycle protection]` and continue (fail-OPEN).
+
+Purpose: lets `precompact.sh` hook know a `/run` phase is in progress.
+
 ## Session bootstrap
 
 When starting:

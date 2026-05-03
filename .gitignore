@@ -30,4 +30,4 @@ __pycache__/
 /
 # /expand --save output files (scratch; use sparingly)
 *.expanded-*.md
-
+.venv/
