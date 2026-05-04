@@ -510,14 +510,17 @@ Drift detection: `quoin/dev/tests/test_quoin_pollution_preamble.py`; manual prod
 
 ### Hooks deployed by quoin
 
-`bash install.sh` deploys three hook scripts to `~/.claude/hooks/` and registers four (event, matcher) stanzas in `~/.claude/settings.json`:
+`bash install.sh` deploys four hook scripts to `~/.claude/hooks/` and registers five (event, matcher) stanzas in `~/.claude/settings.json`:
 
 | Event | Matcher | Script | Timeout | Contract |
 |-------|---------|--------|---------|----------|
 | UserPromptSubmit | `*` | `userpromptsubmit.sh` | 5s | Checks context utilization; advisory or block at threshold |
 | PreCompact | `auto` | `precompact.sh` | 10s | Last-resort save + block on auto-compaction |
-| SessionStart | `startup` | `sessionstart.sh` | 5s | Surfaces pending-restore banner on new session |
-| SessionStart | `resume` | `sessionstart.sh` | 5s | Surfaces pending-restore banner on resumed session |
+| SessionStart | `startup` | `sessionstart.sh` | 5s | Surfaces pending-restore banner on new session; emits missing-EOD banner if any session file within 36 h has `end_of_day_due: yes` (S-4) |
+| SessionStart | `resume` | `sessionstart.sh` | 5s | Surfaces pending-restore banner on resumed session; emits missing-EOD banner (S-4) |
+| SessionEnd | `*` | `sessionend.sh` | 5s | Emits EOD nudge via `systemMessage` if the most-recent session file (≤8 h) has `end_of_day_due: yes` (S-4) |
+
+**S-4 banner dedup:** The SessionStart hook writes a sentinel file at `$TMPDIR/quoin-s4-eod-banner-<YYYY-MM-DD>.tmp` after firing the missing-EOD banner. If a sentinel from within the last 5 minutes exists, the banner is suppressed for the current session start. `/start_of_day` also reads this sentinel (see `/start_of_day/SKILL.md`) and skips its own banner if the hook fired within the last 5 minutes — preventing duplicate noise when both mechanisms are active.
 
 **Fail-OPEN / non-aborting deploy contract:** Every hook exits 0 on any error (no abort). If jq is absent, hooks fail-OPEN silently (zero protection — see jq soft-required dependency below). The `userpromptsubmit.sh` block JSON is only emitted AFTER the pending-prompt file is successfully written; if the write fails, the hook exits 0 (passthrough).
 
@@ -555,6 +558,8 @@ Three skills handle session lifecycle at different granularities (v3 lifecycle s
 **`--restore` subcommand:** Run `/checkpoint --restore` in a fresh session to re-hydrate state. Locates the most recent checkpoint (or follows the `pending-restore-${session_id}.txt` sentinel from the compaction-block flow), surfaces task state, and optionally re-fires the saved pending prompt. Sentinel cleanup happens on restore.
 
 **`/end_of_day`** — rolls up daily session state into `.workflow_artifacts/memory/daily/<date>.md`. Touches `lessons-learned.md` if insights are promoted. Run at end of each work session.
+
+**Session hooks (S-4):** `/start_of_day` checks `end_of_day_due: yes` in session files (Signal B, 36 h window). The `sessionstart.sh` hook provides the same check unconditionally at session-open (no need to invoke `/start_of_day`). The `sessionend.sh` hook nudges at session-close if the active session still has `end_of_day_due: yes`. Both hooks are non-blocking (exit 0) and informational only. Dedup: the sentinel file prevents duplicate banners within a 5-minute window.
 
 **`/sleep`** — Haiku-tier. Auto-invoked by `/end_of_day` as its final step (opt-out via `--skip-sleep`). Scans daily insights + session files within a 30-day window. Three-bucket decisions:
 - Promote → `lessons-learned.md` (per-entry user confirmation)
