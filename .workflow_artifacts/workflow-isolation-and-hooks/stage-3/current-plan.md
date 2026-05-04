@@ -261,7 +261,7 @@ Stage 3 ships the full `/sleep` skill body (replacing the S-2 stub), edits `/end
    - Error handling: if `--scan-dir` does not exist → print warning to stderr, exit 0 with empty output (not a hard error — directory may not exist in fresh projects).
    - Acceptance: `python3 quoin/scripts/sleep_score.py --help` exits 0; `python3 quoin/scripts/sleep_score.py --dry-run --scan-dir quoin/dev/tests/fixtures/sleep/promote_hit/ --output json` exits 0 and prints NDJSON; importable as `from sleep_score import load_config, collect_entries, score_entries, ScoredEntry, RawEntry`; no external imports at module scope (pyyaml imported inside `load_config()` body only, not at top level); `grep '^import\|^from' quoin/scripts/sleep_score.py` shows only stdlib modules at top level; `collect_entries` correctly parses both `insights-2026-04-25.md` (heading-based, ≥2 `### ` lines → Pass 1) and `insights-2026-05-01.md` (separator-based with surrounding blank lines, <2 `### ` lines → Pass 2) returning non-empty entry lists for both.
 
-9. ⏳ T-07: build fixture corpus at `quoin/dev/tests/fixtures/sleep/`
+9. ✓ T-07: build fixture corpus at `quoin/dev/tests/fixtures/sleep/`
    - Directory: `quoin/dev/tests/fixtures/sleep/`
    - Required fixtures (one subdirectory each):
      - `promote_hit/`: THREE separate insights files required for `frequency_3plus` signal (signal counts distinct files, not occurrences within one file):
@@ -279,7 +279,7 @@ Stage 3 ships the full `/sleep` skill body (replacing the S-2 stub), edits `/end
    - Fixture format requirement: each `insights-*.md` fixture file MUST use the heading-based format (`### Insight N:` headings) as the canonical fixture format — this matches the actual format used by real insights files (as confirmed by reading `.workflow_artifacts/memory/daily/insights-2026-04-25.md`). Each `### ` heading starts a new entry block. Separator-based format (`---`) is supported by `collect_entries()` for backward compat but fixtures should use headings. Any fixture using a `### ` heading-based format with ≥2 headings will be parsed by Pass 1.
    - Acceptance: all 7 subdirectories present; each has a `README.md` explaining expected outcome; `promote_hit/` has exactly 3 separate `insights-*.md` files with a shared named pattern; at least one fixture exercises the `--quiet-forget` floor (score ≥ 4 forget signals); every fixture insights file uses the `### Insight N:` heading-based format with ≥2 headings.
 
-10. ⏳ T-08: write `quoin/dev/tests/test_sleep_scoring.py` — unit tests for importance scoring
+10. ✓ T-08: write `quoin/dev/tests/test_sleep_scoring.py` — unit tests for importance scoring
     - File: `quoin/dev/tests/test_sleep_scoring.py`
     - Prerequisite: T-06.5 (`sleep_score.py`) must exist. Import via `sys.path.insert(0, str(Path(__file__).parent.parent.parent / "scripts"))`.
     - Tests:
@@ -291,7 +291,7 @@ Stage 3 ships the full `/sleep` skill body (replacing the S-2 stub), edits `/end
       - `test_default_weights_present`: calls `load_config("quoin/CLAUDE.md")` against the live CLAUDE.md file (not a fixture); asserts returned dict has keys `promote`, `forget`, `thresholds` with expected sub-keys (e.g., `frequency_3plus` in `promote`, `one_shot` in `forget`, `promote_min_score` in `thresholds`). To distinguish live YAML parse from hardcoded fallback: the T-02 YAML block in CLAUDE.md must include a sentinel key `_source: claude_md` under `thresholds` that is absent from the hardcoded defaults; the test asserts `config["thresholds"].get("_source") == "claude_md"`. If pyyaml is not installed, the test should skip with `pytest.skip("pyyaml not installed — skipping live-parse verification")`.
     - Acceptance: `python3 quoin/dev/tests/test_sleep_scoring.py` exits 0 with all tests passing or skipping (no failures); pyyaml-dependent test (`test_default_weights_present`) skips gracefully when pyyaml absent; no hardcoded paths to user home.
 
-11. ⏳ T-09: write `quoin/dev/tests/test_sleep_write_boundary.py` — auto-memory bleed test
+11. ✓ T-09: write `quoin/dev/tests/test_sleep_write_boundary.py` — auto-memory bleed test
     - File: `quoin/dev/tests/test_sleep_write_boundary.py`
     - Purpose: assert `/sleep` NEVER writes outside `lessons-learned.md` and `forgotten/`. This is the R-05 mitigation test.
     - Design (MAJ-3 fix — dual-layer approach):
