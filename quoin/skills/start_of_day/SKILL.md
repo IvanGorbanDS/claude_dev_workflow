@@ -71,6 +71,12 @@ If a task context is active: append your session to `.workflow_artifacts/<task-n
 
 **Signal B:** (set in Step 1a) — count of session-state files written in the last 36 hours with `end_of_day_due: yes`. Let M = that count.
 
+**Signal B dedup check (S-4 sentinel):** Before including Signal B in the unified banner, check for the S-4 dedup sentinel:
+- Sentinel path: `$TMPDIR/quoin-s4-eod-banner-<today>.tmp` (where `<today>` is `YYYY-MM-DD`).
+- If the sentinel file exists AND was written within the last 5 minutes (compare `date +%s` vs file mtime via `python3 -c "import os,sys; print(int(os.path.getmtime(sys.argv[1])))" <path>` or `stat -f %m <path>` on BSD): the SessionStart hook already emitted the EOD banner in this session — **set M = 0** (suppress Signal B contribution to the unified banner) and log: "(missing-EOD banner suppressed — sessionstart.sh fired within 5 min)".
+- If sentinel absent or older than 5 minutes: use M as computed.
+- Rationale: prevents duplicate "run /end_of_day" banners when the user opens a session and immediately runs /start_of_day (the typical morning sequence).
+
 **Unified banner (fire if A OR B is positive, i.e. N > 0 OR M > 0):**
 > "⚠ Yesterday's `/end_of_day` did not fire — [N insight(s) pending and/or M session(s) unflushed]. Recommend running `/end_of_day` before continuing."
 > "Want to run `/end_of_day` now or skip?"

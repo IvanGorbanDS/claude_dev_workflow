@@ -264,6 +264,14 @@ merged manually into ~/.claude/settings.json under the "hooks" key:
 }
 ```
 
+## SessionEnd (matcher: *)
+```json
+{
+  "matcher": "*",
+  "hooks": [{"type": "command", "command": "~/.claude/hooks/sessionend.sh", "timeout": 5}]
+}
+```
+
 After merging, verify with: jq '.hooks' ~/.claude/settings.json
 TODOEOF
     warn "jq not found on PATH; settings.json merge skipped (see $(basename "$TODO_FILE")) AND runtime hooks (userpromptsubmit / precompact / sessionstart) will fail-OPEN silently — install jq for full protection."
@@ -340,6 +348,11 @@ TODOEOF
     '.hooks.SessionStart = ([(.hooks.SessionStart // [])[] | select(.matcher != $matcher or ([ .hooks[]?.command | select(endswith($scriptname)) ] | length == 0))] + [{"matcher": $matcher, "hooks": [{"type": "command", "command": $cmd, "timeout": 5}]}])' \
     "$WORK_FILE" > "$NEW_FILE" && mv "$NEW_FILE" "$WORK_FILE"
 
+  # SessionEnd / * (event name confirmed by T-00 spike — "SessionEnd" is correct per Anthropic docs)
+  jq --arg cmd "$HOOKS_DST_REAL/sessionend.sh" --arg matcher "*" --arg scriptname "sessionend.sh" \
+    '.hooks.SessionEnd = ([(.hooks.SessionEnd // [])[] | select(.matcher != $matcher or ([ .hooks[]?.command | select(endswith($scriptname)) ] | length == 0))] + [{"matcher": $matcher, "hooks": [{"type": "command", "command": $cmd, "timeout": 5}]}])' \
+    "$WORK_FILE" > "$NEW_FILE" && mv "$NEW_FILE" "$WORK_FILE"
+
   # Step 6: Validate result
   if ! jq empty < "$WORK_FILE" 2>/dev/null; then
     if [ "$DRY_RUN" -ne 1 ] && [ -f "${SETTINGS_FILE}.bak-"* ] 2>/dev/null; then
@@ -360,7 +373,7 @@ TODOEOF
     cat "$WORK_FILE"
     rm -rf "$DRY_RUN_TMP"
   else
-    success "Hook stanzas merged into ~/.claude/settings.json (4 tuples)"
+    success "Hook stanzas merged into ~/.claude/settings.json (5 tuples)"
   fi
 }
 
