@@ -298,12 +298,15 @@ Spawn an Agent subagent:
     Steps:
     1. Read `cost-summary.json` from the task dir (BEFORE any mv).
     2. Read `eot-preflights.json` for `archive_type` and `task_name`.
-    3. Archive based on `archive_type`:
+    3. Delete planner trace breadcrumb (if present):
+       Run: `rm -f "<task_dir>/.planner-trace.md" 2>/dev/null || true`
+       This file is Tier 3 ephemeral — it must not persist in the finalized archive. The deletion runs BEFORE the archive `mv` step so it applies regardless of `archive_type` (feature, subtask, or none).
+    4. Archive based on `archive_type`:
        - `"subtask"`: mv task folder into `.workflow_artifacts/<parent>/finalized/<subtask>/`
        - `"feature"`: mv task folder into `.workflow_artifacts/finalized/<task_name>/`
        - `"none"`: skip the mv entirely.
        Create target dir with `mkdir -p` before the mv.
-    4. Print the final report:
+    5. Print the final report:
        ```
        Task finalized: <task_name>
 

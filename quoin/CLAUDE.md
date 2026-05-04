@@ -431,6 +431,8 @@ NOTE: QUICKSTART.md sits at `quoin/` root and deploys to `~/.claude/QUICKSTART.m
 
 Any other workflow artifact may be subject to terse-style writing (Tier 2 contract files use English + side-file; Tier 3 ephemeral files are terse-only with `/expand` for human reading).
 
+`.planner-trace.md` is an example of a Tier-3 ephemeral: machine-written by `/plan` at session end, read by `/critic` as a search-prior only, deleted by `/end_of_task` before archive; no Haiku summary, no validator.
+
 If you are adding a new file class and unsure which tier applies: hand-edited or contract-approved → Tier 1; ephemeral or machine-only → Tier 3; user-approves-but-machine-reads → Tier 2.
 
 ## Model assignments
