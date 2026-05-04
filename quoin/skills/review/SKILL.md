@@ -32,6 +32,44 @@ trap 'pidfile_release review' EXIT
 
 Purpose: lets `precompact.sh` hook know a `/review` session is active (for escalation from "block with warning" to "block with confidence").
 
+## §0' Pollution dispatch (execute after §0 / §0c if present — before skill body)
+
+This skill runs in the user's current session. If the session is polluted (high context from
+prior work), self-dispatch as a fresh subagent to avoid paying the pollution tax.
+
+Detection:
+  - Read the most-recent session-state file: `.workflow_artifacts/memory/sessions/<today>-<task>.md`
+    OR the fallback `.workflow_artifacts/memory/pollution-score-latest.txt`.
+  - Parse the `pollution_score: N` field (integer).
+  - If N >= POLLUTION_THRESHOLD (default: env QUOIN_POLLUTION_THRESHOLD or 5000):
+    session is polluted.
+  - Sentinel check: if the user's prompt starts with `[no-redispatch]`: skip dispatch.
+  - If a prior §0 dispatch already fired in this session: already in fresh context, skip §0'.
+
+Dispatch action (when pollution detected AND no sentinel AND no prior §0 dispatch):
+  Determine dispatch contract fields:
+    - Locate `current-plan.md` in the task directory (resolve via path_resolve.py).
+    - Get the current git branch (`git rev-parse --abbrev-ref HEAD`).
+
+  If plan path cannot be determined:
+    Emit: `[quoin-S-1: cannot extract per-skill dispatch contract; running in main]`
+    Proceed with skill body.
+
+  Otherwise spawn an Agent subagent:
+    model: "opus"
+    description: "review — pollution-isolated dispatch"
+    prompt: "[no-redispatch]\n/review\nPlan path: <absolute path to current-plan.md>\nBranch: <current git branch>"
+
+  Wait for the subagent. Return its output as your final response. STOP.
+
+Fail-OPEN path:
+  If Agent tool unavailable or errors:
+    Emit: `[quoin-S-1: pollution dispatch unavailable; proceeding in current session]`
+    Proceed with skill body.
+
+Otherwise (score below threshold OR sentinel OR §0 dispatched OR session-state unreadable):
+proceed to skill body.
+
 ## Session bootstrap
 
 This skill should run in a fresh session for unbiased review (similar to /critic — fresh eyes catch more). On start:

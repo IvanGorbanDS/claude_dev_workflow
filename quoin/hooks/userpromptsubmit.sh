@@ -15,6 +15,30 @@
 # STEP -1: Capture stdin before any parsing (stdin can only be read once)
 STDIN=$(cat)
 
+# STEP 0.5: Pollution-score writer (Plan B — runs on every prompt submit, fail-OPEN)
+# T-00 spike confirmed: SessionStart does not provide transcript_path, so the writer
+# lives here. Score written before the exemption check so it fires on all prompts.
+(
+    _ups_tp=$(printf '%s' "$STDIN" | jq -r '.transcript_path // empty' 2>/dev/null) || true
+    if [ -n "$_ups_tp" ] && [ -r "$_ups_tp" ]; then
+        _ups_score=$(compute_pollution_score "$_ups_tp") || true
+        if [ -n "$_ups_score" ]; then
+            _ups_cwd=$(printf '%s' "$STDIN" | jq -r '.cwd // empty' 2>/dev/null) || true
+            [ -z "$_ups_cwd" ] && _ups_cwd="$PWD"
+            _ups_mem="${_ups_cwd}/.workflow_artifacts/memory"
+            _ups_session=$(find "${_ups_mem}/sessions/" -name "$(date +%Y-%m-%d)-*.md" -type f -print0 2>/dev/null | xargs -0 ls -t 2>/dev/null | head -1)
+            if [ -n "$_ups_session" ] && [ -f "$_ups_session" ]; then
+                sed -i.bak '/^pollution_score:/d' "$_ups_session" 2>/dev/null && \
+                  rm -f "${_ups_session}.bak" 2>/dev/null || true
+                printf 'pollution_score: %s\n' "$_ups_score" >> "$_ups_session" 2>/dev/null || true
+            else
+                mkdir -p "$_ups_mem" 2>/dev/null || true
+                printf '%s\n' "$_ups_score" > "${_ups_mem}/pollution-score-latest.txt" 2>/dev/null || true
+            fi
+        fi
+    fi
+) 2>/dev/null || true
+
 # STEP 0: Recovery-command exemption
 # Extract prompt field (POSIX-portable; avoid echo's non-portable behavior)
 prompt=$(printf '%s' "$STDIN" | jq -r '.prompt // empty' 2>/dev/null) || exit 0
