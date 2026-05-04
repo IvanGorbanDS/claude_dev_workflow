@@ -1,5 +1,5 @@
 ## Status
-COMPLETE — Stage 3 implementation done; all T-13..T-16 complete; ready for /end_of_task
+COMPLETED — Stage 3 finalized by /end_of_task. Branch: main. Commit: 4f953d7d0f09c99e7e48f478b12e97765e1ca8e7
 
 ## Current stage
 implement — S-3 T-00..T-12 complete; T-13 onward pending
@@ -57,4 +57,6 @@ None — Stage 3 complete.
 - Recorded in cost ledger: yes
 - end_of_day_due: yes
 - fallback_fires: 0
-pollution_score: 172
+- pollution_score: 172
+- end_of_task_completed: 2026-05-04
+pollution_score: 548
