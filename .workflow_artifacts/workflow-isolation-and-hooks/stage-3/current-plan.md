@@ -2,9 +2,33 @@
 path: .workflow_artifacts/workflow-isolation-and-hooks/stage-3/current-plan.md
 hash: HEAD
 updated: 2026-05-04T15:30:00Z
-updated_by: /revise
+updated_by: /implement
 tokens: 7200
 ---
+
+## Convergence Summary
+- **Task profile:** Large
+- **Rounds:** 4 (plan + 4 critic/revise cycles)
+- **Final verdict:** Implementation complete (user accepted plan at round 4 critic with 2 open MAJs resolved inline)
+- **Key revisions:** Added sleep_score.py write task (T-06.5); fixed spike corpus from finalized/ to daily/; specified load_config() pyyaml pattern; specified collect_entries() two-pass algorithm; fixed RawEntry→ScoredEntry field mapping; fixed preamble-block discard in Pass 1
+- **Remaining concerns:** T-12 spike ran on thin corpus (5 entries at threshold); P-0 calibration deferred to 30-day production dry-run; rate thresholds unvalidated against real data
+
+## T-16 Gate Results (2026-05-04)
+
+All automated tests PASSED:
+- `test_sleep_scoring.py` — 6/6 passed
+- `test_sleep_write_boundary.py` — 2/2 passed
+- `test_sleep_restore_roundtrip.py` — 3/3 passed
+- `test_sleep_skill_structure.py` — 8 passed, 1 skipped (deployed-copy skip is expected pre-install-run)
+- `test_sleep_chaining.sh` — 3/3 passed
+- `test_quoin_stage1_preamble.py` — 117/117 passed (now covers 13 cheap-tier skills including sleep)
+
+Sub-task B smoke observations:
+- T-16B-1: `~/.claude/memory/sleep_dryrun_start.txt` contains `2026-05-04` — CONFIRMED
+- T-16B-2: Re-running `bash install.sh` leaves marker date unchanged — CONFIRMED (message: "Sleep dry-run marker already exists — date unchanged (clock not reset).")
+- T-16B-3: `diff quoin/skills/sleep/SKILL.md ~/.claude/skills/sleep/SKILL.md` → IDENTICAL
+- T-16B-4: `grep 'ONLY writes to' ~/.claude/skills/sleep/SKILL.md` → MATCHED
+- T-16B-5: `grep 'Step 6' ~/.claude/skills/end_of_day/SKILL.md` and `grep 'skip-sleep'` → MATCHED (Step 6: Invoke /sleep; --skip-sleep flag documented)
 
 ## For human
 
@@ -338,7 +362,7 @@ Stage 3 ships the full `/sleep` skill body (replacing the S-2 stub), edits `/end
       - Forget user-override rate ≤ 25%.
     - Acceptance: `v00_sleep_dry_run_results.md` present; either (a) both rate criteria met with ≥5-entry corpus, OR (b) corpus-too-small finding documented with "calibration deferred to post-merge 30-day dry-run". Restore round-trip confirmed for ≥3 of 5 candidates (when applicable). BLOCKS MERGE until results documented.
 
-15. ⏳ T-13: write `quoin/dev/tests/test_sleep_skill_structure.py` + update `test_quoin_stage1_preamble.py`
+15. ✓ T-13: write `quoin/dev/tests/test_sleep_skill_structure.py` + update `test_quoin_stage1_preamble.py`
     - **File A (update): `quoin/dev/tests/test_quoin_stage1_preamble.py`** — add `"sleep"` to `CHEAP_TIER_SKILLS` list (one-line change; list grows from 12 to 13 skills). This maintains the canonical cheap-tier enumeration invariant — if a future edit removes §0 from sleep's SKILL.md, the stage-1 test now catches it.
     - **File B (new): `quoin/dev/tests/test_sleep_skill_structure.py`** — sleep-specific drift-detection, mirroring the stage-1 preamble test pattern:
       - `test_model_declared_haiku`: frontmatter `model: haiku`.
@@ -352,7 +376,7 @@ Stage 3 ships the full `/sleep` skill body (replacing the S-2 stub), edits `/end
       - `test_deployed_copy_sync`: `pytest.skip("deployed-copy-sync check requires install.sh (T-15) to have run first — assertion moved to T-16 Sub-task A")`. Documents the ordering dependency explicitly; prevents silent false-negative.
     - Acceptance: `python3 quoin/dev/tests/test_sleep_skill_structure.py` exits 0; all non-skipped tests pass; `test_deployed_copy_sync` skips with the documented message; `python3 quoin/dev/tests/test_quoin_stage1_preamble.py` exits 0 (now enumerating 13 cheap-tier skills, `sleep` included).
 
-16. ⏳ T-14: update `quoin/CLAUDE.md` lifecycle skills section for S-3 completeness
+16. ✓ T-14: update `quoin/CLAUDE.md` lifecycle skills section for S-3 completeness
     - File: `quoin/CLAUDE.md` — `### Lifecycle skills (checkpoint / end_of_day / sleep)` section
     - Edit: replace the forward-link placeholder for `/sleep` with the full description:
       - `/sleep` is Haiku-tier. Auto-invoked by `/end_of_day` as its final step (opt-out via `--skip-sleep`). Scans daily insights + session files within 30-day window. Three-bucket decisions: Promote → lessons-learned.md (per-entry user confirmation); Soft-Forget → `forgotten/YYYY-MM-DD.md` archive (per-entry confirmation, or skipped above quiet_floor with `--quiet-forget`); Middle-Band → deferred.
@@ -362,7 +386,7 @@ Stage 3 ships the full `/sleep` skill body (replacing the S-2 stub), edits `/end
     - Tier 1 — plain English.
     - Acceptance: all /sleep invocation modes described; dry-run marker file mentioned; boundary with `/checkpoint` clear.
 
-17. ⏳ T-15: update `install.sh` to deploy `sleep_score.py`, write dry-run start marker, and verify skills deploy
+17. ✓ T-15: update `install.sh` to deploy `sleep_score.py`, write dry-run start marker, and verify skills deploy
     - File: `quoin/install.sh`
     - Edit 1: add `sleep_score.py` to the scripts deploy step — `quoin/scripts/sleep_score.py` → `~/.claude/scripts/sleep_score.py`.
     - Edit 2: after skills deploy step, write the dry-run start marker on FIRST DEPLOY ONLY: `[ -f ~/.claude/memory/sleep_dryrun_start.txt ] || echo "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > ~/.claude/memory/sleep_dryrun_start.txt`. The `[ -f ... ] ||` guard ensures re-running install.sh does NOT reset the dry-run clock. After the conditional write, emit the current marker date: `echo "sleep dry-run start: $(cat ~/.claude/memory/sleep_dryrun_start.txt 2>/dev/null || echo 'not yet written')"`. `/sleep` reads this at startup and emits "Dry-run mode active until `<start + 30 days>`: no writes will occur" if within 30 days.
@@ -371,7 +395,7 @@ Stage 3 ships the full `/sleep` skill body (replacing the S-2 stub), edits `/end
     - Run `bash install.sh` after edits.
     - Acceptance: `ls ~/.claude/scripts/sleep_score.py` succeeds; `ls ~/.claude/memory/sleep_dryrun_start.txt` succeeds and contains an ISO timestamp; `bash install.sh` exits 0; `~/.claude/skills/sleep/SKILL.md` matches `quoin/skills/sleep/SKILL.md`. Re-run `bash install.sh` a second time and confirm `sleep_dryrun_start.txt` still contains the FIRST timestamp (not updated) — verifies the conditional write guard. "re-running install.sh does NOT reset the dry-run clock."
 
-18. ⏳ T-16: final validation — pre-merge gate + manual smoke (BLOCKS MERGE)
+18. ✓ T-16: final validation — pre-merge gate + manual smoke (BLOCKS MERGE)
     - **Sub-task A — automated:**
       - Run all S-3 unit tests: `python3 quoin/dev/tests/test_sleep_scoring.py` + `test_sleep_write_boundary.py` + `test_sleep_restore_roundtrip.py` + `test_sleep_skill_structure.py` + `bash quoin/dev/tests/test_sleep_chaining.sh`. All must exit 0.
       - Run `python3 quoin/dev/tests/test_quoin_stage1_preamble.py` — confirm 13-skill enumeration passes.
