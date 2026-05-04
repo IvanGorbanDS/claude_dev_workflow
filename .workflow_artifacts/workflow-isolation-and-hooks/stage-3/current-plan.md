@@ -299,7 +299,7 @@ Stage 3 ships the full `/sleep` skill body (replacing the S-2 stub), edits `/end
       - **Layer 2 (SKILL.md body text):** open `quoin/skills/sleep/SKILL.md`; grep for the literal string `"ONLY writes to"`; assert the grep matches; assert the surrounding context names only `lessons-learned.md` and `forgotten/` as write targets; assert no `~/.claude/projects/` path appears as a write target in the `## Write-target restriction` section.
     - Acceptance: `python3 quoin/dev/tests/test_sleep_write_boundary.py` exits 0; both layers pass; no auto-memory path appears in dry-run output.
 
-12. ⏳ T-10: write `quoin/dev/tests/test_sleep_restore_roundtrip.py` — restore round-trip test
+12. ✓ T-10: write `quoin/dev/tests/test_sleep_restore_roundtrip.py` — restore round-trip test
     - File: `quoin/dev/tests/test_sleep_restore_roundtrip.py`
     - Tests (three cases per architecture MAJ-5):
       - **Case 1 — original path exists:** soft-forget 1 entry from `restore_original_exists/` fixture (write to temp `forgotten/` dir); run `--restore <pattern>` → assert entry text appears verbatim in the original source file.
@@ -308,7 +308,7 @@ Stage 3 ships the full `/sleep` skill body (replacing the S-2 stub), edits `/end
     - All three cases use a temp directory sandbox; no writes to real `.workflow_artifacts/`.
     - Acceptance: `python3 quoin/dev/tests/test_sleep_restore_roundtrip.py` exits 0; all 3 cases pass.
 
-13. ⏳ T-11: write `quoin/dev/tests/test_sleep_chaining.sh` — /end_of_day → /sleep integration tests
+13. ✓ T-11: write `quoin/dev/tests/test_sleep_chaining.sh` — /end_of_day → /sleep integration tests
     - File: `quoin/dev/tests/test_sleep_chaining.sh`
     - Tests (all are static SKILL.md body text checks — grep + pattern-matching):
       - **test_skip_sleep_flag:** grep `quoin/skills/end_of_day/SKILL.md` for "Skipping /sleep" and "Run /sleep standalone"; also grep frontmatter description for `--skip-sleep`. Assert all matches found. (Verifies the flag is wired into both the body and the description.)
@@ -316,7 +316,7 @@ Stage 3 ships the full `/sleep` skill body (replacing the S-2 stub), edits `/end
       - **test_default_chain_fires:** grep `quoin/skills/end_of_day/SKILL.md` Step 6 body for the `[no-redispatch]` sentinel in the subagent dispatch prompt text. Assert sentinel is present. NOTE: runtime verification that the Haiku subagent actually fires is manual and is covered in T-16 Sub-task B smoke.
     - Acceptance: `bash quoin/dev/tests/test_sleep_chaining.sh` exits 0; 3/3 subtests pass.
 
-14. ⏳ T-12: write `quoin/dev/tests/test_sleep_dry_run_spike.sh` — dual false-positive rate spike (P-0, BLOCKS MERGE)
+14. ✓ T-12: write `quoin/dev/tests/test_sleep_dry_run_spike.sh` — dual false-positive rate spike (P-0, BLOCKS MERGE)
     - File: `quoin/dev/tests/test_sleep_dry_run_spike.sh`
     - This is the S-3 P-0 de-risking spike from the architecture.
     - Corpus design (CRIT-2 fix):

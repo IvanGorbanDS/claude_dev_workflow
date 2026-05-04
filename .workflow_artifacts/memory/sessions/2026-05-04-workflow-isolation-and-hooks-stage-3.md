@@ -2,7 +2,7 @@
 in_progress
 
 ## Current stage
-implement — S-3 T-00..T-04 complete; T-05 onward pending
+implement — S-3 T-00..T-12 complete; T-13 onward pending
 
 ## Completed in this session
 - ✓ Read critic SKILL.md, plan, architecture S-3 section, lessons-learned, sleep stub, end_of_day SKILL.md, quoin/CLAUDE.md, install.sh, existing tests, existing scripts
@@ -27,22 +27,18 @@ implement — S-3 T-00..T-04 complete; T-05 onward pending
   - ✓ T-03: Created .workflow_artifacts/memory/forgotten/.gitkeep; added `forgotten/<date>.md` entry in memory tree in quoin/CLAUDE.md
   - ✓ T-04: Added `### Workflow memory layers` section to quoin/CLAUDE.md with 6-layer boundary table and hard boundary statement
   - ✓ Appended implement session to cost ledger (UUID: AD2AC7B5-FD49-4ACE-B4D8-7026A2F132EC)
+- ✓ S-3 IMPLEMENT DISPATCH 2 (T-05..T-09): T-05 end_of_day Step 6, T-06 sleep SKILL.md, T-06.5 sleep_score.py, T-07 fixtures, T-08/T-09 tests — all committed
+- ✓ S-3 IMPLEMENT DISPATCH 3 (T-10..T-12):
+  - ✓ T-10: test_sleep_restore_roundtrip.py — 3 cases pass (original exists, gone, neither writable)
+  - ✓ T-11: test_sleep_chaining.sh — 3/3 static text checks pass
+  - ✓ T-12: test_sleep_dry_run_spike.sh — spike ran, 5 entries (at minimum), 1 promote, 0 forget, 4 middle; results in quoin/dev/spikes/v00_sleep_dry_run_results.md
 
 ## Unfinished work
-- T-05: edit quoin/skills/end_of_day/SKILL.md to add Step 6 /sleep auto-chain
-- T-06: write quoin/skills/sleep/SKILL.md (replace stub with full skill body)
-- T-06.5: write quoin/scripts/sleep_score.py
-- T-07: build fixture corpus at quoin/dev/tests/fixtures/sleep/
-- T-08: write test_sleep_scoring.py
-- T-09: write test_sleep_write_boundary.py
-- T-10: write test_sleep_restore_roundtrip.py
-- T-11: write test_sleep_chaining.sh
-- T-12: write test_sleep_dry_run_spike.sh
 - T-13: write test_sleep_skill_structure.py + update test_quoin_stage1_preamble.py
 - T-14: update lifecycle skills section in quoin/CLAUDE.md
-- T-15: update install.sh
-- T-16: final validation
-- Next dispatch scope: T-05 and T-06
+- T-15: update install.sh (deploy sleep_score.py, write dry-run marker)
+- T-16: final validation (all tests pass, deploy sync, manual smoke)
+- Next dispatch scope: T-13 onward
 
 ## Decisions made
 - T-00 CASE A: Agent subagent dispatch IS available from /end_of_day body; proven by §0 block in end_of_day SKILL.md which already spawns Haiku subagents; all stage-3 task specs proceed with Option A
