@@ -153,7 +153,7 @@ success "QUICKSTART deployed to ~/.claude/QUICKSTART.md"
 
 # v3 scripts (NEW — separate destination directory ~/.claude/scripts/)
 mkdir -p "$USER_SCRIPTS_DIR"
-for script_file in validate_artifact.py path_resolve.py cost_from_jsonl.py classify_critic_issues.py build_preambles.py session_age_guard.py pidfile_helpers.sh; do
+for script_file in validate_artifact.py path_resolve.py cost_from_jsonl.py classify_critic_issues.py build_preambles.py session_age_guard.py pidfile_helpers.sh sleep_score.py; do
   SCRIPT_SRC="$SCRIPT_DIR/scripts/$script_file"
   SCRIPT_DST="$USER_SCRIPTS_DIR/$script_file"
   if [ ! -f "$SCRIPT_SRC" ]; then
@@ -398,6 +398,20 @@ else
     echo "$MARKER_END"
   } >> "$USER_CLAUDE_MD"
   success "Appended quoin rules to ~/.claude/CLAUDE.md"
+fi
+
+# ── Step 3b: Write sleep dry-run marker (idempotent — never resets the clock) ──
+# NOTE: after editing quoin/CLAUDE.md with sleep phase value + importance signals,
+# run bash install.sh BEFORE the first /sleep session (per S-3 T-01 order constraint)
+if [ "$DRY_RUN" -ne 1 ]; then
+  SLEEP_MARKER="$HOME/.claude/memory/sleep_dryrun_start.txt"
+  mkdir -p "$HOME/.claude/memory"
+  if [ ! -f "$SLEEP_MARKER" ]; then
+    date -u +%Y-%m-%d > "$SLEEP_MARKER"
+    success "Wrote sleep dry-run start marker: $SLEEP_MARKER"
+  else
+    info "Sleep dry-run marker already exists ($SLEEP_MARKER) — date unchanged (clock not reset)."
+  fi
 fi
 
 # ── Done ──
