@@ -26,6 +26,7 @@ SKILLS_DIR = TESTS_DIR.parent.parent / "skills"
 
 SO_HEADING = "## §0 Model dispatch (FIRST STEP — execute before anything else)"
 MR_HEADING = "## Model requirement"
+POLLUTION_HEADING = "## §0' Pollution dispatch (execute after §0 / §0c if present — before skill body)"
 
 # 12 cheap-tier skills — must carry §0.
 CHEAP_TIER_SKILLS = [
@@ -305,7 +306,7 @@ def test_revise_revise_fast_sync_contract():
                     return None
         return None
 
-    allowed_sections = {SO_HEADING, MR_HEADING}
+    allowed_sections = {SO_HEADING, MR_HEADING, POLLUTION_HEADING}
     # Stage 2-alt (pipeline-efficiency-improvements): the preamble bootstrap step
     # contains the skill-specific path (~/.claude/skills/<skill>/preamble.md) which
     # differs between revise and revise-fast. This is an intentional, allowed diff

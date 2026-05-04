@@ -57,6 +57,38 @@ compute_utilization() {
         'BEGIN{ printf "%d\n", (b / bpt / lim) * 10000 }'
 }
 
+# compute_pollution_score <transcript_path> — returns an integer score.
+# Formula: byte_size_kb + (agent_returns × 5) + (read_calls × 1) + (bash_calls × 1)
+# where byte_size_kb = bytes / 1000 (integer division).
+# Default threshold 5000 corresponds to ~5MB transcript or ~1MB + heavy tool use.
+# jq preferred for precision; grep is the stdlib-only fallback.
+# Returns non-zero exit if transcript_path is empty or unreadable.
+compute_pollution_score() {
+    _tp="$1"
+    if [ -z "$_tp" ] || ! [ -r "$_tp" ]; then
+        return 1
+    fi
+    _bytes=$(wc -c < "$_tp" 2>/dev/null) || return 1
+    _bytes=$(printf '%s' "$_bytes" | awk '{print $1}')
+    _kb=$((_bytes / 1000))
+
+    _agent_count=0
+    _read_count=0
+    _bash_count=0
+    if command -v jq > /dev/null 2>&1; then
+        _agent_count=$(jq -r 'select(.type == "tool_result") | select(.tool_name == "Agent") | "x"' "$_tp" 2>/dev/null | wc -l | awk '{print $1}')
+        _read_count=$(jq -r 'select(.type == "tool_result") | select(.tool_name == "Read") | "x"' "$_tp" 2>/dev/null | wc -l | awk '{print $1}')
+        _bash_count=$(jq -r 'select(.type == "tool_result") | select(.tool_name == "Bash") | "x"' "$_tp" 2>/dev/null | wc -l | awk '{print $1}')
+    else
+        _agent_count=$(grep -c '"tool_name"[[:space:]]*:[[:space:]]*"Agent"' "$_tp" 2>/dev/null || printf '0')
+        _read_count=$(grep -c '"tool_name"[[:space:]]*:[[:space:]]*"Read"' "$_tp" 2>/dev/null || printf '0')
+        _bash_count=$(grep -c '"tool_name"[[:space:]]*:[[:space:]]*"Bash"' "$_tp" 2>/dev/null || printf '0')
+    fi
+
+    awk -v kb="$_kb" -v ag="$_agent_count" -v rd="$_read_count" -v ba="$_bash_count" \
+        'BEGIN{ printf "%d\n", kb + (ag * 5) + (rd * 1) + (ba * 1) }'
+}
+
 # safe_jq_or_passthrough [jq-args]... — jq invocation with fail-OPEN.
 # If jq is not on PATH, returns 1; caller should exit 0 (fail-OPEN).
 # Usage: output=$(printf '%s' "$STDIN" | safe_jq_or_passthrough -r '.field // empty')

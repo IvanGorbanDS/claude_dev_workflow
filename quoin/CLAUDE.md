@@ -472,6 +472,42 @@ Manual override: prefix any user-typed slash invocation with bare `[no-redispatc
 
 Mechanical drift detection lives in `quoin/dev/tests/test_quoin_stage1_preamble.py` and `quoin/dev/tests/test_quoin_stage1_recursion_abort.py`; manual production-dispatch verification is captured in `quoin/dev/verify_subagent_dispatch.md`.
 
+### §0' Pollution dispatch
+
+The 7 Opus-tier skills that are NOT orchestrators (architect, plan, critic, revise, review, init_workflow, discover) carry a `## §0' Pollution dispatch (execute after §0 / §0c if present — before skill body)` block. When invoked from a session whose `pollution_score` exceeds `POLLUTION_THRESHOLD`, the skill self-dispatches as a fresh Agent subagent carrying per-skill paths (not content).
+
+**Detection:** The skill reads `pollution_score: N` from the active session-state file (`.workflow_artifacts/memory/sessions/<today>-<task>.md`) or from the fallback `pollution-score-latest.txt`. If N >= threshold AND no `[no-redispatch]` sentinel AND no prior §0 dispatch occurred: dispatch fires.
+
+**Score writer:** `userpromptsubmit.sh` STEP 0.5 computes and writes the score on every prompt submit (Plan B — SessionStart does not provide `transcript_path`; empirically confirmed via T-00 spike). The writer runs BEFORE the exemption check so the score is always fresh at dispatch time.
+
+**Score formula:** `transcript_kb + (agent_returns × 5) + (read_calls × 1) + (bash_calls × 1)`. Implemented in `quoin/hooks/_lib.sh` as `compute_pollution_score()`.
+
+**Per-skill dispatch contract:**
+
+| Skill | What the dispatch prompt carries |
+|-------|----------------------------------|
+| /architect | task description + paths to /discover output |
+| /plan | task description + path to architecture.md + stage identifier |
+| /critic | absolute path to target artifact |
+| /revise | path to current-plan.md + path to critic-response-N.md |
+| /review | path to current-plan.md + branch ref |
+| /init_workflow | project root absolute path |
+| /discover | project root absolute path |
+
+**Ordering:** §0 (model tier) fires FIRST. §0' fires only if no §0 dispatch happened. For skills with §0c (architect, review): order is §0c → §0' → skill body.
+
+**Threshold tunable:** `QUOIN_POLLUTION_THRESHOLD` env var (default 5000). Score 5000 corresponds to ~5MB transcript or ~1MB transcript + heavy tool use.
+
+**Refusal path:** If §0' cannot extract per-skill dispatch fields, it emits `[quoin-S-1: cannot extract per-skill dispatch contract; running in main]` and proceeds in main.
+
+**Fail-OPEN:** If Agent tool unavailable, emits `[quoin-S-1: pollution dispatch unavailable; proceeding in current session]` and proceeds.
+
+**Manual override:** `[no-redispatch]` sentinel (same as §0) skips dispatch.
+
+**Excluded:** /run and /thorough_plan (orchestrators already spawn phases as subagents).
+
+Drift detection: `quoin/dev/tests/test_quoin_pollution_preamble.py`; manual production verification: `quoin/dev/verify_pollution_dispatch.md`.
+
 ### Hooks deployed by quoin
 
 `bash install.sh` deploys three hook scripts to `~/.claude/hooks/` and registers four (event, matcher) stanzas in `~/.claude/settings.json`:
@@ -506,6 +542,7 @@ Hook scripts read these values at runtime via `${QUOIN_*:-default}` parameter ex
 | `STOP_THRESHOLD_BPS` | `8500` | `QUOIN_STOP_BPS` | Advisory threshold in basis-points (8500 = 85.00%) |
 | `BLOCK_THRESHOLD_BPS` | `9500` | `QUOIN_BLOCK_BPS` | Block threshold in basis-points (9500 = 95.00%) |
 | `STALE_SENTINEL_DAYS` | `7` | `QUOIN_STALE_SENTINEL_DAYS` | Days after which pending-prompt-*.txt / pending-restore-*.txt are swept; long-lived sessions may extend to 14+ |
+| `POLLUTION_THRESHOLD` | `5000` | `QUOIN_POLLUTION_THRESHOLD` | Score threshold for pollution dispatch (score = transcript_kB + weighted tool-use count); 5000 ≈ 5MB transcript or ~1MB + heavy tool use |
 
 **Basis-points convention:** Utilization values and threshold comparisons use INTEGER basis-points (0..10000) throughout. POSIX `[ ]` does integer comparison only; basis-points eliminate all floating-point comparison hazards. `compute_utilization()` in `_lib.sh` returns a basis-point integer (e.g., `8540` = 85.40% utilization).
 
