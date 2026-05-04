@@ -70,26 +70,35 @@ class TestComputePollutionScore:
         assert score == 5, f"5KB no-tool file should score 5, got {score}"
 
     def test_tool_weighted_score(self, tmp_path):
-        """1MB JSONL with 10 Agent + 20 Read + 5 Bash → score = 1000 + 50 + 20 + 5 = 1075."""
+        """1MB JSONL with 10 Agent + 20 Read + 5 Bash → score = 1000 + 50 + 20 + 5 = 1075.
+
+        Uses real Claude Code transcript shape: tool_use entries are nested under assistant
+        messages at .message.content[].type == "tool_use" with .name (not flat tool_result).
+        """
         f = tmp_path / "tool_heavy.jsonl"
         lines = []
-        # Fill to ~1MB with plain content (no tool_result)
-        filler = json.dumps({"type": "text", "content": "x" * 900}) + "\n"
-        # ~1000 lines × ~900 bytes ≈ 900KB; pad to 1000000 bytes total
+        # Fill to ~1MB with user-turn content (no tool_use — won't be counted)
+        filler = json.dumps({"type": "user", "message": {"content": [{"type": "text", "text": "x" * 870}]}}) + "\n"
         lines.extend([filler] * 1000)
 
-        # Add tool_result entries (10 Agent + 20 Read + 5 Bash)
+        # Add real-shape assistant messages with tool_use (10 Agent + 20 Read + 5 Bash)
+        def _tool_line(name: str) -> str:
+            return json.dumps({
+                "type": "assistant",
+                "message": {"content": [{"type": "tool_use", "id": "toolu_01", "name": name, "input": {}}]}
+            }) + "\n"
+
         for _ in range(10):
-            lines.append(json.dumps({"type": "tool_result", "tool_name": "Agent"}) + "\n")
+            lines.append(_tool_line("Agent"))
         for _ in range(20):
-            lines.append(json.dumps({"type": "tool_result", "tool_name": "Read"}) + "\n")
+            lines.append(_tool_line("Read"))
         for _ in range(5):
-            lines.append(json.dumps({"type": "tool_result", "tool_name": "Bash"}) + "\n")
+            lines.append(_tool_line("Bash"))
 
         content = "".join(lines)
         # Pad to exactly 1MB
         if len(content.encode()) < 1_000_000:
-            pad = json.dumps({"type": "text", "content": "p" * 900}) + "\n"
+            pad = json.dumps({"type": "user", "message": {"content": [{"type": "text", "text": "p" * 870}]}}) + "\n"
             while len(content.encode()) < 1_000_000:
                 content += pad
         f.write_bytes(content.encode("utf-8")[:1_000_000])
@@ -98,6 +107,43 @@ class TestComputePollutionScore:
         score = int(result.stdout.strip())
         # 1000 kB + (10×5) + (20×1) + (5×1) = 1075
         assert score == 1075, f"Tool-weighted 1MB file should score 1075, got {score}"
+
+    def test_real_shape_fixture(self, tmp_path):
+        """50 assistant messages with tool_use → function counts them correctly.
+
+        Regression guard: ensures the jq filter walks .message.content[] as in
+        real Claude Code transcripts, not the synthetic flat tool_result shape.
+        """
+        f = tmp_path / "real_shape.jsonl"
+        lines = []
+        # 30 Bash + 15 Read + 5 Agent in real assistant message shape
+        for _ in range(30):
+            lines.append(json.dumps({
+                "type": "assistant",
+                "message": {"content": [{"type": "tool_use", "id": "t1", "name": "Bash", "input": {}}]}
+            }) + "\n")
+        for _ in range(15):
+            lines.append(json.dumps({
+                "type": "assistant",
+                "message": {"content": [{"type": "tool_use", "id": "t2", "name": "Read", "input": {}}]}
+            }) + "\n")
+        for _ in range(5):
+            lines.append(json.dumps({
+                "type": "assistant",
+                "message": {"content": [{"type": "tool_use", "id": "t3", "name": "Agent", "input": {}}]}
+            }) + "\n")
+        f.write_text("".join(lines), encoding="utf-8")
+        result = _run_score(str(f))
+        assert result.returncode == 0
+        score = int(result.stdout.strip())
+        content_bytes = f.stat().st_size
+        kb = content_bytes // 1000
+        # Score = kb + (5×5) + (15×1) + (30×1) = kb + 25 + 15 + 30 = kb + 70
+        expected = kb + 70
+        assert score == expected, (
+            f"Real-shape fixture (5 Agent + 15 Read + 30 Bash) should score {expected}, got {score}. "
+            f"If score == {kb} (kb only), the jq filter is not walking .message.content[] correctly."
+        )
 
     def test_missing_file_nonzero_exit(self):
         """Missing file → non-zero exit code."""

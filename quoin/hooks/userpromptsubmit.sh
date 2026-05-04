@@ -26,7 +26,7 @@ STDIN=$(cat)
             _ups_cwd=$(printf '%s' "$STDIN" | jq -r '.cwd // empty' 2>/dev/null) || true
             [ -z "$_ups_cwd" ] && _ups_cwd="$PWD"
             _ups_mem="${_ups_cwd}/.workflow_artifacts/memory"
-            _ups_session=$(find "${_ups_mem}/sessions/" -name "$(date +%Y-%m-%d)-*.md" -type f -print 2>/dev/null | xargs ls -t 2>/dev/null | head -1)
+            _ups_session=$(find "${_ups_mem}/sessions/" -name "$(date +%Y-%m-%d)-*.md" -type f -print0 2>/dev/null | xargs -0 ls -t 2>/dev/null | head -1)
             if [ -n "$_ups_session" ] && [ -f "$_ups_session" ]; then
                 sed -i.bak '/^pollution_score:/d' "$_ups_session" 2>/dev/null && \
                   rm -f "${_ups_session}.bak" 2>/dev/null || true

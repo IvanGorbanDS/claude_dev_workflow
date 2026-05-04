@@ -76,13 +76,18 @@ compute_pollution_score() {
     _read_count=0
     _bash_count=0
     if command -v jq > /dev/null 2>&1; then
-        _agent_count=$(jq -r 'select(.type == "tool_result") | select(.tool_name == "Agent") | "x"' "$_tp" 2>/dev/null | wc -l | awk '{print $1}')
-        _read_count=$(jq -r 'select(.type == "tool_result") | select(.tool_name == "Read") | "x"' "$_tp" 2>/dev/null | wc -l | awk '{print $1}')
-        _bash_count=$(jq -r 'select(.type == "tool_result") | select(.tool_name == "Bash") | "x"' "$_tp" 2>/dev/null | wc -l | awk '{print $1}')
+        # Real Claude Code JSONL: tool_use entries are nested under assistant messages at
+        # .message.content[].type == "tool_use" with .name (not a flat tool_result/tool_name).
+        # Single jq pass extracts all tool names, then awk counts per name.
+        _counts=$(jq -r 'select(.type == "assistant") | .message.content[]? | select(.type == "tool_use") | .name' "$_tp" 2>/dev/null | sort | uniq -c) || true
+        _agent_count=$(printf '%s\n' "$_counts" | awk 'BEGIN{n=0} $2=="Agent"{n=$1} END{print n}')
+        _read_count=$(printf '%s\n' "$_counts" | awk 'BEGIN{n=0} $2=="Read"{n=$1} END{print n}')
+        _bash_count=$(printf '%s\n' "$_counts" | awk 'BEGIN{n=0} $2=="Bash"{n=$1} END{print n}')
     else
-        _agent_count=$(grep -c '"tool_name"[[:space:]]*:[[:space:]]*"Agent"' "$_tp" 2>/dev/null || printf '0')
-        _read_count=$(grep -c '"tool_name"[[:space:]]*:[[:space:]]*"Read"' "$_tp" 2>/dev/null || printf '0')
-        _bash_count=$(grep -c '"tool_name"[[:space:]]*:[[:space:]]*"Bash"' "$_tp" 2>/dev/null || printf '0')
+        # grep fallback: real transcripts have "name":"Agent" inside tool_use objects
+        _agent_count=$(grep -c '"name"[[:space:]]*:[[:space:]]*"Agent"' "$_tp" 2>/dev/null || printf '0')
+        _read_count=$(grep -c '"name"[[:space:]]*:[[:space:]]*"Read"' "$_tp" 2>/dev/null || printf '0')
+        _bash_count=$(grep -c '"name"[[:space:]]*:[[:space:]]*"Bash"' "$_tp" 2>/dev/null || printf '0')
     fi
 
     awk -v kb="$_kb" -v ag="$_agent_count" -v rd="$_read_count" -v ba="$_bash_count" \
