@@ -1,7 +1,7 @@
 # T-02 — install.sh Hooks-Deploy Idempotency Spike: Results
 
 **Status:** PASS
-**Date:** 2026-05-03
+**Date:** 2026-05-04
 **Runner:** idempotency_spike.sh
 
 ## Scenarios tested
