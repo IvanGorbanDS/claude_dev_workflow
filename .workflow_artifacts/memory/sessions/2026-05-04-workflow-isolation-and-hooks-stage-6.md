@@ -3,8 +3,11 @@
 ## Task
 `workflow-isolation-and-hooks` — Stage 6: analyze_cost_ledger.py + quoin/.gitignore
 
+## Status
+completed
+
 ## Current stage
-COMPLETE — all 6 tasks implemented, 11/11 tests pass, committed on feat/workflow-isolation-and-hooks-stage-6
+review — verdict APPROVED; gate-post-review PASSED. Ready for /end_of_task.
 
 ## Completed in this session
 - T1: Created `quoin/.gitignore` (excludes .workflow_artifacts/, .claude/, .pytest_cache/, settings.local.json, Python artifacts)
@@ -19,7 +22,12 @@ COMPLETE — all 6 tasks implemented, 11/11 tests pass, committed on feat/workfl
 - `52d7ff5` — T3+T4+T5: --list-models, tests, fixtures, install.sh wiring
 
 ## Unfinished work
-None. Ready for /review.
+None. Review APPROVED. Gate-post-review PASSED. Ready for /end_of_task.
+
+## Review outcome
+- review-1.md: APPROVED — no CRITICAL or MAJOR issues; 5 MINORs noted (defer-able)
+- gate-post-review-2026-05-04.md: PASS — 7/7 checks passed
+- Branch: feat/workflow-isolation-and-hooks-stage-6 (3 commits ahead of main, no conflicts)
 
 ## Files created/modified
 - `quoin/.gitignore` (new)
@@ -35,3 +43,4 @@ None. Ready for /review.
 - Recorded in cost ledger: no
 - end_of_day_due: yes
 - fallback_fires: 0
+pollution_score: 185
