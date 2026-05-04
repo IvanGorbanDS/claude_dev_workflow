@@ -313,7 +313,7 @@ The 7th column (`fallback_fires`) is OPTIONAL. Existing 6-column rows are valid 
 
 **UUID acquisition:** Most recently modified `<uuid>.jsonl` under `~/.claude/projects/<project-hash>/` (project-hash = project path with `/` replaced by `-`). Fall back to `unknown-<ISO-timestamp>` if none found.
 
-**Phase values:** `discover`, `architect`, `plan`, `critic`, `revise`, `implement`, `review`, `gate`, `end-of-task`, `run-orchestrator`, `thorough-plan`, `rollback`, `init-workflow`, `start-of-day`, `end-of-day`, `weekly-review`, `capture-insight`, `triage`, `expand`, `checkpoint`, `ad-hoc`
+**Phase values:** `discover`, `architect`, `plan`, `critic`, `revise`, `implement`, `review`, `gate`, `end-of-task`, `run-orchestrator`, `thorough-plan`, `rollback`, `init-workflow`, `start-of-day`, `end-of-day`, `weekly-review`, `capture-insight`, `triage`, `expand`, `checkpoint`, `sleep`, `ad-hoc`
 
 **Category:** Always write `task`. The ledger is append-only — never delete or rewrite rows.
 
@@ -562,3 +562,83 @@ Three skills handle session lifecycle at different granularities (v3 lifecycle s
 - `/checkpoint` → session-restore primitives only (`checkpoints/`, `sessions/`, `pending-*` sentinels)
 - `/end_of_day` → daily rollup (`daily/`, `lessons-learned.md`)
 - `/sleep` → long-term memory promote/forget (S-3 scope)
+
+### /sleep importance signals
+
+`/sleep` reads this YAML block at runtime to tune its promote/forget scoring. The block is parsed by `sleep_score.py` via `load_config()`. All threshold values are tunable via environment variables (`QUOIN_SLEEP_<KEY>`, e.g., `QUOIN_SLEEP_PROMOTE_MIN_SCORE=3`).
+
+```yaml
+sleep_importance_signals:
+  promote:
+    frequency_3plus: 3       # appears in ≥3 daily/session entries in scan window
+    cross_task_2plus: 2      # keywords in sessions for ≥2 different task names
+    cost_bearing: 2          # entry within ±2h of high-cost-ledger row
+    user_marked_yes: 5       # Promote?: yes in insights file
+    structural_fit: 1        # matches known taxonomy (V-04..V-07, integration, etc.)
+    survival: 1              # still relevant N days later (re-mentioned or unresolved)
+  forget:
+    one_shot: 2              # appears exactly once in dailies
+    resolved_and_shipped: 2  # tied to cleanly-closed task with no recurrence
+    sub_threshold_cost: 1    # no cost-ledger row above $0.50 floor within ±2h
+    stale_30days: 2          # older than 30 days with no new mentions
+    user_marked_no: 5        # Promote?: no
+    duplicate: 3             # ≥3-keyword overlap with existing lessons-learned entry
+  thresholds:
+    promote_min_score: 3     # sum of matched promote weights to qualify as Promote
+    promote_max_forget: 0    # max forget signals allowed for Promote decision
+    forget_min_score: 2      # sum of matched forget weights to qualify as Soft-Forget
+    forget_max_promote: 0    # max promote signals allowed for Forget decision
+    forget_quiet_floor: 4    # score at which --quiet-forget suppresses per-entry confirmation
+    scan_window_days: 30     # how far back /sleep scans daily files
+    cost_bearing_floor_usd: 0.50  # cost-ledger row threshold for cost_bearing signal
+    stale_days: 30           # days threshold for stale signal
+    _source: claude_md       # sentinel: distinguishes live YAML parse from hardcoded defaults (test_default_weights_present uses this)
+```
+
+**`_source: claude_md` sentinel:** This key is present in the parsed `thresholds` dict at runtime. `sleep_score.py` ignores it — `load_config()` uses `.get()` for all threshold key lookups, so unknown keys (including `_source`) are silently skipped. The sentinel is purely for the `test_default_weights_present` test to distinguish a live YAML parse from hardcoded fallback defaults; it has no runtime effect.
+
+**Env var overrides:** Each threshold key maps to `QUOIN_SLEEP_<KEY>` (uppercase, underscores). Examples:
+- `QUOIN_SLEEP_PROMOTE_MIN_SCORE=5` — raise the promote bar
+- `QUOIN_SLEEP_SCAN_WINDOW_DAYS=60` — widen the scan window
+- `QUOIN_SLEEP_FORGET_QUIET_FLOOR=6` — require higher confidence before auto-quiet
+
+### Workflow memory layers
+
+The workflow uses several distinct memory layers. Each has a different lifecycle, writer, and consumer:
+
+| Memory layer | Purpose | Today's mechanism |
+|---|---|---|
+| auto-memory | user/feedback/project facts | written ad-hoc by Claude |
+| `lessons-learned.md` | reusable engineering takeaways | `/end_of_task` + `/sleep` promote |
+| `daily/insights-<date>.md` | in-session insight scratchpad | written ad-hoc via `/capture_insight` |
+| `daily/<date>.md` | rendered daily briefing | written by `/end_of_day` |
+| `weekly/<iso-week>.md` | rendered weekly review | written by `/weekly_review` |
+| `forgotten/<date>.md` (NEW in S-3) | soft-forget archive | written by `/sleep` |
+
+**Hard boundary:** `/sleep` writes ONLY to `lessons-learned.md` and `forgotten/<date>.md`. It does NOT touch `~/.claude/projects/<hash>/memory/` (auto-memory). This restriction is enforced by the write-target restriction in the `/sleep` SKILL.md and tested by the `test_sleep_write_boundary.py` test.
+
+The `forgotten/` directory structure:
+```
+.workflow_artifacts/memory/
+├── sessions/          ← per-session state files
+├── daily/             ← rendered briefings + insights scratchpads
+├── weekly/            ← weekly review summaries
+├── checkpoints/       ← /checkpoint restore sentinels
+├── forgotten/         ← soft-forget archive (NEW — S-3)
+│   └── <date>.md      ← one file per day /sleep ran with forgets
+└── lessons-learned.md ← long-term institutional memory
+```
+
+Each `forgotten/<date>.md` file is append-only. Each entry block follows this format:
+
+```
+> Source: <absolute-path-to-source-file>:<start-line>..<end-line>
+> Forgotten: <ISO timestamp>
+> Score: forget=<N>, promote=<N>
+
+<original entry text verbatim>
+
+---
+```
+
+The `> Source:` line is the restore anchor for `/sleep --restore`. Use `/sleep --restore <pattern>` to search `forgotten/` and move entries back to their source location.
