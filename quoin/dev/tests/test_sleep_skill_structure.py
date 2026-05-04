@@ -11,9 +11,8 @@ No live LLM calls.
 """
 from __future__ import annotations
 
+import sys
 from pathlib import Path
-
-import pytest
 
 TESTS_DIR = Path(__file__).parent
 SKILLS_DIR = TESTS_DIR.parent.parent / "skills"
@@ -132,7 +131,40 @@ def test_dry_run_no_write():
 # ── 9. Deployed copy sync (requires install.sh to have run) ──────────────────
 
 def test_deployed_copy_sync():
-    pytest.skip(
-        "requires install.sh to have run — verify in T-16 gate: "
-        "diff quoin/skills/sleep/SKILL.md ~/.claude/skills/sleep/SKILL.md"
-    )
+    print("  SKIP  test_deployed_copy_sync — requires install.sh to have run; verify via: diff quoin/skills/sleep/SKILL.md ~/.claude/skills/sleep/SKILL.md")
+
+
+def run_tests():
+    tests = [
+        test_model_declared_haiku,
+        test_sec0_present,
+        test_sec0c_present,
+        test_sec0c_after_sec0,
+        test_pidfile_acquire_sleep,
+        test_pidfile_release_sleep,
+        test_write_target_restriction_present,
+        test_dry_run_no_write,
+        test_deployed_copy_sync,
+    ]
+    passed = 0
+    failed = 0
+    print(f"Running {len(tests)} test(s) from {__file__}")
+    for t in tests:
+        name = t.__name__
+        try:
+            t()
+            if "SKIP" not in name or name == "test_deployed_copy_sync":
+                # deployed_copy_sync prints its own SKIP line
+                if name != "test_deployed_copy_sync":
+                    print(f"  PASS  {name}")
+            passed += 1
+        except AssertionError as e:
+            print(f"  FAIL  {name}: {e}")
+            failed += 1
+    print(f"\nResults: {passed} passed (includes skips), {failed} failed")
+    if failed:
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    run_tests()
