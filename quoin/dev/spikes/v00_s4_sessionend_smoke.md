@@ -80,4 +80,4 @@ into the next system prompt turn.
 
 ## Manual smoke
 
-Manual smoke: PASS (recorded after T-09 completes — see below)
+Manual smoke: PENDING — T-09 requires a live Claude Code session; automated tests (T-06) cover the logic. Run by opening a new session with `end_of_day_due: yes` set in a session file and observing the banner before running /end_of_task.

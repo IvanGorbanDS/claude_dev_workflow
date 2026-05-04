@@ -229,7 +229,7 @@ install_hooks() {
     cat > "$TODO_FILE" << 'TODOEOF'
 # Hook Merge TODO — quoin install.sh
 
-jq was not found on PATH at install time. The following four stanzas must be
+jq was not found on PATH at install time. The following five stanzas must be
 merged manually into ~/.claude/settings.json under the "hooks" key:
 
 ## UserPromptSubmit (matcher: *)
