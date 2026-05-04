@@ -34,3 +34,8 @@ __pycache__/
 
 # Workflow cost ledgers — internal session tracking, never in repo
 **/cost-ledger.md
+
+# Process/scratch files at project root
+/next-steps*.md
+/pipeline-spending-analysis*.md
+/openquoin/
