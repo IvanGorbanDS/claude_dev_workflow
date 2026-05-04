@@ -556,7 +556,19 @@ Three skills handle session lifecycle at different granularities (v3 lifecycle s
 
 **`/end_of_day`** — rolls up daily session state into `.workflow_artifacts/memory/daily/<date>.md`. Touches `lessons-learned.md` if insights are promoted. Run at end of each work session.
 
-**`/sleep`** — memory promote/forget (architecture stage 3; not yet shipped). Will handle moving insights from daily scratchpad to long-term memory and soft-forgetting stale artifacts. Forward-compatible section; `/sleep` skill stub ships in S-2 carrying only the §0c pidfile lifecycle block.
+**`/sleep`** — Haiku-tier. Auto-invoked by `/end_of_day` as its final step (opt-out via `--skip-sleep`). Scans daily insights + session files within a 30-day window. Three-bucket decisions:
+- Promote → `lessons-learned.md` (per-entry user confirmation)
+- Soft-Forget → `forgotten/<date>.md` archive (per-entry user confirmation in default mode; skipped above `forget_quiet_floor` score with `--quiet-forget`)
+- Middle-Band → deferred
+
+First 30 days of production: `/sleep --dry-run` mode only (no writes); inspect proposed decisions to tune weights.
+
+Subcommands:
+- `/sleep --restore <pattern>`: moves entries back from `forgotten/` to their source (or today's insights if source gone)
+- `/sleep --purge --older-than 90d`: true-deletes archive files; per-file confirmation; never auto-run
+- `/sleep --escalate`: re-examines middle-band candidates on Opus for deeper reasoning
+
+**Boundary:** `/sleep` writes ONLY to `lessons-learned.md` and `forgotten/<date>.md`. Does NOT touch `~/.claude/projects/<hash>/memory/` (auto-memory). Distinct from `/checkpoint` (which handles session-restore primitives only) and `/end_of_day` (which handles daily rollup).
 
 **Boundary summary:**
 - `/checkpoint` → session-restore primitives only (`checkpoints/`, `sessions/`, `pending-*` sentinels)
