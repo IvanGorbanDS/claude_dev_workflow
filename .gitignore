@@ -31,3 +31,6 @@ __pycache__/
 # /expand --save output files (scratch; use sparingly)
 *.expanded-*.md
 .venv/
+
+# Workflow cost ledgers — internal session tracking, never in repo
+**/cost-ledger.md

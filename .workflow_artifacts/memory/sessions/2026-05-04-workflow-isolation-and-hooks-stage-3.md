@@ -1,5 +1,5 @@
 ## Status
-in_progress
+COMPLETE — Stage 3 implementation done; all T-13..T-16 complete; ready for /end_of_task
 
 ## Current stage
 implement — S-3 T-00..T-12 complete; T-13 onward pending
@@ -33,12 +33,14 @@ implement — S-3 T-00..T-12 complete; T-13 onward pending
   - ✓ T-11: test_sleep_chaining.sh — 3/3 static text checks pass
   - ✓ T-12: test_sleep_dry_run_spike.sh — spike ran, 5 entries (at minimum), 1 promote, 0 forget, 4 middle; results in quoin/dev/spikes/v00_sleep_dry_run_results.md
 
+## Completed in final dispatch (T-13..T-16)
+- ✓ T-13: test_sleep_skill_structure.py (9 tests: 8 pass, 1 skip); test_quoin_stage1_preamble.py CHEAP_TIER_SKILLS 12→13 (117 tests all pass)
+- ✓ T-14: quoin/CLAUDE.md lifecycle section — /sleep stub replaced with full description
+- ✓ T-15: install.sh — sleep_score.py added; Step 3b dry-run marker (idempotent); bash install.sh run + verified
+- ✓ T-16: All S-3 automated tests pass; Sub-task B smoke confirmed; convergence summary written to plan
+
 ## Unfinished work
-- T-13: write test_sleep_skill_structure.py + update test_quoin_stage1_preamble.py
-- T-14: update lifecycle skills section in quoin/CLAUDE.md
-- T-15: update install.sh (deploy sleep_score.py, write dry-run marker)
-- T-16: final validation (all tests pass, deploy sync, manual smoke)
-- Next dispatch scope: T-13 onward
+None — Stage 3 complete.
 
 ## Decisions made
 - T-00 CASE A: Agent subagent dispatch IS available from /end_of_day body; proven by §0 block in end_of_day SKILL.md which already spawns Haiku subagents; all stage-3 task specs proceed with Option A
@@ -55,3 +57,4 @@ implement — S-3 T-00..T-12 complete; T-13 onward pending
 - Recorded in cost ledger: yes
 - end_of_day_due: yes
 - fallback_fires: 0
+pollution_score: 172
