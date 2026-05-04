@@ -130,7 +130,7 @@ Stage 3 ships the full `/sleep` skill body (replacing the S-2 stub), edits `/end
    - Tier 1 — plain English.
    - Acceptance: section present; boundary table enumerates all 6 layers; auto-memory boundary explicitly called out; `forgotten/` noted as new in S-3.
 
-6. ⏳ T-05: edit `quoin/skills/end_of_day/SKILL.md` to auto-invoke `/sleep` as final step (gated on T-00 PASS, CASE A assumed)
+6. ✓ T-05: edit `quoin/skills/end_of_day/SKILL.md` to auto-invoke `/sleep` as final step (gated on T-00 PASS, CASE A assumed)
    - File: `quoin/skills/end_of_day/SKILL.md`
    - Edit: add a new `### Step 6: Invoke /sleep (memory consolidation)` section after the existing Step 5 "Report to user" section.
    - Content (Option A — Agent subagent dispatch, per T-00 CASE A):
@@ -150,7 +150,7 @@ Stage 3 ships the full `/sleep` skill body (replacing the S-2 stub), edits `/end
    - Also add `--skip-sleep` flag documentation to the `/end_of_day` SKILL.md description frontmatter and the "Important behaviors" section.
    - Acceptance: `grep 'Step 6' quoin/skills/end_of_day/SKILL.md` matches; `--skip-sleep` documented in two places; subagent dispatch uses `[no-redispatch]` sentinel; failure path does NOT roll back daily briefing; test in T-11.
 
-7. ⏳ T-06: write `quoin/skills/sleep/SKILL.md` — replace stub with full skill body (Haiku-tier)
+7. ✓ T-06: write `quoin/skills/sleep/SKILL.md` — replace stub with full skill body (Haiku-tier)
    - File: `quoin/skills/sleep/SKILL.md` (currently the S-2 stub; this task replaces body, preserving §0c block placement)
    - Tier: Haiku (§0 Model dispatch block required; same pattern as `/end_of_day`)
    - Structure (in order):
@@ -178,7 +178,7 @@ Stage 3 ships the full `/sleep` skill body (replacing the S-2 stub), edits `/end
    - §0c placement rule: §0c MUST remain the LAST §0-class block. Verify: `grep -n '## §0' quoin/skills/sleep/SKILL.md` confirms §0 precedes §0c.
    - Acceptance: stub body replaced; §0 and §0c blocks present in correct order; all modes documented; write-target restriction states literal "ONLY writes to"; `--dry-run` note says "Makes NO writes"; `## Process (default mode)` starts with Step 0 prerequisite guard; test in T-08, T-09, T-10, T-11, T-12.
 
-8. ⏳ T-06.5: write `quoin/scripts/sleep_score.py` — scoring module (MUST precede T-07, T-08, T-09, T-12, T-15)
+8. ✓ T-06.5: write `quoin/scripts/sleep_score.py` — scoring module (MUST precede T-07, T-08, T-09, T-12, T-15)
    - File: `quoin/scripts/sleep_score.py` (new file — does not exist today; verify: `quoin/scripts/` currently contains build_preambles.py, classify_critic_issues.py, cost_from_jsonl.py, measure_revise_crossover_cost.py, measure_v_trip_rate.py, path_resolve.py, pidfile_helpers.sh, session_age_guard.py, validate_artifact.py)
    - Constraint: stdlib preferred; pyyaml used for YAML parsing if installed (soft dependency, same pattern as `validate_artifact.py`), hardcoded defaults otherwise. No other external packages. Plain Python 3, importable and runnable as CLI.
    - CLI interface:
