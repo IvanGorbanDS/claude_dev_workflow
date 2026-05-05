@@ -64,9 +64,10 @@ grep -q 'end_of_day_due: yes' "$RECENT_FILE" 2>/dev/null || exit 0
 # STEP 6: Extract task name for the nudge message
 task_name=$(basename "$RECENT_FILE" .md | sed 's/^[0-9]*-[0-9]*-[0-9]*-//')
 
+# Banner shape mirrors quoin/hooks/sessionstart.sh:69 and quoin/skills/start_of_day/SKILL.md Step 1 — keep in sync; drift test: quoin/dev/tests/test_lifecycle_banner_drift.sh
 # STEP 7: Emit nudge via systemMessage
 # SessionEnd output channel is systemMessage (not additionalContext — confirmed by T-00 spike).
-printf '{"systemMessage": "[quoin-S-4] Session ending with unfinished task: %s — run /end_of_day before your next session."}\n' \
+printf '{"systemMessage": "[quoin-S-4] Session ending with unfinished task: %s — run /checkpoint to save your place (resume next session) or /end_of_day to wrap up the workday."}\n' \
   "$task_name"
 
 # STEP 8: Capture Close snapshot
