@@ -417,7 +417,7 @@ All hooks fail-OPEN (exit 0 on any error). jq is a soft-required dependency (`br
 
 Three skills handle session lifecycle at different granularities (v3 lifecycle separation per architecture):
 
-**`/checkpoint`** — context-threshold primitive. Writes session-restore state to `.workflow_artifacts/memory/checkpoints/<YYYY-MM-DD>-<task>.md` and a `pending-restore-${session_id}.txt` sentinel. Does NOT roll up dailies, does NOT touch `lessons-learned.md`, does NOT touch `forgotten/`. Use when the context utilization advisory fires or proactively before starting a heavy task. **Paths-not-content rule (D-04):** checkpoint files record only PATHS to in-flight artifacts — never file contents. Restore re-fires Read tool on disk artifacts in the new session.
+**`/checkpoint`** — general-purpose state-save (mid-session, between tasks, between sessions). Writes session-restore state to `.workflow_artifacts/memory/checkpoints/<YYYY-MM-DD>-<task>.md` and a `pending-restore-${session_id}.txt` sentinel. Does NOT roll up dailies, does NOT touch `lessons-learned.md`, does NOT touch `forgotten/`. Use it mid-session before context exhaustion (when the context-utilization advisory fires), between tasks, between sessions, or proactively before starting new heavy work. **Paths-not-content rule (D-04):** checkpoint files record only PATHS to in-flight artifacts — never file contents. Restore re-fires Read tool on disk artifacts in the new session.
 
 **`--restore` subcommand:** Run `/checkpoint --restore` in a fresh session to re-hydrate state. Locates the most recent checkpoint (or follows the `pending-restore-${session_id}.txt` sentinel from the compaction-block flow), surfaces task state, and optionally re-fires the saved pending prompt. Sentinel cleanup happens on restore.
 
@@ -437,11 +437,11 @@ Subcommands:
 - `/sleep --purge --older-than 90d`: true-deletes archive files; per-file confirmation; never auto-run
 - `/sleep --escalate`: re-examines middle-band candidates on Opus for deeper reasoning
 
-**Boundary:** `/sleep` writes ONLY to `lessons-learned.md` and `forgotten/<date>.md`. Does NOT touch `~/.claude/projects/<hash>/memory/` (auto-memory). Distinct from `/checkpoint` (which handles session-restore primitives only) and `/end_of_day` (which handles daily rollup).
+**Boundary:** `/sleep` writes ONLY to `lessons-learned.md` and `forgotten/<date>.md`. Does NOT touch `~/.claude/projects/<hash>/memory/` (auto-memory). Distinct from `/checkpoint` (general-purpose state-save) and `/end_of_day` (end-of-workday rollup).
 
 **Boundary summary:**
-- `/checkpoint` → session-restore primitives only (`checkpoints/`, `sessions/`, `pending-*` sentinels)
-- `/end_of_day` → daily rollup (`daily/`, `lessons-learned.md`)
+- `/checkpoint` → general-purpose state-save (`checkpoints/`, `sessions/`, `pending-*` sentinels — mid-session, between tasks, between sessions)
+- `/end_of_day` → end-of-workday only — daily rollup (`daily/`, `lessons-learned.md`) + auto-invokes `/sleep`
 - `/sleep` → long-term memory promote/forget (S-3 scope)
 
 ### /sleep importance signals
