@@ -70,6 +70,8 @@ For each ledger file found, parse every data line (skip lines starting with `#` 
 
 The 7th column is OPTIONAL (Stage 4+ only); 6-column rows are always valid with `fallback_fires=0`.
 
+**UUID dedup for hook-placeholder rows:** When the same `<uuid>` appears on more than one ledger row, prefer the row whose `phase` column is NOT `session-close-hook` (the placeholder phase written by `/end_of_day` Step 3e for hook-captured UUIDs). If multiple non-placeholder rows share a UUID, keep them all (legitimate cross-phase reuse). Placeholder rows with `model: unknown` should be reported separately or aggregated as `0` cost — `ccusage` cannot price them. This dedup is a downstream-reader concern only; the ledger remains append-only.
+
 Build three collections:
 
 - **`today_entries`** — entries where `date` matches today's date (YYYY-MM-DD), from ALL ledgers

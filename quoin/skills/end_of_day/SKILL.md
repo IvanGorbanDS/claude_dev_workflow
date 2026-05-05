@@ -306,6 +306,37 @@ Check `.workflow_artifacts/memory/lessons-learned.md`. Count the number of lesso
 - **Atomic-rename pattern**: write to `resume-cookie.md.tmp` via Python `open(path, 'w')`, then `os.rename(tmp_path, final_path)`. Do NOT use shell `mv` in Python contexts — use `os.rename`.
 - Cookie path: `<project-root>/.workflow_artifacts/memory/resume-cookie.md` (under `.workflow_artifacts/` which is gitignored — cookie is never committed).
 
+### Step 3e: Reconcile Close snapshot blocks
+
+After Step 3d completes, scan each session file processed in Step 3 (all `.workflow_artifacts/memory/sessions/<today>-*.md` if the Step 3 set is unavailable) for a `## Close snapshot` block. The block spans from the `## Close snapshot` heading line through its bullet lines, ending at the next `^## ` heading or end-of-file. Process each block and always remove it from the session file when done (the block is a consume-once inbox item — removing it makes re-runs idempotent).
+
+**Per-block reconciliation procedure:**
+
+1. **Parse fields** from the block via line-prefix grep:
+   - `Closed at: <ISO_TIMESTAMP>` → extract date as `YYYY-MM-DD` (first 10 characters)
+   - `JSONL UUID: <UUID>`
+   - `Project: <HASH>`
+   - If any field is missing or malformed → skip placeholder append (still remove block); log a one-line note in the daily briefing: `[EOD-3e] Close snapshot in <session_file>: malformed block, skipped placeholder`.
+
+2. **Resolve task name** from the session filename: strip the leading `YYYY-MM-DD-` prefix and the trailing `.md` suffix from the basename.
+
+3. **Locate cost ledger:**
+   - Primary: `.workflow_artifacts/<task-name>/cost-ledger.md`
+   - Fallback: `.workflow_artifacts/finalized/<task-name>/cost-ledger.md`
+   - If neither exists → skip placeholder append (still remove block).
+
+4. **Dedup check:** `grep -F "$jsonl_uuid" "$ledger"` (substring match anywhere in the file — catches UUID in any column). If found → skip placeholder append.
+
+5. **Append placeholder row** (only if not found). Use the standard 7-column form:
+   ```
+   <UUID> | <YYYY-MM-DD> | session-close-hook | unknown | task | UUID captured by hook; no skill-written row | 0
+   ```
+   Where `<YYYY-MM-DD>` is the `Closed at:` date, and `<UUID>` is the `JSONL UUID:` value verbatim. Append atomically: `printf '%s | %s | session-close-hook | unknown | task | UUID captured by hook; no skill-written row | 0\n' "$uuid" "$date" >> "$ledger"`.
+
+6. **Remove the block:** rewrite the session file without the `## Close snapshot` block using an atomic rename — write to `<path>.tmp`, then rename to `<path>`. Remove heading line and all bullet lines up to (not including) the next `^## ` heading or EOF.
+
+Step 3 → Step 3b → Step 3c → Step 3d → Step 3e → Step 4.
+
 ### Step 4: Prompt for lessons learned
 
 Ask the user:
