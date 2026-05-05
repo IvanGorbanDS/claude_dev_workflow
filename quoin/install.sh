@@ -127,7 +127,7 @@ cp "$RUBRIC_SRC" "$RUBRIC_DST"
 success "Copied terse-rubric.md to ~/.claude/memory/"
 
 # v3 reference files (NEW — mirror the rubric pattern exactly)
-for ref_file in format-kit.md glossary.md format-kit.sections.json summary-prompt.md format-kit-pitfalls.md; do
+for ref_file in format-kit.md glossary.md format-kit.sections.json summary-prompt.md format-kit-pitfalls.md sleep-signals.yaml cache-guide.md; do
   REF_SRC="$SCRIPT_DIR/memory/$ref_file"
   REF_DST="$USER_MEMORY_DIR/$ref_file"
   if [ ! -f "$REF_SRC" ]; then

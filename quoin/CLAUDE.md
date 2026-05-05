@@ -47,38 +47,18 @@ PROJECT-FOLDER/.workflow_artifacts/TASK-NAME/
 └── ...
 ```
 
-A task is "multi-stage" when its `architecture.md` contains a `## Stage decomposition` section. Single-stage tasks (no architecture.md, or architecture.md without the decomposition heading) keep the legacy root-level layout — `current-plan.md` lives directly under the task name folder.
+A task is "multi-stage" when its `architecture.md` has a `## Stage decomposition` section. Single-stage tasks keep the legacy root-level layout.
 
-Skills resolve the artifact path via `quoin/scripts/path_resolve.py` (deployed to `~/.claude/scripts/path_resolve.py`). Resolution order:
+Skills resolve the artifact path via `quoin/scripts/path_resolve.py`. Resolution order:
+1. **Explicit:** `stage N of <task>` → `<task-name>/stage-N/`.
+2. **By name:** stage descriptive name + `## Stage decomposition` in architecture.md → resolver looks up stage number → `<task-name>/stage-N/`.
+3. **Default:** `<task-name>/` (legacy / single-stage / mixed-layout grandfathering).
 
-1. **Explicit:** the user invocation includes `stage N of <task>` (where N is an integer) — path is `<task-name>/stage-N/`.
-2. **By name:** the user invocation references a stage by descriptive name (e.g., `model-dispatch`) AND `architecture.md` exists at the task root AND it has a `## Stage decomposition` section — resolver looks up the stage number from the decomposition table — path is `<task-name>/stage-N/`.
-3. **Default:** path is `<task-name>/` (legacy / single-stage / mixed-layout grandfathering).
-
-**Grandfathering:** existing task folders predating this convention (those with a root-level `current-plan.md` and no `## Stage decomposition` in their architecture.md) continue to use the root-level layout indefinitely. The resolver does NOT auto-migrate them — even if a `stage-N/` subfolder happens to exist alongside a root-level plan (the I-05 mixed-layout case), the default rule routes to the root unless the user explicitly passes `stage N of <task>`. Migration is opt-in: a future `/thorough_plan stage N of <task>` invocation creates the stage subfolder.
-
-Two artifacts always stay at the task root regardless of stage layout:
-- `architecture.md` — single source of truth for the whole task.
-- `cost-ledger.md` — append-only ledger spans all stages.
-
-`/end_of_task` already detects `stage-*` sub-task folders and archives them into the parent feature's `finalized/stage-N/` subdirectory — see "Archiving completed work" below.
+**Grandfathering:** existing folders with root-level `current-plan.md` and no `## Stage decomposition` continue using root-level layout. Resolver does NOT auto-migrate — migration is opt-in via a future `/thorough_plan stage N of <task>`. Two artifacts always stay at task root: `architecture.md` and `cost-ledger.md`.
 
 ### Archiving completed work
 
-When a task is finalized via `/end_of_task`, its folder is moved into `.workflow_artifacts/finalized/`:
-
-- **Sub-task completed** — moves into `.workflow_artifacts/<parent-feature>/finalized/`:
-  ```
-  .workflow_artifacts/payment-v2/auth-retry/  →  .workflow_artifacts/payment-v2/finalized/auth-retry/
-  ```
-- **Entire feature completed** — moves into `.workflow_artifacts/finalized/`:
-  ```
-  .workflow_artifacts/payment-v2/  →  .workflow_artifacts/finalized/payment-v2/
-  ```
-
-This keeps both the project root and `.workflow_artifacts/` clean — only active task folders are visible at the top of `.workflow_artifacts/`. Completed work is preserved in `.workflow_artifacts/finalized/` for reference.
-
-**IMPORTANT: Never move task folders into `.workflow_artifacts/finalized/` during planning or implementation.** Keep them in their working location throughout the entire workflow. The `finalized/` directory is reserved for completed, shipped work only. Artifacts are moved there exclusively when `/end_of_task` is explicitly invoked by the user.
+`/end_of_task` moves the task folder into `.workflow_artifacts/finalized/` (sub-task → `<parent>/finalized/`; top-level task → `finalized/<task>/`). **IMPORTANT: Never move to `finalized/` during planning or implementation** — only when `/end_of_task` is explicitly invoked.
 
 ## Workflow sequence
 
@@ -145,20 +125,13 @@ Multiple sessions can run in a day (parallel tasks). Each session writes its own
 
 ## Session independence
 
-**Each skill is designed to run in its own chat session.** Context windows fill up — this is expected. The file-based artifacts (`current-plan.md`, `critic-response-N.md`, session state, `architecture.md`, etc.) ARE the shared memory between sessions.
+**Each skill is designed to run in its own chat session.** File-based artifacts ARE the shared memory between sessions — never rely on a previous session's memory.
 
-**Recommended session pattern:**
-- One command per session for heavy work (`/architect`, `/thorough_plan`, `/implement`, `/review`)
-- **`/run` gets its own session.** It orchestrates subagent sessions for each phase, so it stays lean — but start it fresh so the orchestrator has maximum context for managing the full pipeline.
-- **Always run `/end_of_task` in a fresh session** if the current session has been through heavy work. The skill has 8 sequential steps that must all complete — context compaction mid-skill can silently skip steps like archiving.
-- Short flows can share a session (`/plan` → `/implement` → `/review` for a small bug fix)
-- Use your judgment: when context feels heavy, close and start fresh
+**Recommended session pattern:** One command per session for heavy work. `/run` gets its own session. Always run `/end_of_task` in a fresh session (8 sequential steps; compaction can silently skip steps). Short flows can share a session. When context feels heavy, close and start fresh.
 
-**Every skill must be self-bootstrapping:** on a fresh-session start, it reads CLAUDE.md, `.workflow_artifacts/memory/lessons-learned.md` (planning/review skills), the relevant task subfolder artifacts, the latest session state, and the actual source code — never relying on a previous session's memory. The per-skill SKILL.md lists the exact files for that skill.
+**Every skill must be self-bootstrapping:** reads CLAUDE.md, lessons-learned.md, task subfolder artifacts, and session state on startup. Per-skill SKILL.md lists exact files. If a skill can't find what it needs, it asks the user.
 
-The user should never have to re-explain context that's already in the files. If a skill can't find what it needs, it asks the user — but the default is to read from disk.
-
-**When closing a session:** any skill that did meaningful work should update the session state file (`.workflow_artifacts/memory/sessions/<date>-<task-name>.md`) before the session ends. This is the handoff to the next session.
+**When closing a session:** update the session state file (`.workflow_artifacts/memory/sessions/<date>-<task-name>.md`) — this is the handoff to the next session.
 
 ## Common rules for all skills
 
@@ -321,119 +294,50 @@ The 7th column (`fallback_fires`) is OPTIONAL. Existing 6-column rows are valid 
 
 ### Knowledge cache
 
-The cache lives under `.workflow_artifacts/cache/`. Three rules govern all skills:
-- **(a) Cache is advisory, not authoritative** — a missing or stale cache entry is never an error; skills may always read source files directly.
-- **(b) Any skill that modifies source files MUST update the corresponding cache entry** (enforced per-skill in each skill's inline "Cache write-through" section). The `.workflow_artifacts/cache/` directory is the host.
-- **(c) Rollback by deletion** — deleting `.workflow_artifacts/cache/` fully restores pre-cache behavior; no skill should fail if the cache directory is absent.
+Cache lives under `.workflow_artifacts/cache/`. Three rules:
+- **(a)** Cache is advisory; missing/stale entry is never an error.
+- **(b)** Any skill that modifies source files MUST update the corresponding cache entry.
+- **(c)** Rollback by deletion — deleting `.workflow_artifacts/cache/` fully restores pre-cache behavior.
 
-#### Cache directory structure
+Directory structure, entry format, and staleness tracking: see `~/.claude/memory/cache-guide.md` (deployed by install.sh from `quoin/memory/cache-guide.md`).
 
-````
-.workflow_artifacts/cache/
-├── _index.md                     ← Root index: repo list, last-updated timestamps
-├── _staleness.md                 ← Git HEAD tracking per repo (replaces repo-heads.md)
-├── <repo-name>/
-│   ├── _index.md                 ← Repo summary: purpose, stack, entry points, key patterns
-│   ├── _deps.md                  ← External deps + internal cross-module deps
-│   └── <directory>/
-│       ├── _index.md             ← Module/directory summary: purpose, exports, patterns
-│       └── <file-stem>.md        ← Per-file summary (key files only)
-````
-
-#### Cache entry format
-
-Every `_index.md` and `<file-stem>.md` uses this structure:
-
-````markdown
----
-path: <relative path from project root to source file/directory>
-hash: <git hash of file at time of caching, or HEAD for directories>
-updated: <ISO timestamp>
-updated_by: <skill that wrote/updated this entry>
-tokens: <approximate token count of this cache entry>
----
-
-## Purpose
-<1-2 sentences>
-
-## Key Exports
-- `name(params)` — description
-
-## Dependencies
-- imports from: <internal modules>
-- external: <key packages>
-
-## Patterns
-- <notable patterns>
-
-## Integration Points
-- exposes: <APIs, events, exports>
-- consumes: <APIs, events, imports>
-
-## Notes
-<gotchas, tech debt, non-obvious details>
-````
-
-Sections may be omitted when not applicable (e.g., a config file has no Key Exports).
-
-#### Staleness tracking
-
-`_staleness.md` stores repo-level HEAD; skills read it to decide which cache entries are still valid; successor to `repo-heads.md` (fall back if absent).
-
-#### Per-skill patterns
-
-Cache-read bootstrap and cache write-through patterns live inline in each skill's SKILL.md. Subagents read their own SKILL.md at startup, not this file — see lessons-learned 2026-04-13. Do not replace inline copies with a pointer.
+Per-skill patterns: cache-read bootstrap and write-through live inline in each skill's SKILL.md. Do not replace inline copies with a pointer — see lessons-learned 2026-04-13.
 
 ### Tier 1 — files that always stay English (caveman-token-optimization carve-out)
 
-The caveman-token-optimization v2 architecture (see `.workflow_artifacts/caveman-token-optimization/architecture.md`) introduces terse-style writing for many workflow artifacts. The following files are explicitly **excluded** from terse-style writing — they stay in human-readable English at all times:
+The following files are explicitly **excluded** from terse-style writing — they stay in human-readable English at all times:
 
-**User-facing rendered output:**
-- Chat messages to the user (progress, questions, conclusions).
-- The `/gate` rendered checkpoint summary shown at each gate.
+**User-facing rendered output:** chat messages to the user; `/gate` rendered checkpoint summary.
 
 **Hand-edited files:**
 - `quoin/CLAUDE.md` (this file).
 - `quoin/memory/lessons-learned.md`.
-- `quoin/memory/terse-rubric.md` (the rubric itself — compressing it recreates the v1 CRIT-2 circular dependency).
-- `~/.claude/memory/terse-rubric.md` (deployed copy — read by skills at runtime; overwritten on re-install from the source above).
-- `quoin/memory/format-kit.md` (v3 format-aware writing reference; content-type → primitive mapping; per artifact-format-architecture v3 §5.1).
-- `~/.claude/memory/format-kit.md` (deployed copy — overwritten on re-install).
-- `quoin/memory/glossary.md` (v3 abbreviation whitelist + status glyphs; extends terse-rubric; per artifact-format-architecture v3 §5.2).
-- `~/.claude/memory/glossary.md` (deployed copy — overwritten on re-install).
-- `quoin/memory/format-kit.sections.json` (v3 machine-readable sidecar enumerating allowed/required sections per artifact type; structured-not-prose; consumed by validate_artifact.py per v3 §5.3.2).
-- `~/.claude/memory/format-kit.sections.json` (deployed copy — overwritten on re-install).
-- `quoin/memory/summary-prompt.md` (Tier 1 hand-edited — frozen Haiku prompt template for Class B writer Step 2 summaries; per stage 5 of the Quoin foundation work).
-- `~/.claude/memory/summary-prompt.md` (deployed copy — read by Class B writer skills at runtime; overwritten on re-install from the source above).
-- `quoin/memory/format-kit-pitfalls.md` (Tier 1 hand-edited — pre-write reminder block read at Class B writers' Step 1; per Stage 4 of pipeline-efficiency-improvements).
-- `~/.claude/memory/format-kit-pitfalls.md` (deployed copy — read by Class B writer skills at runtime; overwritten on re-install from the source above).
+- `quoin/memory/terse-rubric.md` (+ deployed copy at `~/.claude/memory/`) — compressing recreates the v1 CRIT-2 circular dependency.
+- `quoin/memory/format-kit.md` (+ deployed copy at `~/.claude/memory/`) — v3 content-type → primitive mapping.
+- `quoin/memory/glossary.md` (+ deployed copy at `~/.claude/memory/`) — v3 abbreviation whitelist + status glyphs.
+- `quoin/memory/format-kit.sections.json` (+ deployed copy at `~/.claude/memory/`) — machine-readable allowed/required sections sidecar.
+- `quoin/memory/summary-prompt.md` (+ deployed copy at `~/.claude/memory/`) — frozen Haiku prompt template for Class B writer Step 2.
+- `quoin/memory/format-kit-pitfalls.md` (+ deployed copy at `~/.claude/memory/`) — pre-write reminder block for Class B writers' Step 1.
+- `quoin/memory/sleep-signals.yaml` (Tier 1 hand-edited source of truth for sleep importance signals)
+- `~/.claude/memory/sleep-signals.yaml` (deployed copy — overwritten on re-install)
+- `quoin/memory/cache-guide.md` (Tier 1 hand-edited cache entry format reference)
+- `~/.claude/memory/cache-guide.md` (deployed copy — overwritten on re-install)
 
-NOTE: QUICKSTART.md sits at `quoin/` root and deploys to `~/.claude/QUICKSTART.md` (NOT under `memory/`) — this is intentional; QUICKSTART is a top-level command reference, not a memory artifact. Do NOT "normalize" the paths to `quoin/memory/QUICKSTART.md` or `~/.claude/memory/QUICKSTART.md` — this would break install.sh (T-01) and /init_workflow Step 7 (T-02) simultaneously.
-- `quoin/QUICKSTART.md` (Tier 1 hand-edited — single-page command reference; deployed by install.sh).
-- `~/.claude/QUICKSTART.md` (deployed copy — read by /init_workflow at runtime; overwritten on re-install).
+NOTE: QUICKSTART.md sits at `quoin/` root and deploys to `~/.claude/QUICKSTART.md` (NOT under `memory/`) — this is intentional. Do NOT normalize paths.
+- `quoin/QUICKSTART.md` (+ `~/.claude/QUICKSTART.md` deployed copy).
 
 **Contract-approval files (v3 format):**
 - `<task>/architecture.md` — has an English `## For human` summary block at the top (read by humans and `/gate`); body is format-aware structured per `quoin/memory/format-kit.md` (read by skills).
 - `<task>/review-<round>.md` — same v3 format as architecture.md.
 - `<task>/cost-ledger.md` (structured, not prose; no v3 changes — append-only row format only).
 
-**Rendered briefings:**
-- `memory/weekly/*.md`.
-- `memory/daily/<date>.md` (the rendered briefing — NOT `daily/insights-<date>.md`, which is Tier 3).
+**Rendered briefings:** `memory/weekly/*.md`; `memory/daily/<date>.md` (NOT `daily/insights-<date>.md`, which is Tier 3).
 
-**Source files:**
-- `MEMORY.md` (tiny — below any compression threshold).
-- `quoin/skills/**/SKILL.md` (skill source, not artifact).
-- `quoin/dev/tests/fixtures/quoin-stage-1-preamble.md` (§0 preamble template; hand-edited Tier 1; source of truth for the 12 cheap-tier SKILL.md preambles).
-- `quoin/dev/verify_subagent_dispatch.md` (§0 subagent-dispatch verification template; hand-filled by user during T-00 pilot and T-09 smoke; lives at `quoin/dev/` only — NOT deployed to `~/.claude/scripts/` per round-3 MIN-1 fix; one-shot diagnostic, not a runtime tool).
-- `quoin/dev/tests/fixtures/path_resolve/**` (Stage 3 path-resolver test fixture corpus; hand-edited Tier 1; consumed by `test_path_resolve.py`; covers all 7 fixture subdirectories AND the `_inflight-snapshot.txt` file).
-- `quoin/skills/<skill>/preamble.md` (any of the 7 spawn targets — critic, revise, revise-fast, plan, review, gate, architect) — GENERATED by `quoin/scripts/build_preambles.py` at install time; never hand-edit. The file is machine-generated English content; listed here only for disambiguation — it is NOT a Tier 1 hand-edited source file.
+**Source files:** `MEMORY.md`; `quoin/skills/**/SKILL.md`; `quoin/dev/tests/fixtures/quoin-stage-1-preamble.md`; `quoin/dev/verify_subagent_dispatch.md`; `quoin/dev/tests/fixtures/path_resolve/**`; `quoin/skills/<skill>/preamble.md` (any of the 7 spawn targets — critic, revise, revise-fast, plan, review, gate, architect) — GENERATED by `quoin/scripts/build_preambles.py` at install time; never hand-edit. The file is machine-generated English content; listed here only for disambiguation — it is NOT a Tier 1 hand-edited source file.
 
-Any other workflow artifact may be subject to terse-style writing (Tier 2 contract files use English + side-file; Tier 3 ephemeral files are terse-only with `/expand` for human reading).
+`.planner-trace.md` is a Tier-3 ephemeral: machine-written by `/plan`, read by `/critic` as a search-prior only, deleted by `/end_of_task` before archive; no Haiku summary, no validator.
 
-`.planner-trace.md` is an example of a Tier-3 ephemeral: machine-written by `/plan` at session end, read by `/critic` as a search-prior only, deleted by `/end_of_task` before archive; no Haiku summary, no validator.
-
-If you are adding a new file class and unsure which tier applies: hand-edited or contract-approved → Tier 1; ephemeral or machine-only → Tier 3; user-approves-but-machine-reads → Tier 2.
+If adding a new file class: hand-edited or contract-approved → Tier 1; ephemeral or machine-only → Tier 3; user-approves-but-machine-reads → Tier 2.
 
 ## Model assignments
 
@@ -477,13 +381,9 @@ Mechanical drift detection lives in `quoin/dev/tests/test_quoin_stage1_preamble.
 
 ### §0' Pollution dispatch
 
-The 7 Opus-tier skills that are NOT orchestrators (architect, plan, critic, revise, review, init_workflow, discover) carry a `## §0' Pollution dispatch (execute after §0 / §0c if present — before skill body)` block. When invoked from a session whose `pollution_score` exceeds `POLLUTION_THRESHOLD`, the skill self-dispatches as a fresh Agent subagent carrying per-skill paths (not content).
+The 7 Opus-tier skills that are NOT orchestrators (architect, plan, critic, revise, review, init_workflow, discover) carry a `## §0' Pollution dispatch (execute after §0 / §0c if present — before skill body)` block. When `pollution_score` exceeds `POLLUTION_THRESHOLD`, the skill self-dispatches as a fresh Agent subagent carrying per-skill paths (not content).
 
-**Detection:** The skill reads `pollution_score: N` from the active session-state file (`.workflow_artifacts/memory/sessions/<today>-<task>.md`) or from the fallback `pollution-score-latest.txt`. If N >= threshold AND no `[no-redispatch]` sentinel AND no prior §0 dispatch occurred: dispatch fires.
-
-**Score writer:** `userpromptsubmit.sh` STEP 0.5 computes and writes the score on every prompt submit (Plan B — SessionStart does not provide `transcript_path`; empirically confirmed via T-00 spike). The writer runs BEFORE the exemption check so the score is always fresh at dispatch time.
-
-**Score formula:** `transcript_kb + (agent_returns × 5) + (read_calls × 1) + (bash_calls × 1)`. Implemented in `quoin/hooks/_lib.sh` as `compute_pollution_score()`.
+**Detection:** reads `pollution_score: N` from session-state file or `pollution-score-latest.txt`. Fires if N >= threshold AND no `[no-redispatch]` AND no prior §0 dispatch. Score formula: `transcript_kb + (agent_returns × 5) + (read_calls × 1) + (bash_calls × 1)` — implemented in `quoin/hooks/_lib.sh`. Written by `userpromptsubmit.sh` STEP 0.5 on every prompt submit.
 
 **Per-skill dispatch contract:**
 
@@ -497,60 +397,21 @@ The 7 Opus-tier skills that are NOT orchestrators (architect, plan, critic, revi
 | /init_workflow | project root absolute path |
 | /discover | project root absolute path |
 
-**Ordering:** §0 (model tier) fires FIRST. §0' fires only if no §0 dispatch happened. For skills with §0c (architect, review): order is §0c → §0' → skill body.
-
-**Threshold tunable:** `QUOIN_POLLUTION_THRESHOLD` env var (default 5000). Score 5000 corresponds to ~5MB transcript or ~1MB transcript + heavy tool use.
-
-**Refusal path:** If §0' cannot extract per-skill dispatch fields, it emits `[quoin-S-1: cannot extract per-skill dispatch contract; running in main]` and proceeds in main.
-
-**Fail-OPEN:** If Agent tool unavailable, emits `[quoin-S-1: pollution dispatch unavailable; proceeding in current session]` and proceeds.
-
-**Manual override:** `[no-redispatch]` sentinel (same as §0) skips dispatch.
-
-**Excluded:** /run and /thorough_plan (orchestrators already spawn phases as subagents).
-
-Drift detection: `quoin/dev/tests/test_quoin_pollution_preamble.py`; manual production verification: `quoin/dev/verify_pollution_dispatch.md`.
+**Ordering:** §0 fires FIRST; §0' fires only if no §0 dispatch. For §0c skills (architect, review): §0c → §0' → body. **Excluded:** /run and /thorough_plan. **Threshold:** `QUOIN_POLLUTION_THRESHOLD` (default 5000). Fail-OPEN on Agent unavailable. `[no-redispatch]` skips. Drift detection: `test_quoin_pollution_preamble.py`; verification: `quoin/dev/verify_pollution_dispatch.md`.
 
 ### Hooks deployed by quoin
 
-`bash install.sh` deploys four hook scripts to `~/.claude/hooks/` and registers five (event, matcher) stanzas in `~/.claude/settings.json`:
+`bash install.sh` deploys hook scripts to `~/.claude/hooks/` and registers five (event, matcher) stanzas in `~/.claude/settings.json`:
 
 | Event | Matcher | Script | Timeout | Contract |
 |-------|---------|--------|---------|----------|
-| UserPromptSubmit | `*` | `userpromptsubmit.sh` | 5s | Checks context utilization; advisory or block at threshold |
+| UserPromptSubmit | `*` | `userpromptsubmit.sh` | 5s | Context utilization check; advisory or block |
 | PreCompact | `auto` | `precompact.sh` | 10s | Last-resort save + block on auto-compaction |
-| SessionStart | `startup` | `sessionstart.sh` | 5s | Surfaces pending-restore banner on new session; emits missing-EOD banner if any session file within 36 h has `end_of_day_due: yes` (S-4) |
-| SessionStart | `resume` | `sessionstart.sh` | 5s | Surfaces pending-restore banner on resumed session; emits missing-EOD banner (S-4) |
-| SessionEnd | `*` | `sessionend.sh` | 5s | Emits EOD nudge via `systemMessage` if the most-recent session file (≤8 h) has `end_of_day_due: yes` (S-4) |
+| SessionStart | `startup` | `sessionstart.sh` | 5s | Pending-restore + missing-EOD banner (S-4) |
+| SessionStart | `resume` | `sessionstart.sh` | 5s | Pending-restore + missing-EOD banner (S-4) |
+| SessionEnd | `*` | `sessionend.sh` | 5s | EOD nudge if `end_of_day_due: yes` |
 
-**S-4 banner dedup:** The SessionStart hook writes a sentinel file at `$TMPDIR/quoin-s4-eod-banner-<YYYY-MM-DD>.tmp` after firing the missing-EOD banner. If a sentinel from within the last 5 minutes exists, the banner is suppressed for the current session start. `/start_of_day` also reads this sentinel (see `/start_of_day/SKILL.md`) and skips its own banner if the hook fired within the last 5 minutes — preventing duplicate noise when both mechanisms are active.
-
-**Fail-OPEN / non-aborting deploy contract:** Every hook exits 0 on any error (no abort). If jq is absent, hooks fail-OPEN silently (zero protection — see jq soft-required dependency below). The `userpromptsubmit.sh` block JSON is only emitted AFTER the pending-prompt file is successfully written; if the write fails, the hook exits 0 (passthrough).
-
-**Exact-token exempt-list for `userpromptsubmit.sh`:** The hook splits the prompt on whitespace (after stripping ALL leading whitespace including newlines and carriage returns) and matches the FIRST token verbatim. Exempt commands (the hook exits 0 immediately without threshold check): `/checkpoint`, `/compact`, `/clear`, `/help`. These are exact string matches — not regex. `/checkpointfoo` and `/checkpoint--restore` are NOT exempt (different tokens). **Destructive-subcommand exception:** `/checkpoint --purge` is the ONE documented carve-out from the exempt-list — it is treated as NON-exempt despite the `/checkpoint` first-token match, and the hook falls through to threshold logic. The rationale: `/checkpoint --purge` should NOT be runnable under ≥95% context pressure (likely-mistaken at high utilization). All other `/checkpoint` subcommands (`--restore`, no-arg) remain exempt.
-
-**STDIN capture pattern:** All three event hooks open with `STDIN=$(cat)` to capture the JSON payload into a variable, then parse with `printf '%s' "$STDIN" | jq -r '<filter> // empty'`. The `// empty` jq filter handles missing fields by returning the empty string instead of `null`, supporting the fail-OPEN discipline.
-
-**`bash install.sh --dry-run`:** Runs the settings.json merge against a temp copy and prints the would-be merged JSON to stdout WITHOUT writing the live file or creating a `.bak` backup. Use this to preview the hook stanzas before committing to a live deploy: `bash install.sh --dry-run | jq '.hooks'`.
-
-**jq is a soft-required dependency:** Runtime hooks parse stdin JSON via `jq`. If `jq` is absent, hooks fail-OPEN silently (zero protection). Install via `brew install jq` (macOS), `apt-get install jq` (Debian), `apk add jq` (Alpine). `bash install.sh` emits a warning if jq is absent at deploy time AND writes `~/.claude/HOOK_MERGE_TODO.md` with manual-merge instructions; install proceeds but hooks will not function until jq is installed.
-
-**R-09 mitigation (settings.json corruption):** install.sh backs up `~/.claude/settings.json` to `settings.json.bak-<timestamp>` before any merge, validates the result with `jq empty`, and restores from `.bak` if validation fails.
-
-#### Tunable constants
-
-Hook scripts read these values at runtime via `${QUOIN_*:-default}` parameter expansion. Defaults are baked into the scripts:
-
-| Constant | Default | Env var override | Notes |
-|----------|---------|-----------------|-------|
-| `BYTES_PER_TOKEN_CONSTANT` | `8.0` | `QUOIN_BYTES_PER_TOKEN` | Bytes per token for byte-count utilization estimate (V-03 calibrated) |
-| `EFFECTIVE_CONTEXT_LIMIT` | `150000` | `QUOIN_EFFECTIVE_CONTEXT_LIMIT` | Effective token limit used as 100% denominator |
-| `STOP_THRESHOLD_BPS` | `8500` | `QUOIN_STOP_BPS` | Advisory threshold in basis-points (8500 = 85.00%) |
-| `BLOCK_THRESHOLD_BPS` | `9500` | `QUOIN_BLOCK_BPS` | Block threshold in basis-points (9500 = 95.00%) |
-| `STALE_SENTINEL_DAYS` | `7` | `QUOIN_STALE_SENTINEL_DAYS` | Days after which pending-prompt-*.txt / pending-restore-*.txt are swept; long-lived sessions may extend to 14+ |
-| `POLLUTION_THRESHOLD` | `5000` | `QUOIN_POLLUTION_THRESHOLD` | Score threshold for pollution dispatch (score = transcript_kB + weighted tool-use count); 5000 ≈ 5MB transcript or ~1MB + heavy tool use |
-
-**Basis-points convention:** Utilization values and threshold comparisons use INTEGER basis-points (0..10000) throughout. POSIX `[ ]` does integer comparison only; basis-points eliminate all floating-point comparison hazards. `compute_utilization()` in `_lib.sh` returns a basis-point integer (e.g., `8540` = 85.40% utilization).
+All hooks fail-OPEN (exit 0 on any error). jq is a soft-required dependency (`brew install jq`). Tunable constants (`QUOIN_BYTES_PER_TOKEN`, `QUOIN_EFFECTIVE_CONTEXT_LIMIT`, `QUOIN_STOP_BPS`, `QUOIN_BLOCK_BPS`, etc.) use `${QUOIN_*:-default}` expansion; thresholds use integer basis-points arithmetic (e.g., `8500` = 85.00%). Verbose details: `quoin/docs/hooks-guide.md`.
 
 ### Lifecycle skills (checkpoint / end_of_day / sleep)
 
@@ -585,42 +446,7 @@ Subcommands:
 
 ### /sleep importance signals
 
-`/sleep` reads this YAML block at runtime to tune its promote/forget scoring. The block is parsed by `sleep_score.py` via `load_config()`. All threshold values are tunable via environment variables (`QUOIN_SLEEP_<KEY>`, e.g., `QUOIN_SLEEP_PROMOTE_MIN_SCORE=3`).
-
-```yaml
-sleep_importance_signals:
-  promote:
-    frequency_3plus: 3       # appears in ≥3 daily/session entries in scan window
-    cross_task_2plus: 2      # keywords in sessions for ≥2 different task names
-    cost_bearing: 2          # entry within ±2h of high-cost-ledger row
-    user_marked_yes: 5       # Promote?: yes in insights file
-    structural_fit: 1        # matches known taxonomy (V-04..V-07, integration, etc.)
-    survival: 1              # still relevant N days later (re-mentioned or unresolved)
-  forget:
-    one_shot: 2              # appears exactly once in dailies
-    resolved_and_shipped: 2  # tied to cleanly-closed task with no recurrence
-    sub_threshold_cost: 1    # no cost-ledger row above $0.50 floor within ±2h
-    stale_30days: 2          # older than 30 days with no new mentions
-    user_marked_no: 5        # Promote?: no
-    duplicate: 3             # ≥3-keyword overlap with existing lessons-learned entry
-  thresholds:
-    promote_min_score: 3     # sum of matched promote weights to qualify as Promote
-    promote_max_forget: 0    # max forget signals allowed for Promote decision
-    forget_min_score: 2      # sum of matched forget weights to qualify as Soft-Forget
-    forget_max_promote: 0    # max promote signals allowed for Forget decision
-    forget_quiet_floor: 4    # score at which --quiet-forget suppresses per-entry confirmation
-    scan_window_days: 30     # how far back /sleep scans daily files
-    cost_bearing_floor_usd: 0.50  # cost-ledger row threshold for cost_bearing signal
-    stale_days: 30           # days threshold for stale signal
-    _source: claude_md       # sentinel: distinguishes live YAML parse from hardcoded defaults (test_default_weights_present uses this)
-```
-
-**`_source: claude_md` sentinel:** This key is present in the parsed `thresholds` dict at runtime. `sleep_score.py` ignores it — `load_config()` uses `.get()` for all threshold key lookups, so unknown keys (including `_source`) are silently skipped. The sentinel is purely for the `test_default_weights_present` test to distinguish a live YAML parse from hardcoded fallback defaults; it has no runtime effect.
-
-**Env var overrides:** Each threshold key maps to `QUOIN_SLEEP_<KEY>` (uppercase, underscores). Examples:
-- `QUOIN_SLEEP_PROMOTE_MIN_SCORE=5` — raise the promote bar
-- `QUOIN_SLEEP_SCAN_WINDOW_DAYS=60` — widen the scan window
-- `QUOIN_SLEEP_FORGET_QUIET_FLOOR=6` — require higher confidence before auto-quiet
+`/sleep` reads importance signals from `~/.claude/memory/sleep-signals.yaml` (deployed by install.sh from `quoin/memory/sleep-signals.yaml`). Source of truth: `quoin/memory/sleep-signals.yaml`. All thresholds override via `QUOIN_SLEEP_<KEY>` env vars. The `_source: claude_md` sentinel in the YAML distinguishes a live parse from hardcoded defaults. Fallback: if YAML absent, `sleep_score.py` parses from CLAUDE.md, then hardcoded defaults.
 
 ### Workflow memory layers
 

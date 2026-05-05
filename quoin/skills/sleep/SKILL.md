@@ -111,7 +111,7 @@ Files `/sleep` does NOT read:
 
 ## Importance scoring
 
-At session start, read the `sleep_importance_signals` YAML block from `~/.claude/CLAUDE.md`. If CLAUDE.md is absent or the block is missing, use hardcoded defaults (the same weights baked into `sleep_score.py`). Emit one-line warning if falling back to defaults: `[sleep: config not found; using hardcoded defaults]`.
+At session start, read sleep config: try `~/.claude/memory/sleep-signals.yaml` first; if absent, read the `sleep_importance_signals` YAML block from `~/.claude/CLAUDE.md`; if missing, use hardcoded defaults. Emit `[sleep: config not found; using hardcoded defaults]` only when falling back to hardcoded.
 
 For each candidate entry, compute:
 - `promote_score` — sum of matched promote signal weights
@@ -141,7 +141,7 @@ Also check whether dry-run mode should be forced: read `~/.claude/memory/sleep_d
 
 ### Step 1: Read config
 
-Read the `sleep_importance_signals` YAML block from `~/.claude/CLAUDE.md`. If missing: use hardcoded defaults and emit `[sleep: config not found; using hardcoded defaults]`.
+At session start, read sleep config: try `~/.claude/memory/sleep-signals.yaml` first; if absent, read the `sleep_importance_signals` YAML block from `~/.claude/CLAUDE.md`; if missing, use hardcoded defaults. Emit `[sleep: config not found; using hardcoded defaults]` only when falling back to hardcoded.
 
 ### Step 2: Run sleep_score.py
 
