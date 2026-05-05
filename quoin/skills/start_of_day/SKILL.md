@@ -78,10 +78,29 @@ If a task context is active: append your session to `.workflow_artifacts/<task-n
 - Rationale: prevents duplicate "run /end_of_day" banners when the user opens a session and immediately runs /start_of_day (the typical morning sequence).
 
 **Unified banner (fire if A OR B is positive, i.e. N > 0 OR M > 0):**
-> "⚠ Yesterday's `/end_of_day` did not fire — [N insight(s) pending and/or M session(s) unflushed]. Recommend running `/end_of_day` before continuing."
-> "Want to run `/end_of_day` now or skip?"
-- If they want to run it: invoke `/end_of_day` inline before continuing (promotion flow from `/end_of_day` Step 3b)
-- If they skip: proceed normally
+
+Three conditional branches keyed on Signal A (N = insights pending) and Signal B (M = sessions unflushed):
+
+<!-- banner shape mirrors quoin/hooks/sessionstart.sh:69 — keep in sync -->
+
+- **Signal A only (N > 0 AND M = 0):** insights need promotion — only `/end_of_day` Step 3b does this.
+  > "⚠ [N insight(s) pending promotion]. Recommend running `/end_of_day` before continuing."
+  > "Want to run `/end_of_day` now or skip?"
+  - **LOAD-BEARING (R-07 mitigation):** Signal A MUST route to `/end_of_day`, never `/checkpoint`. `/checkpoint` does not touch `lessons-learned.md` and will not promote insights.
+  - If they want to run it: invoke `/end_of_day` inline before continuing
+  - If they skip: proceed normally
+
+- **Signal B only (N = 0 AND M > 0):** sessions unflushed but no pending insights — a mid-session save is sufficient.
+  > "⚠ [M session(s) with unsaved end-of-day state]. Recommend running `/checkpoint` to save your place (or `/end_of_day` if wrapping up the workday)."
+  > "Want to run the recommended command now or skip?"
+  - If they want to run it: invoke `/checkpoint` (or `/end_of_day` if they choose) inline before continuing
+  - If they skip: proceed normally
+
+- **Both signals (N > 0 AND M > 0):** `/end_of_day` covers both — it flips `end_of_day_due: no` AND promotes insights; `/checkpoint` covers neither completely.
+  > "⚠ [N insight(s) pending and M session(s) unflushed]. Recommend running `/end_of_day` before continuing."
+  > "Want to run `/end_of_day` now or skip?"
+  - If they want to run it: invoke `/end_of_day` inline before continuing
+  - If they skip: proceed normally
 
 If neither signal is positive (N = 0 AND M = 0), skip this step silently.
 
