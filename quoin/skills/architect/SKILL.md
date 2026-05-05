@@ -76,7 +76,8 @@ This skill may run in a fresh chat session with no prior context. On start:
 4. Read the task subfolder if it exists: architecture.md is ALWAYS at task root (`<task-root>/architecture.md`); for `current-plan.md`, resolve via `python3 ~/.claude/scripts/path_resolve.py --task <task-name> [--stage <N-or-name>]` and read `<task_dir>/current-plan.md`. If exit code 2: display stderr verbatim, fall back to task root, ask user to disambiguate. cost-ledger.md: ALWAYS `<task-root>/cost-ledger.md` (line 5 — NOT edited per D-03).
 5. Append your session to the cost ledger: `.workflow_artifacts/<task-name>/cost-ledger.md` (see cost tracking rules in CLAUDE.md) — phase: `architect`
 6. Read deployed v3 references at session start: `~/.claude/memory/format-kit.md` and `~/.claude/memory/glossary.md`.
-7. Then proceed with the work below
+7. Read `~/.claude/memory/cache-guide.md` for the cache entry format schema.
+8. Then proceed with the work below
 
 ## How you work
 
@@ -181,7 +182,7 @@ When spawning a scan agent for a repo that has stale cache entries (case 2 from 
 > - Update module `_index.md` files for directories you examined (150–300 tokens each)
 > - Update file `<stem>.md` entries for key files you read (50–150 tokens each)
 >
-> Use the cache entry format defined in CLAUDE.md (frontmatter with path/hash/updated/updated_by/tokens, then sections). Set `updated_by: /architect` in the frontmatter. Set `hash` to the current HEAD.
+> Use the cache entry format defined in CLAUDE.md (frontmatter with path/hash/updated/updated_by/tokens, then sections). Set `updated_by: /architect` in the frontmatter. Set `hash` to the current HEAD. (schema also at ~/.claude/memory/cache-guide.md)
 >
 > Only update cache entries for files and directories you actually read during the scan. Do not invent summaries for unexamined code. If a previously cached directory or file was not examined in this scan, leave its existing cache entry unchanged.
 >

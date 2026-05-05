@@ -55,6 +55,8 @@ Cost tracking note: `/discover` can run standalone (no task context) or as part 
 
 If a task context is active: append your session to `.workflow_artifacts/<task-name>/cost-ledger.md` (see cost tracking rules in CLAUDE.md) — phase: `discover`.
 
+Read `~/.claude/memory/cache-guide.md` for the cache entry format schema.
+
 ## What to scan
 
 ### Incremental scan — skip unchanged repos
@@ -339,7 +341,7 @@ When scanning repos in parallel, spawn a subagent per repo (or batch 2-3 small r
 > - `<dir>/_index.md` — for each key directory with 3+ source files (150-300 tokens each)
 > - `<dir>/<file-stem>.md` — for key files only: entry points, APIs, models, configs (50-150 tokens each)
 >
-> Use the cache entry format defined in CLAUDE.md (frontmatter with path/hash/updated/updated_by/tokens, then sections: Purpose, Key Exports, Dependencies, Patterns, Integration Points, Notes). Omit sections that don't apply.
+> Use the cache entry format defined in CLAUDE.md (frontmatter with path/hash/updated/updated_by/tokens, then sections: Purpose, Key Exports, Dependencies, Patterns, Integration Points, Notes). Omit sections that don't apply. (schema also at ~/.claude/memory/cache-guide.md)
 >
 > Only write cache entries for files you actually read. Do not invent summaries for files you did not examine. It is better to have a sparse cache than an inaccurate one.
 >
@@ -373,7 +375,7 @@ For each repo scanned, the subagent creates:
    - Only for **key files**: entry points, API route definitions, model/schema definitions, configuration files, and files with complex business logic (>100 lines with non-trivial logic)
    - Do NOT create file entries for: test files, type definition files, simple utility files (<50 lines), generated files, lock files, or files whose content is adequately captured in the module `_index.md`
    - Target: 50-150 tokens per entry
-   - Use the standard cache entry format (see CLAUDE.md "Knowledge cache" section)
+   - Use the standard cache entry format (see CLAUDE.md "Knowledge cache" section) (schema also at ~/.claude/memory/cache-guide.md)
 
 ### What the main `/discover` session writes
 
