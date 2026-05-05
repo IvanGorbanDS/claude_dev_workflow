@@ -65,8 +65,9 @@ if [ "$EOD_BANNER_FIRED" -eq 0 ] && [ -d "$SESSIONS_DIR" ]; then
   rm -f "$_EOD_TMPFILE" 2>/dev/null || true
 
   UNFINISHED_TASKS="${UNFINISHED_TASKS% }"
+  # banner shape mirrors quoin/skills/start_of_day/SKILL.md Step 1 — keep in sync
   if [ -n "$UNFINISHED_TASKS" ]; then
-    printf '{"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": "[quoin-S-4] Unfinished /end_of_day detected for task(s): %s — run /end_of_day before starting new work."}}\n' \
+    printf '{"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": "[quoin-S-4] Unfinished /end_of_day detected for task(s): %s — run /checkpoint to save your place (or /end_of_day to wrap up the workday)."}}\n' \
       "$UNFINISHED_TASKS"
     # Write dedup sentinel
     touch "$EOD_SENTINEL" 2>/dev/null || true
