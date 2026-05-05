@@ -585,42 +585,7 @@ Subcommands:
 
 ### /sleep importance signals
 
-`/sleep` reads this YAML block at runtime to tune its promote/forget scoring. The block is parsed by `sleep_score.py` via `load_config()`. All threshold values are tunable via environment variables (`QUOIN_SLEEP_<KEY>`, e.g., `QUOIN_SLEEP_PROMOTE_MIN_SCORE=3`).
-
-```yaml
-sleep_importance_signals:
-  promote:
-    frequency_3plus: 3       # appears in ≥3 daily/session entries in scan window
-    cross_task_2plus: 2      # keywords in sessions for ≥2 different task names
-    cost_bearing: 2          # entry within ±2h of high-cost-ledger row
-    user_marked_yes: 5       # Promote?: yes in insights file
-    structural_fit: 1        # matches known taxonomy (V-04..V-07, integration, etc.)
-    survival: 1              # still relevant N days later (re-mentioned or unresolved)
-  forget:
-    one_shot: 2              # appears exactly once in dailies
-    resolved_and_shipped: 2  # tied to cleanly-closed task with no recurrence
-    sub_threshold_cost: 1    # no cost-ledger row above $0.50 floor within ±2h
-    stale_30days: 2          # older than 30 days with no new mentions
-    user_marked_no: 5        # Promote?: no
-    duplicate: 3             # ≥3-keyword overlap with existing lessons-learned entry
-  thresholds:
-    promote_min_score: 3     # sum of matched promote weights to qualify as Promote
-    promote_max_forget: 0    # max forget signals allowed for Promote decision
-    forget_min_score: 2      # sum of matched forget weights to qualify as Soft-Forget
-    forget_max_promote: 0    # max promote signals allowed for Forget decision
-    forget_quiet_floor: 4    # score at which --quiet-forget suppresses per-entry confirmation
-    scan_window_days: 30     # how far back /sleep scans daily files
-    cost_bearing_floor_usd: 0.50  # cost-ledger row threshold for cost_bearing signal
-    stale_days: 30           # days threshold for stale signal
-    _source: claude_md       # sentinel: distinguishes live YAML parse from hardcoded defaults (test_default_weights_present uses this)
-```
-
-**`_source: claude_md` sentinel:** This key is present in the parsed `thresholds` dict at runtime. `sleep_score.py` ignores it — `load_config()` uses `.get()` for all threshold key lookups, so unknown keys (including `_source`) are silently skipped. The sentinel is purely for the `test_default_weights_present` test to distinguish a live YAML parse from hardcoded fallback defaults; it has no runtime effect.
-
-**Env var overrides:** Each threshold key maps to `QUOIN_SLEEP_<KEY>` (uppercase, underscores). Examples:
-- `QUOIN_SLEEP_PROMOTE_MIN_SCORE=5` — raise the promote bar
-- `QUOIN_SLEEP_SCAN_WINDOW_DAYS=60` — widen the scan window
-- `QUOIN_SLEEP_FORGET_QUIET_FLOOR=6` — require higher confidence before auto-quiet
+`/sleep` reads importance signals from `~/.claude/memory/sleep-signals.yaml` (deployed by install.sh from `quoin/memory/sleep-signals.yaml`). Source of truth: `quoin/memory/sleep-signals.yaml`. All thresholds override via `QUOIN_SLEEP_<KEY>` env vars. The `_source: claude_md` sentinel in the YAML distinguishes a live parse from hardcoded defaults. Fallback: if YAML absent, `sleep_score.py` parses from CLAUDE.md, then hardcoded defaults.
 
 ### Workflow memory layers
 

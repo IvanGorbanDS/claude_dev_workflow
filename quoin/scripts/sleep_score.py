@@ -9,7 +9,7 @@ No writes performed by this module — all writes are performed by the /sleep
 SKILL.md body on user confirmation.
 
 Public API (importable):
-  load_config(claude_md_path: str) -> dict
+  load_config(claude_md_path: str = None, *, signals_yaml_path: str = None) -> dict
   collect_entries(scan_dir: str, scan_days: int = 30) -> List[RawEntry]
   score_entries(entries: List[RawEntry], config: dict) -> List[ScoredEntry]
   dedup_against_lessons(entries: List[ScoredEntry], lessons_text: str) -> List[ScoredEntry]
@@ -97,67 +97,102 @@ class ScoredEntry:
 # load_config
 # ---------------------------------------------------------------------------
 
-def load_config(claude_md_path: str) -> dict:
-    """Extract and parse the sleep_importance_signals YAML block from CLAUDE.md.
+def load_config(claude_md_path: str = None, *, signals_yaml_path: str = None) -> dict:
+    """Load sleep_importance_signals config.
 
-    Algorithm:
-    1. Read file as text.
-    2. Find '### /sleep importance signals' heading.
-    3. Extract YAML from next ```yaml fenced block.
-    4. Try yaml.safe_load(extracted) — use pyyaml if installed.
-    5. On ImportError: fall back to hardcoded defaults + stderr warning.
+    Search order:
+    1. signals_yaml_path if explicitly provided — OR home default when claude_md_path is None
+    2. Parse YAML block from claude_md_path (backward-compat fallback)
+    3. Hardcoded DEFAULT_CONFIG (final fallback)
+
+    Precedence rationale: if caller passes claude_md_path positionally (no signals_yaml_path),
+    we try CLAUDE.md first to preserve backward-compat. The home-default YAML path is only
+    consulted when no CLAUDE.md path is provided (typical CLI default case).
 
     Unknown keys in thresholds (including _source: claude_md) are silently
     ignored — load_config() uses .get() for all threshold lookups.
 
     Returns dict with keys: promote, forget, thresholds.
     """
-    try:
-        text = Path(claude_md_path).read_text(encoding="utf-8")
-    except (OSError, IOError):
-        return DEFAULT_CONFIG
+    # Path 1: standalone YAML file
+    if signals_yaml_path is not None:
+        yaml_path = Path(signals_yaml_path)
+    elif claude_md_path is None:
+        # No CLAUDE.md path provided → try home default
+        yaml_path = Path(os.path.expanduser("~/.claude/memory/sleep-signals.yaml"))
+    else:
+        yaml_path = None  # caller passed CLAUDE.md positionally → try CLAUDE.md first
 
-    # Find the heading
-    heading_pattern = r"### /sleep importance signals"
-    heading_match = re.search(heading_pattern, text)
-    if not heading_match:
-        return DEFAULT_CONFIG
+    if yaml_path is not None and yaml_path.exists():
+        try:
+            import yaml  # pyyaml — soft dependency; imported inside body only
+            parsed = yaml.safe_load(yaml_path.read_text(encoding="utf-8"))
+            if isinstance(parsed, dict):
+                signals = parsed.get("sleep_importance_signals", parsed)
+                if isinstance(signals, dict):
+                    return {
+                        "promote": signals.get("promote", DEFAULT_CONFIG["promote"]),
+                        "forget": signals.get("forget", DEFAULT_CONFIG["forget"]),
+                        "thresholds": signals.get("thresholds", DEFAULT_CONFIG["thresholds"]),
+                    }
+        except ImportError:
+            print(
+                "[sleep_score: pyyaml not installed; trying CLAUDE.md fallback]",
+                file=sys.stderr,
+            )
+        except Exception:
+            pass  # Fall through to CLAUDE.md parse
 
-    # Find the ```yaml fenced block after the heading
-    after_heading = text[heading_match.end():]
-    fence_pattern = r"```yaml\s*\n(.*?)```"
-    fence_match = re.search(fence_pattern, after_heading, re.DOTALL)
-    if not fence_match:
-        return DEFAULT_CONFIG
+    # Path 2: parse YAML block from claude_md_path (backward-compat fallback)
+    if claude_md_path is not None:
+        try:
+            text = Path(claude_md_path).read_text(encoding="utf-8")
+        except (OSError, IOError):
+            return DEFAULT_CONFIG
 
-    yaml_text = fence_match.group(1)
+        # Find the heading
+        heading_pattern = r"### /sleep importance signals"
+        heading_match = re.search(heading_pattern, text)
+        if not heading_match:
+            return DEFAULT_CONFIG
 
-    try:
-        import yaml  # pyyaml — soft dependency; imported inside body only
-        parsed = yaml.safe_load(yaml_text)
-    except ImportError:
-        print(
-            "[sleep_score: pyyaml not installed; using hardcoded default weights]",
-            file=sys.stderr,
-        )
-        return DEFAULT_CONFIG
-    except Exception:
-        return DEFAULT_CONFIG
+        # Find the ```yaml fenced block after the heading
+        after_heading = text[heading_match.end():]
+        fence_pattern = r"```yaml\s*\n(.*?)```"
+        fence_match = re.search(fence_pattern, after_heading, re.DOTALL)
+        if not fence_match:
+            return DEFAULT_CONFIG
 
-    if not isinstance(parsed, dict):
-        return DEFAULT_CONFIG
+        yaml_text = fence_match.group(1)
 
-    # Extract the sleep_importance_signals sub-dict if nested
-    signals = parsed.get("sleep_importance_signals", parsed)
-    if not isinstance(signals, dict):
-        return DEFAULT_CONFIG
+        try:
+            import yaml  # pyyaml — soft dependency; imported inside body only
+            parsed = yaml.safe_load(yaml_text)
+        except ImportError:
+            print(
+                "[sleep_score: pyyaml not installed; using hardcoded default weights]",
+                file=sys.stderr,
+            )
+            return DEFAULT_CONFIG
+        except Exception:
+            return DEFAULT_CONFIG
 
-    result = {
-        "promote": signals.get("promote", DEFAULT_CONFIG["promote"]),
-        "forget": signals.get("forget", DEFAULT_CONFIG["forget"]),
-        "thresholds": signals.get("thresholds", DEFAULT_CONFIG["thresholds"]),
-    }
-    return result
+        if not isinstance(parsed, dict):
+            return DEFAULT_CONFIG
+
+        # Extract the sleep_importance_signals sub-dict if nested
+        signals = parsed.get("sleep_importance_signals", parsed)
+        if not isinstance(signals, dict):
+            return DEFAULT_CONFIG
+
+        return {
+            "promote": signals.get("promote", DEFAULT_CONFIG["promote"]),
+            "forget": signals.get("forget", DEFAULT_CONFIG["forget"]),
+            "thresholds": signals.get("thresholds", DEFAULT_CONFIG["thresholds"]),
+        }
+
+    # Path 3: hardcoded defaults
+    return DEFAULT_CONFIG
 
 
 # ---------------------------------------------------------------------------
@@ -617,14 +652,23 @@ def main(argv: Optional[List[str]] = None) -> int:
     )
     parser.add_argument(
         "--claude-md",
-        default=os.path.expanduser("~/.claude/CLAUDE.md"),
-        help="Path to CLAUDE.md for config (default: ~/.claude/CLAUDE.md).",
+        default=None,
+        help=(
+            "Path to CLAUDE.md for config. Search order: (1) ~/.claude/memory/sleep-signals.yaml "
+            "when --claude-md is omitted, (2) YAML block parsed from --claude-md path, "
+            "(3) hardcoded defaults."
+        ),
+    )
+    parser.add_argument(
+        "--signals-yaml",
+        default=None,
+        help="Explicit path to sleep-signals.yaml (overrides --claude-md and home default).",
     )
 
     args = parser.parse_args(argv)
 
     # Load config
-    config = load_config(args.claude_md)
+    config = load_config(args.claude_md, signals_yaml_path=args.signals_yaml)
 
     # Collect entries
     entries = collect_entries(args.scan_dir, args.scan_days)

@@ -1,0 +1,25 @@
+sleep_importance_signals:
+  promote:
+    frequency_3plus: 3       # appears in ≥3 daily/session entries in scan window
+    cross_task_2plus: 2      # keywords in sessions for ≥2 different task names
+    cost_bearing: 2          # entry within ±2h of high-cost-ledger row
+    user_marked_yes: 5       # Promote?: yes in insights file
+    structural_fit: 1        # matches known taxonomy (V-04..V-07, integration, etc.)
+    survival: 1              # still relevant N days later (re-mentioned or unresolved)
+  forget:
+    one_shot: 2              # appears exactly once in dailies
+    resolved_and_shipped: 2  # tied to cleanly-closed task with no recurrence
+    sub_threshold_cost: 1    # no cost-ledger row above $0.50 floor within ±2h
+    stale_30days: 2          # older than 30 days with no new mentions
+    user_marked_no: 5        # Promote?: no
+    duplicate: 3             # ≥3-keyword overlap with existing lessons-learned entry
+  thresholds:
+    promote_min_score: 3     # sum of matched promote weights to qualify as Promote
+    promote_max_forget: 0    # max forget signals allowed for Promote decision
+    forget_min_score: 2      # sum of matched forget weights to qualify as Soft-Forget
+    forget_max_promote: 0    # max promote signals allowed for Forget decision
+    forget_quiet_floor: 4    # score at which --quiet-forget suppresses per-entry confirmation
+    scan_window_days: 30     # how far back /sleep scans daily files
+    cost_bearing_floor_usd: 0.50  # cost-ledger row threshold for cost_bearing signal
+    stale_days: 30           # days threshold for stale signal
+    _source: claude_md       # sentinel: distinguishes live YAML parse from hardcoded defaults (test_default_weights_present uses this)

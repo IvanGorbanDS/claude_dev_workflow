@@ -28,7 +28,7 @@ from sleep_score import (
 )
 
 _FIXTURES = Path(__file__).parent / "fixtures" / "sleep"
-_CLAUDE_MD = Path(__file__).parent.parent.parent / "CLAUDE.md"
+_SIGNALS_YAML = Path(__file__).parent.parent.parent / "memory" / "sleep-signals.yaml"
 
 
 # ---------------------------------------------------------------------------
@@ -164,7 +164,7 @@ def test_weight_override():
 
 
 def test_default_weights_present():
-    """load_config(CLAUDE.md) returns a dict with expected keys; _source sentinel present when pyyaml installed."""
+    """load_config(signals_yaml_path=...) returns a dict with expected keys; _source sentinel present when pyyaml installed."""
     try:
         import yaml
         pyyaml_available = True
@@ -175,10 +175,10 @@ def test_default_weights_present():
         # Skip — cannot verify live YAML parse without pyyaml
         return "SKIP"
 
-    if not _CLAUDE_MD.exists():
-        raise AssertionError(f"quoin/CLAUDE.md not found at {_CLAUDE_MD}")
+    if not _SIGNALS_YAML.exists():
+        raise AssertionError(f"quoin/memory/sleep-signals.yaml not found at {_SIGNALS_YAML}")
 
-    config = load_config(str(_CLAUDE_MD))
+    config = load_config(signals_yaml_path=str(_SIGNALS_YAML))
 
     # Top-level keys
     _assert("promote" in config, "config missing 'promote' key")
