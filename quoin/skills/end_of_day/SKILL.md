@@ -1,6 +1,6 @@
 ---
 name: end_of_day
-description: "Consolidates all of today's work across all sessions into a daily cache for next-day resumption. Works in any session — fresh or active. Use this skill for: /end_of_day, 'wrapping up', 'done for the day', 'save my progress', 'end of day', 'EOD'. Captures what was worked on, what's unfinished, blockers, decisions made, and recent git activity. The daily cache feeds into /start_of_day for seamless resumption. Flags: --skip-sleep (skip automatic /sleep invocation at Step 6)."
+description: "End-of-workday only — consolidates all of today's work across all sessions into a daily cache for next-day resumption, promotes insights to lessons-learned.md, and auto-invokes /sleep. For mid-session, between-task, or between-session state-saving, run /checkpoint instead. Works in any session — fresh or active. Use this skill for: /end_of_day, 'wrapping up', 'done for the day', 'save my progress', 'end of day', 'EOD'. Captures what was worked on, what's unfinished, blockers, decisions made, and recent git activity. The daily cache feeds into /start_of_day for seamless resumption. Flags: --skip-sleep (skip automatic /sleep invocation at Step 6)."
 model: haiku
 ---
 
